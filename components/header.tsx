@@ -1,31 +1,29 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { ShoppingCart, Search, ChevronDown, Globe, User, Menu, X } from "lucide-react"
+import { ShoppingCart, Search, ChevronDown, Gift, User, Menu, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import PointsBalance from "@/components/points-balance"
+import { usePoints } from "@/lib/points-store"
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { cartCount, ready } = usePoints()
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background">
       <div className="container flex h-16 items-center justify-between px-4 md:px-6">
         <div className="flex items-center gap-6 md:gap-10">
           <Link href="/" className="flex items-center gap-2">
-            <Image
-              src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2064&auto=format&fit=crop&ixlib=rb-4.0.3"
-              alt="PetDo Logo"
-              width={40}
-              height={40}
-              className="rounded-full bg-primary"
-            />
-            <span className="text-xl font-bold">PetDo</span>
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Gift className="h-5 w-5" />
+            </span>
+            <span className="hidden text-xl font-bold sm:inline">Regala</span>
           </Link>
           <nav className="hidden md:flex gap-6">
             <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
@@ -69,8 +67,9 @@ export default function Header() {
             </Link>
           </nav>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex">
+        <div className="flex items-center gap-2 md:gap-4">
+          <PointsBalance />
+          <div className="hidden lg:flex">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -80,20 +79,7 @@ export default function Header() {
               />
             </div>
           </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="relative">
-                <Globe className="h-5 w-5" />
-                <span className="sr-only">Language</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>English</DropdownMenuItem>
-              <DropdownMenuItem>Spanish</DropdownMenuItem>
-              <DropdownMenuItem>French</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button variant="ghost" size="icon" className="relative" asChild>
+          <Button variant="ghost" size="icon" className="relative hidden sm:inline-flex" asChild>
             <Link href="/login">
               <User className="h-5 w-5" />
               <span className="sr-only">Sign In</span>
@@ -102,9 +88,11 @@ export default function Header() {
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link href="/cart">
               <ShoppingCart className="h-5 w-5" />
-              <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-primary">
-                3
-              </Badge>
+              {ready && cartCount > 0 && (
+                <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-primary">
+                  {cartCount}
+                </Badge>
+              )}
               <span className="sr-only">Cart</span>
             </Link>
           </Button>
