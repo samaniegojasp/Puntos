@@ -102,7 +102,8 @@ function OrderSuccessContent() {
                   <GiftCardFace
                     store={store}
                     usd={item.usd}
-                    className="w-28 shrink-0 p-2 text-xs"
+                    compact
+                    className="w-28 shrink-0"
                   />
                 )}
                 <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-3">

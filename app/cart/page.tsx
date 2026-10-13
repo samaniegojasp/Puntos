@@ -63,7 +63,7 @@ export default function CartPage() {
                   className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
                 >
                   <div className="flex items-center gap-3">
-                    <GiftCardFace store={store} usd={item.usd} className="w-28 shrink-0 p-2 text-xs" />
+                    <GiftCardFace store={store} usd={item.usd} compact className="w-28 shrink-0" />
                     <div>
                       <h3 className="font-semibold">
                         {store.name} · ${item.usd}

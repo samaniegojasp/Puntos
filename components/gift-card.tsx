@@ -11,22 +11,39 @@ import { THEMES, formatPoints, pointsFor, type Store } from "@/lib/catalog"
 import { usePoints } from "@/lib/points-store"
 
 /** Cara visual de la tarjeta (proporción de tarjeta física). */
-export function GiftCardFace({ store, usd, className }: { store: Store; usd: number; className?: string }) {
+export function GiftCardFace({
+  store,
+  usd,
+  className,
+  compact = false,
+}: {
+  store: Store
+  usd: number
+  className?: string
+  /** Miniatura (≈110 px de ancho): textos y chip reducidos para que no se pisen. */
+  compact?: boolean
+}) {
   return (
     <div
       className={cn(
-        "relative aspect-[1.586] overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-lg",
+        "relative aspect-[1.586] overflow-hidden bg-gradient-to-br text-white",
+        compact ? "rounded-lg p-2 shadow-md" : "rounded-xl p-4 shadow-lg",
         THEMES[store.theme],
         className,
       )}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent" />
       <div className="flex items-start justify-between">
-        <span className="text-lg font-extrabold leading-tight">{store.name}</span>
-        <Gift className="h-5 w-5 opacity-80" aria-hidden />
+        <span className={cn("font-extrabold leading-tight", compact ? "text-[10px]" : "text-lg")}>{store.name}</span>
+        {!compact && <Gift className="h-5 w-5 opacity-80" aria-hidden />}
       </div>
-      <div className="absolute bottom-4 left-4 h-6 w-9 rounded-md bg-yellow-200/70" aria-hidden />
-      <span className="absolute bottom-3 right-4 text-3xl font-extrabold">${usd}</span>
+      <div
+        className={cn("absolute rounded-md bg-yellow-200/70", compact ? "bottom-2 left-2 h-3 w-4" : "bottom-4 left-4 h-6 w-9")}
+        aria-hidden
+      />
+      <span className={cn("absolute font-extrabold", compact ? "bottom-1.5 right-2 text-base" : "bottom-3 right-4 text-3xl")}>
+        ${usd}
+      </span>
     </div>
   )
 }
