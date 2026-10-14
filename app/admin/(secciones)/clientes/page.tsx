@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import {
   Table,
@@ -127,18 +128,61 @@ export default function AdminClientesPage() {
     active,
   }
 
-  const simulatedClients = editingClient
-    ? clients.map((c) => (c.id === editingClient.id ? candidateClient : c))
-    : [...clients, candidateClient]
+  // Revisa las reglas del sistema con un conjunto de tramos propios dado
+  const buildIssues = (packs: PointsPack[]) => {
+    const cand: ClientAdminRow = { ...candidateClient, customPacks: packMode === "custom" ? packs : [] }
+    const simulated = editingClient
+      ? clients.map((c) => (c.id === editingClient.id ? cand : c))
+      : [...clients, cand]
+    return validatePricing({
+      settings: MOCK_SETTINGS,
+      providers: MOCK_PROVIDERS,
+      products: MOCK_PRODUCTS,
+      standardPacks: MOCK_STANDARD_PACKS,
+      publicPacks: MOCK_PUBLIC_PACKS,
+      clients: simulated,
+    })
+  }
 
-  const issues = validatePricing({
-    settings: MOCK_SETTINGS,
-    providers: MOCK_PROVIDERS,
-    products: MOCK_PRODUCTS,
-    standardPacks: MOCK_STANDARD_PACKS,
-    publicPacks: MOCK_PUBLIC_PACKS,
-    clients: simulatedClients,
-  })
+  const issues = buildIssues(customPacks)
+
+  // Rango de puntos válido para un tramo, calculado con las mismas reglas (sin fórmulas propias).
+  // Regla 2 (el Canjeador paga más por punto): exige un mínimo de puntos.
+  // Regla 3 (margen mínimo): exige un máximo de puntos.
+  const POINTS_STEP = 50
+  const POINTS_CAP = 5_000_000
+  const pointsBounds = (idx: number): { min: number; max: number } | null => {
+    const own = customPacks[idx]
+    if (!own || own.usdCents <= 0) return null
+    const tag = `tramo $${(own.usdCents / 100).toFixed(2)}:`
+    const withPoints = (pts: number) =>
+      customPacks.map((x, i) => (i === idx ? { ...x, points: pts } : x))
+    const lowOk = (pts: number) => !buildIssues(withPoints(pts)).some((i) => i.rule === 2)
+    const highOk = (pts: number) =>
+      !buildIssues(withPoints(pts)).some((i) => i.rule === 3 && i.message.includes(tag))
+
+    const maxK = Math.floor(POINTS_CAP / POINTS_STEP)
+    // Menor valor que cumple la regla 2 (válido de ahí hacia arriba)
+    if (!lowOk(maxK * POINTS_STEP) || !highOk(POINTS_STEP)) return null
+    let a = 1
+    let b = maxK
+    while (a < b) {
+      const m = Math.floor((a + b) / 2)
+      if (lowOk(m * POINTS_STEP)) b = m
+      else a = m + 1
+    }
+    const min = a * POINTS_STEP
+    // Mayor valor que cumple la regla 3 (válido de ahí hacia abajo)
+    a = 1
+    b = maxK
+    while (a < b) {
+      const m = Math.ceil((a + b) / 2)
+      if (highOk(m * POINTS_STEP)) a = m
+      else b = m - 1
+    }
+    const max = a * POINTS_STEP
+    return min <= max ? { min, max } : null
+  }
 
   const errorIssues = issues.filter((i) => i.severity === "error")
   const warningIssues = issues.filter((i) => i.severity === "warning")
@@ -390,6 +434,7 @@ export default function AdminClientesPage() {
                     {customPacks.map((pack, idx) => {
                       const usdAmount = pack.usdCents / 100
                       const cpp = pack.points > 0 ? (pack.usdCents / pack.points) / 100 : 0
+                      const bounds = pointsBounds(idx)
 
                       return (
                         <div
@@ -413,21 +458,49 @@ export default function AdminClientesPage() {
                             />
                           </div>
 
-                          <div className="w-32 space-y-1">
-                            <Label className="text-[10px] text-muted-foreground">Puntos recibidos</Label>
-                            <Input
-                              type="number"
-                              min="100"
-                              step="50"
-                              value={pack.points}
-                              onChange={(e) =>
-                                handlePackChange(
-                                  idx,
-                                  "points",
-                                  parseInt(e.target.value, 10) || 0
-                                )
-                              }
-                            />
+                          <div className="min-w-[220px] flex-1 space-y-2">
+                            <div className="flex items-baseline justify-between">
+                              <Label className="text-[10px] text-muted-foreground">Puntos recibidos</Label>
+                              <span className="font-mono text-sm font-semibold text-foreground">
+                                {formatPts(pack.points)} pts
+                              </span>
+                            </div>
+                            {bounds ? (
+                              <>
+                                <Slider
+                                  min={bounds.min}
+                                  max={bounds.max}
+                                  step={POINTS_STEP}
+                                  value={[Math.min(Math.max(pack.points, bounds.min), bounds.max)]}
+                                  onValueChange={(v) => handlePackChange(idx, "points", v[0])}
+                                  aria-label="Puntos recibidos"
+                                />
+                                <div className="flex justify-between text-[10px] text-muted-foreground">
+                                  <span>Mínimo {formatPts(bounds.min)}</span>
+                                  <span>Máximo {formatPts(bounds.max)}</span>
+                                </div>
+                                {(pack.points < bounds.min || pack.points > bounds.max) && (
+                                  <p className="text-[11px] text-destructive">
+                                    El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                                  </p>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                <p className="text-[11px] text-destructive">
+                                  Con los otros tramos y el monto actuales no existe un valor que cumpla las reglas. Corrige el monto o los demás tramos.
+                                </p>
+                                <Input
+                                  type="number"
+                                  min="100"
+                                  step="50"
+                                  value={pack.points}
+                                  onChange={(e) =>
+                                    handlePackChange(idx, "points", parseInt(e.target.value, 10) || 0)
+                                  }
+                                />
+                              </>
+                            )}
                           </div>
 
                           <div className="flex-1 min-w-[130px] space-y-1">
