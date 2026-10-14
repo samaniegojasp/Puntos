@@ -215,11 +215,11 @@ export default function ProveedorCajaPage() {
                 />
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <Button type="submit">
                   <Search className="mr-2 h-4 w-4" /> Buscar
                 </Button>
-                <Button type="button" variant="outline" disabled title="Próximamente en la app móvil">
+                <Button type="button" variant="outline" disabled title="Próximamente en la app móvil" className="h-auto whitespace-normal">
                   <QrCode className="mr-2 h-4 w-4" /> Escanear QR (próximamente en la app)
                 </Button>
               </div>
