@@ -209,6 +209,19 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 
 ---
 
+### Resultado de D7 (barrido automático hecho por Claude, no por Haiku)
+
+| Verificación | Resultado |
+|---|---|
+| Matriz de acceso: 20 rutas × 4 roles (80 combinaciones, a 1280 px) | 0 discrepancias con la matriz de la sección 1 |
+| Scroll horizontal a 375, 768 y 1280 px (240 cargas) | 0 casos |
+| Textos: "undefined", "NaN", "[object", "verificamos/verificado" | 0 casos |
+| Consola (errores y avisos) | 1 aviso 404 de un recurso en la primera carga de `/cuenta`; no se reprodujo en una segunda corrida (probable prefetch de enlaces) |
+| Enlaces internos de los menús (29 únicos) | 0 rotos |
+| Accesibilidad: campos sin etiqueta y botones sin nombre | 2 corregidos: botón "Editar" de Precios y buscador del encabezado. El resto de lo marcado eran falsos positivos de componentes Radix |
+
+---
+
 ## Después de la Fase D
 
 Cuando apruebes las pantallas, Claude **congela el contrato**: ajusta `lib/domain/types.ts` a lo que realmente muestran y empieza **B1** (`PLAN-BACKEND.md`). Las pantallas se conectan al backend en las fases B2–B9 reemplazando `lib/mock/*` por las funciones del servidor.

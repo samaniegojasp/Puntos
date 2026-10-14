@@ -394,6 +394,7 @@ export default function AdminPreciosPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleOpenEditProduct(prod)}
+                          aria-label={`Editar ${prod.storeName} ${formatUsd(prod.faceCents)}`}
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </Button>

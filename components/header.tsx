@@ -98,6 +98,7 @@ export default function Header() {
                 value={desktopSearch}
                 onChange={(e) => setDesktopSearch(e.target.value)}
                 placeholder="Buscar tiendas…"
+                aria-label="Buscar tiendas"
                 className="w-[200px] pl-8 md:w-[250px] rounded-full bg-muted"
               />
             </form>
@@ -189,6 +190,7 @@ export default function Header() {
               value={mobileSearch}
               onChange={(e) => setMobileSearch(e.target.value)}
               placeholder="Buscar tiendas…"
+              aria-label="Buscar tiendas"
               className="w-full pl-8 rounded-full bg-muted"
             />
           </form>
