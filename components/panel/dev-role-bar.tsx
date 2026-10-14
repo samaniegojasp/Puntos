@@ -12,7 +12,7 @@ export default function DevRoleBar() {
   if (process.env.NEXT_PUBLIC_PROTOTYPE === "0" || !ready) return null
 
   return (
-    <div className="fixed bottom-3 left-3 z-[60] flex items-center gap-2 rounded-full border bg-background/95 px-3 py-1.5 text-xs shadow-lg backdrop-blur">
+    <div className="fixed bottom-16 left-3 z-[60] flex items-center gap-2 rounded-full border bg-background/95 px-3 py-1.5 text-xs shadow-lg backdrop-blur">
       <FlaskConical className="h-3.5 w-3.5 text-primary" aria-hidden />
       <label htmlFor="proto-role" className="font-medium">
         Prototipo · Ver como
