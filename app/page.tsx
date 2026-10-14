@@ -1,3 +1,5 @@
+"use client"
+
 import Link from "next/link"
 import {
   ShoppingBasket,
@@ -22,7 +24,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { GiftCardFace, GiftCardTile } from "@/components/gift-card"
-import { CATEGORIES, PACKS, STORES, formatPoints } from "@/lib/catalog"
+import { PACKS, formatPoints } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   Supermercado: ShoppingBasket,
@@ -34,7 +37,10 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 }
 
 export default function HomePage() {
-  const featuredStores = STORES.filter((s) => s.featured)
+  const { stores, categories } = useCatalog()
+  // Hero: 3 tiendas destacadas; si hay menos de 3, completa con las primeras del catálogo.
+  const featuredStores = stores.filter((s) => s.featured)
+  const heroStores = (featuredStores.length >= 3 ? featuredStores : stores).slice(0, 3)
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -59,17 +65,17 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="relative hidden md:flex items-center justify-center h-80 overflow-hidden">
-              {featuredStores.length >= 3 && (
-                <div className="relative w-80 h-64">
-                  <div className="absolute top-0 left-0 w-64 transform rotate-[-8deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
-                    <GiftCardFace store={featuredStores[0]} usd={featuredStores[0].denoms[0]} />
+            <div className="relative hidden md:flex items-center justify-center h-80 lg:h-[340px] overflow-hidden">
+              {heroStores.length >= 3 && (
+                <div className="relative w-80 h-64 lg:w-[452px] lg:h-[300px] xl:w-[472px] xl:h-[310px]">
+                  <div className="absolute top-0 left-0 w-64 lg:w-[340px] xl:w-[360px] transform rotate-[-8deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
+                    <GiftCardFace store={heroStores[0]} usd={heroStores[0].denoms[0]} />
                   </div>
-                  <div className="absolute top-6 left-10 w-64 transform rotate-[4deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
-                    <GiftCardFace store={featuredStores[1]} usd={featuredStores[1].denoms[0]} />
+                  <div className="absolute top-6 left-10 lg:top-8 lg:left-14 w-64 lg:w-[340px] xl:w-[360px] transform rotate-[4deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
+                    <GiftCardFace store={heroStores[1]} usd={heroStores[1].denoms[0]} />
                   </div>
-                  <div className="absolute top-12 left-20 w-64 transform rotate-[-2deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
-                    <GiftCardFace store={featuredStores[2]} usd={featuredStores[2].denoms[0]} />
+                  <div className="absolute top-12 left-20 lg:top-16 lg:left-28 w-64 lg:w-[340px] xl:w-[360px] transform rotate-[-2deg] shadow-xl transition-transform hover:rotate-0 hover:z-20">
+                    <GiftCardFace store={heroStores[2]} usd={heroStores[2].denoms[0]} />
                   </div>
                 </div>
               )}
@@ -86,7 +92,7 @@ export default function HomePage() {
             <p className="text-muted-foreground">Explora gift cards por tus categorías preferidas</p>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {CATEGORIES.map((cat) => {
+            {categories.map((cat) => {
               const Icon = CATEGORY_ICONS[cat] || ShoppingBasket
               return (
                 <Link
@@ -143,7 +149,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-xl font-semibold">1. Recarga Puntos</h3>
               <p className="text-sm text-muted-foreground">
-                Adquiere paquetes de Puntos con tu tarjeta de forma segura y obtén bonificaciones.
+                Adquiere paquetes de Puntos con tu tarjeta de forma segura.
               </p>
             </div>
             <div className="flex flex-col items-center text-center space-y-3 p-6 rounded-2xl border bg-card">
@@ -256,7 +262,7 @@ export default function HomePage() {
                 Recibe promociones de Puntos
               </h2>
               <p className="text-primary-foreground/90 md:text-lg">
-                Suscríbete para recibir ofertas exclusivas, novedades de nuevas tiendas y bonificaciones de Puntos.
+                Suscríbete para recibir ofertas exclusivas y novedades de nuevas tiendas.
               </p>
             </div>
             <div className="w-full max-w-md space-y-2">

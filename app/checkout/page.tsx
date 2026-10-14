@@ -11,13 +11,15 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
-import { findStore, formatPoints, pointsFor } from "@/lib/catalog"
+import { formatPoints, pointsFor } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 // Canje con Puntos: sin pasarela bancaria.
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, cartTotal, balance, ready, redeem } = usePoints()
+  const { findStore } = useCatalog()
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)

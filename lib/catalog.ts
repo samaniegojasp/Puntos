@@ -24,9 +24,12 @@ export type Store = {
   denoms: number[]
   description: string
   featured?: boolean
+  /** Visible en la tienda. `undefined` cuenta como activa. */
+  active?: boolean
 }
 
-export const STORES: Store[] = [
+/** Catálogo inicial (semilla). El catálogo vigente se lee con `useCatalog()` de lib/catalog-store.tsx. */
+export const DEFAULT_STORES: Store[] = [
   { id: "supermaxi", name: "Supermaxi", category: "Supermercado", theme: "super", denoms: [10, 25, 50], description: "Compras del súper para el día a día.", featured: true },
   { id: "megamaxi", name: "Megamaxi", category: "Supermercado", theme: "super", denoms: [25, 50, 100], description: "Hogar, tecnología y supermercado en un solo lugar." },
   { id: "fybeca", name: "Fybeca", category: "Salud y belleza", theme: "salud", denoms: [10, 20, 40], description: "Cuidado personal, salud y belleza.", featured: true },
@@ -36,8 +39,6 @@ export const STORES: Store[] = [
   { id: "deprati", name: "De Prati", category: "Moda", theme: "moda", denoms: [25, 50, 100], description: "Moda, accesorios y decoración." },
 ]
 
-export const CATEGORIES = Array.from(new Set(STORES.map((s) => s.category)))
-
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }
 
 export const PACKS: PointsPack[] = [
@@ -46,6 +47,5 @@ export const PACKS: PointsPack[] = [
   { id: "p5000", points: 5000, usd: 35, badge: "Mejor valor" },
 ]
 
-export const findStore = (id: string) => STORES.find((s) => s.id === id)
 export const pointsFor = (usd: number) => usd * POINTS_PER_USD
 export const formatPoints = (n: number) => new Intl.NumberFormat("es-EC").format(n)

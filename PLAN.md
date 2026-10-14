@@ -25,17 +25,21 @@ pnpm dev   # http://localhost:3000
 
 | Archivo | Qué exporta / hace |
 |---|---|
-| `lib/catalog.ts` | `STORES`, `CATEGORIES`, `PACKS`, `THEMES`, `POINTS_PER_USD` (150), `findStore(id)`, `pointsFor(usd)`, `formatPoints(n)`, tipos `Store`, `PointsPack` |
+| `lib/catalog.ts` | Constantes: `DEFAULT_STORES` (catálogo inicial, solo semilla), `PACKS`, `THEMES`, `POINTS_PER_USD` (150), `pointsFor(usd)`, `formatPoints(n)`, tipos `Store`, `PointsPack`. **No** exporta `STORES`, `CATEGORIES` ni `findStore`. |
+| `lib/catalog-store.tsx` | `<CatalogProvider>` y hook `useCatalog()` → `{ ready, stores (solo activas), allStores, categories, findStore(id), isAvailable(storeId, usd), saveStore, removeStore, resetCatalog }`. El catálogo es editable desde `/admin`. **Todo componente cliente que necesite tiendas o categorías debe usar este hook** (las páginas que lo usan llevan `"use client"`). |
+| `lib/admin-auth.ts` + `app/admin/` | Panel `/admin` (solo el dueño): añadir, editar, ocultar y eliminar tiendas del catálogo. Clave por `NEXT_PUBLIC_ADMIN_HASH` en `.env.local`. Sin enlaces desde el header ni el footer. |
 | `lib/points-store.tsx` | `<PointsProvider>` y hook `usePoints()` → `{ balance, cart, orders, topups, ready, cartTotal, cartCount, addToCart(storeId, usd), setQty(storeId, usd, qty), clearCart(), redeem(opts), topUp(packId, last4) }` |
 | `lib/payment.ts` | Validación de tarjeta (solo la usa `/recargar`) |
 | `components/points-balance.tsx` | Indicador 💎 de saldo en el header (enlaza a `/recargar`) |
 | `components/gift-card.tsx` | `<GiftCardFace store usd />` (visual de tarjeta) y `<GiftCardTile store />` (selector de valor + botón **"Canjear por X puntos"**) |
 | `app/recargar/page.tsx` | Compra de paquetes de Puntos con tarjeta (simulada). **Único lugar con pago en dinero.** |
 | `app/checkout/page.tsx` | Canje con Puntos (sin datos bancarios); redirige a `/checkout/success?order=<id>` |
-| `app/layout.tsx` | Envuelve la app en `PointsProvider` + `<Toaster />`, `lang="es"` |
+| `app/layout.tsx` | Envuelve la app en `CatalogProvider` > `PointsProvider` + `<Toaster />`, `lang="es"` |
 | `components/header.tsx` | Ya tiene: logo "Regala", saldo de puntos, badge del carrito real. **Falta** traducir nav (Fase 2) |
 
-Reglas de uso de `usePoints()`:
+Reglas de uso de `usePoints()` y `useCatalog()`:
+- Tiendas y categorías: `const { stores, categories, findStore } = useCatalog()`. Nunca importes `DEFAULT_STORES` en una página: ignoraría los cambios del administrador.
+- `usePoints().cart` ya viene filtrado por disponibilidad (una tienda oculta o con otros valores no aparece ni se canjea).
 - Antes de mostrar saldo/carrito comprueba `ready` (se carga de `localStorage` tras montar). Mientras `!ready` muestra `<Skeleton />` o "Cargando…".
 - Para quitar un ítem: `setQty(storeId, usd, 0)`.
 - Precio en puntos de un ítem: `pointsFor(item.usd) * item.qty`. Formatear siempre con `formatPoints()` + `" pts"`.
@@ -62,7 +66,7 @@ function Content() { const params = useSearchParams(); /* … */ }
 
 ## FASE 2 — Header y footer (`components/header.tsx`, `components/footer.tsx`)
 Header (escritorio y menú móvil):
-- Enlaces: `Inicio` (/), `Gift cards` (/shop), dropdown `Categorías` generado con `CATEGORIES.map(c => <Link href={`/shop?categoria=${encodeURIComponent(c)}`}>)` (reemplaza Food/Accessories/Toys/Grooming, que apuntaban a rutas inexistentes), `Recargar Puntos` (/recargar), `Nosotros` (/about), `Contacto` (/contact).
+- Enlaces: `Inicio` (/), `Gift cards` (/shop), dropdown `Categorías` generado con `categories.map(c => <Link href={`/shop?categoria=${encodeURIComponent(c)}`}>)` (reemplaza Food/Accessories/Toys/Grooming, que apuntaban a rutas inexistentes), `Recargar Puntos` (/recargar), `Nosotros` (/about), `Contacto` (/contact).
 - Búsqueda: `placeholder="Buscar tiendas…"`; envuélvela en `<form>` que al enviar haga `router.push(`/shop?q=${encodeURIComponent(valor)}`)` (`useRouter` de `next/navigation`).
 - `sr-only`: "Iniciar sesión", "Carrito", "Menú".
 - En el menú móvil añade el enlace `Mi cuenta` (/login), porque el icono de usuario está oculto en móvil.
@@ -74,9 +78,9 @@ Footer: marca "Regala", descripción "Gift cards digitales de las tiendas favori
 
 ## FASE 3 — Catálogo `app/shop/page.tsx` (reescritura completa)
 Borra el array `products`, filtros de marca/rating/precio y la paginación. Implementa:
-- Datos: `STORES` y `CATEGORIES` de `@/lib/catalog`; tarjeta: `<GiftCardTile store={s} />`.
+- Datos: `stores` y `categories` de `useCatalog()` (`@/lib/catalog-store`); tarjeta: `<GiftCardTile store={s} />`.
 - Estado inicial desde la URL (`useSearchParams`, con `<Suspense>`): `categoria` → categoría preseleccionada; `q` → texto de búsqueda.
-- Barra superior: `<Input>` de búsqueda (filtra por `name` y `category`, sin distinguir mayúsculas ni tildes: `s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()`), chips de categoría ("Todas" + `CATEGORIES`, uno activo), `<Select>` de orden: `Destacadas` (featured primero), `Menos puntos`, `Más puntos` (por `pointsFor(s.denoms[0])`).
+- Barra superior: `<Input>` de búsqueda (filtra por `name` y `category`, sin distinguir mayúsculas ni tildes: `s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase()`), chips de categoría ("Todas" + `categories`, uno activo), `<Select>` de orden: `Destacadas` (featured primero), `Menos puntos`, `Más puntos` (por `pointsFor(s.denoms[0])`).
 - Grid: `grid gap-6 sm:grid-cols-2 lg:grid-cols-3`.
 - Vacío: "No encontramos tiendas con ese criterio" + botón "Limpiar filtros".
 - Encabezado: `h1` "Gift cards" + breadcrumb `Inicio / Gift cards` + contador `{n} tiendas`.
@@ -87,7 +91,7 @@ Borra el array `products`, filtros de marca/rating/precio y la paginación. Impl
 ## FASE 4 — Carrito `app/cart/page.tsx` (reescritura)
 - Fuente: `const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()`. Borra el array mock.
 - `!ready` → "Cargando…". Vacío → "Tu carrito está vacío" + botón "Ver gift cards" (/shop).
-- Fila por ítem: `<GiftCardFace store={findStore(i.storeId)!} usd={i.usd} className="w-28 p-2 text-xs" />`, nombre `"{tienda} · ${usd}"`, puntos unitarios, controles −/+ (`setQty(i.storeId, i.usd, i.qty ± 1)`; con 1 el "−" queda deshabilitado), botón eliminar (`setQty(..., 0)`), subtotal en pts.
+- Fila por ítem: `<GiftCardFace store={findStore(i.storeId)!} usd={i.usd} compact className="w-28 shrink-0" />`, nombre `"{tienda} · ${usd}"`, puntos unitarios, controles −/+ (`setQty(i.storeId, i.usd, i.qty ± 1)`; con 1 el "−" queda deshabilitado), botón eliminar (`setQty(..., 0)`), subtotal en pts.
 - Resumen (Card): `Total` en pts, `Tu saldo`, y si `cartTotal > balance`: texto rojo "Te faltan X pts" + botón **"Recargar Puntos"** (/recargar). Si alcanza: botón **"Canjear X puntos"** → `/checkout`.
 - **Elimina**: envío, impuestos, cupón, cualquier `$` excepto el valor facial.
 - Botones inferiores: "Seguir explorando" (/shop) y "Vaciar carrito" (`clearCart`).
@@ -108,8 +112,8 @@ Borra el array `products`, filtros de marca/rating/precio y la paginación. Impl
 ## FASE 6 — Home `app/page.tsx` (reescritura completa)
 Borra arrays de productos/categorías/testimonios de mascotas y todas las imágenes de Unsplash. Secciones en orden:
 1. **Hero** (degradado `bg-gradient-to-br from-primary/15 via-background to-pink-500/10`): h1 "Regala lo que realmente quieren", subtítulo "Canjea tus Puntos por gift cards de las tiendas favoritas de Ecuador. Entrega digital inmediata.", botones "Ver gift cards" (/shop) y "Recargar Puntos" (/recargar, `variant="outline"`). A la derecha: 3 `<GiftCardFace>` superpuestas y rotadas (`rotate-[-8deg]`, `rotate-[4deg]`…) usando 3 tiendas `featured`; ocultas en móvil (`hidden md:block`).
-2. **Categorías**: chips/tarjetas desde `CATEGORIES` → `/shop?categoria=…`, con icono lucide (ShoppingBasket, HeartPulse, Dumbbell, Hammer, ToyBrick, Shirt).
-3. **Destacadas**: `STORES.filter(s => s.featured)` → `<GiftCardTile>` en grid; botón "Ver todas" (/shop).
+2. **Categorías**: chips/tarjetas desde `categories` (de `useCatalog()`) → `/shop?categoria=…`, con icono lucide (ShoppingBasket, HeartPulse, Dumbbell, Hammer, ToyBrick, Shirt).
+3. **Destacadas**: `stores.filter(s => s.featured)` (de `useCatalog()`) → `<GiftCardTile>` en grid; botón "Ver todas" (/shop).
 4. **Cómo funciona** (`id="como-funciona"`): 3 pasos con iconos Gem, Gift, Zap: "Recarga Puntos" / "Elige tu gift card" / "Recibe tu código al instante".
 5. **Paquetes**: `PACKS` en 3 tarjetas (puntos, `$usd`, badge) → todas enlazan a `/recargar`.
 6. **FAQ** (`id="faq"`, `Accordion`): ¿Qué son los Puntos? · ¿Los Puntos caducan? (respuesta: "En esta demo, no.") · ¿Cómo recibo mi gift card? · ¿Puedo regalarla a otra persona?
@@ -117,13 +121,17 @@ Borra arrays de productos/categorías/testimonios de mascotas y todas las imáge
 
 ✅ Checklist: sin imágenes externas; a 375 px sin scroll horizontal. Commit `feat: home de gift cards`.
 
-## FASE 7 — Páginas de texto
-Traduce al español y quita toda referencia a mascotas en: `app/about/page.tsx` (misión: "hacer fácil regalar en Ecuador"; sin fotos de perros: usa iconos o `<GiftCardFace>`), `app/contact/page.tsx` (dirección Quito, correo hola@regala.ec, horario; formulario igual pero en español), `app/login`, `app/register`, `app/forgot-password` (solo textos; en register añade nota "Recibe 500 Puntos de bienvenida"). `app/loading.tsx`: texto "Cargando…".
+## FASE 7 — Páginas de texto y ajustes de seguimiento
+**Parte A.** Traduce al español y quita toda referencia a mascotas en: `app/about/page.tsx` (misión: "hacer fácil regalar en Ecuador"; sin fotos de perros: usa iconos o `<GiftCardFace>`), `app/contact/page.tsx` (dirección Quito, correo hola@regala.ec, horario; formulario igual pero en español; **arregla el error de tipos de la línea 17**: tipa el parámetro `e` con `React.FormEvent<HTMLFormElement>` o `React.ChangeEvent<...>`), `app/login`, `app/register`, `app/forgot-password` (solo textos; en register añade nota "Recibe 500 Puntos de bienvenida"; sin autenticación real). `app/loading.tsx`: texto "Cargando…".
 
-✅ Checklist: Commit `chore: textos en español`.
+**Parte B.**
+- B1 Newsletter del home (`app/page.tsx`): el formulario recarga la página sin respuesta. Extráelo a `components/newsletter-form.tsx` (`"use client"`): `preventDefault`, valida que el correo no esté vacío, `toast.success("¡Gracias! Te avisaremos de las novedades")` y vacía el campo. No guardes el correo (es demo). No prometas bonificaciones en ningún texto.
+- B2 `components/header.tsx`: entre 768 y 1023 px no hay buscador. El menú de escritorio debe aparecer desde `lg`: cambia `hidden md:flex` por `hidden lg:flex` en el `<nav>` de escritorio, y `md:hidden` por `lg:hidden` en el botón de menú y en el contenedor del menú móvil. No toques `<PointsBalance />` ni el badge del carrito.
+
+✅ Checklist: `npx tsc --noEmit` con **cero** errores; a 800 px se ve el botón de menú y su buscador; newsletter muestra el aviso. Commit `chore: textos en español y ajustes de seguimiento`.
 
 ## FASE 8 — README
-Crear `README.md`: qué es, `pnpm install` / `pnpm dev`, flujo (recargar → elegir → canjear), y sección **Limitaciones de la demo**: saldo en `localStorage` (manipulable), pago simulado (tarjeta de prueba 4242 4242 4242 4242), códigos ficticios, marcas solo como referencia. Commit `docs: README`.
+Crear `README.md`: qué es, `npm install` / `npm run dev` (o pnpm), flujo (recargar → elegir → canjear), **cómo configurar `/admin`** (generar el hash con el comando de PowerShell que muestra la propia página, guardarlo en `.env.local` como `NEXT_PUBLIC_ADMIN_HASH`, reiniciar el servidor) y sección **Limitaciones de la demo**: saldo y catálogo en `localStorage` (manipulables y visibles solo en el navegador donde se guardan), la clave de `/admin` se comprueba en el navegador (frena el acceso casual, no es seguridad real), pago simulado (tarjeta de prueba 4242 4242 4242 4242), códigos ficticios, marcas solo como referencia. Commit `docs: README`.
 
 ## FASE 9 — Verificación final (PowerShell)
 ```powershell
@@ -157,3 +165,4 @@ git push -u origin claude/pet-store-gift-cards-refactor-n3h79x
 2. Pasarela con formulario alojado (Payphone, Kushki, Datafast): no capturar números de tarjeta propios (PCI-DSS).
 3. Acuerdos con las tiendas para emitir códigos reales; facturación electrónica SRI por la venta de Puntos; política de caducidad y reembolso.
 4. Validar `POINTS_PER_USD` contra el margen real que den las tiendas.
+5. Administración real: catálogo en base de datos (Supabase, Firebase, Vercel KV…) y acceso con autenticación de servidor. Hoy `/admin` solo cambia el catálogo en el navegador de quien lo usa; el resto de visitantes no ve esos cambios.

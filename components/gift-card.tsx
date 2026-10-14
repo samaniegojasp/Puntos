@@ -50,7 +50,9 @@ export function GiftCardFace({
 
 /** Tarjeta del catálogo: selector de denominación + botón de canje. */
 export function GiftCardTile({ store }: { store: Store }) {
-  const [usd, setUsd] = useState(store.denoms[0])
+  const [picked, setUsd] = useState(store.denoms[0])
+  // Si el administrador cambió los valores de la tienda, vuelve al primero disponible.
+  const usd = store.denoms.includes(picked) ? picked : store.denoms[0]
   const { addToCart } = usePoints()
   const points = pointsFor(usd)
 

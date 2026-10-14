@@ -1,8 +1,9 @@
 "use client"
 
 // Estado global: saldo de Puntos, carrito, órdenes y recargas. Persistido en localStorage (DEMO: manipulable por el usuario).
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react"
-import { PACKS, WELCOME_POINTS, findStore, pointsFor } from "@/lib/catalog"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
+import { PACKS, WELCOME_POINTS, pointsFor } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 
 export type CartItem = { storeId: string; usd: number; qty: number }
 export type RedeemedCode = { storeId: string; usd: number; code: string }
@@ -15,10 +16,9 @@ export type RedeemResult = { ok: true; order: Order } | { ok: false; reason: "em
 const STORAGE_KEY = "gc_state_v1"
 const initialState: State = { balance: WELCOME_POINTS, cart: [], orders: [], topups: [] }
 
-const isValidItem = (i: CartItem) => {
-  const s = findStore(i.storeId)
-  return !!s && s.denoms.includes(i.usd) && Number.isInteger(i.qty) && i.qty > 0
-}
+// Validación estructural (no depende del catálogo): el catálogo se aplica al derivar el carrito.
+const isWellFormed = (i: CartItem) =>
+  !!i && typeof i.storeId === "string" && Number.isInteger(i.usd) && i.usd > 0 && Number.isInteger(i.qty) && i.qty > 0
 const cartTotal = (cart: CartItem[]) => cart.reduce((sum, i) => sum + pointsFor(i.usd) * i.qty, 0)
 
 function load(): State {
@@ -28,7 +28,7 @@ function load(): State {
     const s = JSON.parse(raw) as State
     return {
       balance: Number.isInteger(s.balance) && s.balance >= 0 ? s.balance : 0,
-      cart: Array.isArray(s.cart) ? s.cart.filter(isValidItem) : [],
+      cart: Array.isArray(s.cart) ? s.cart.filter(isWellFormed) : [],
       orders: Array.isArray(s.orders) ? s.orders : [],
       topups: Array.isArray(s.topups) ? s.topups : [],
     }
@@ -60,6 +60,10 @@ const PointsContext = createContext<Ctx | null>(null)
 export function PointsProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(initialState)
   const [ready, setReady] = useState(false)
+  const { isAvailable } = useCatalog()
+  // Siempre el criterio de disponibilidad más reciente, para usarlo dentro de callbacks estables.
+  const availRef = useRef(isAvailable)
+  availRef.current = isAvailable
   // Ref espejo: las mutaciones leen siempre el estado más reciente (evita doble canje con doble clic).
   const ref = useRef(state)
 
@@ -82,12 +86,13 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
 
   const addToCart = useCallback(
     (storeId: string, usd: number) => {
+      if (!availRef.current(storeId, usd)) return
       const s = ref.current
       const exists = s.cart.some((i) => i.storeId === storeId && i.usd === usd)
       const cart = exists
         ? s.cart.map((i) => (i.storeId === storeId && i.usd === usd ? { ...i, qty: i.qty + 1 } : i))
         : [...s.cart, { storeId, usd, qty: 1 }]
-      commit({ ...s, cart: cart.filter(isValidItem) })
+      commit({ ...s, cart })
     },
     [commit],
   )
@@ -107,10 +112,12 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
   const redeem = useCallback(
     (opts: { recipientEmail?: string; message?: string } = {}): RedeemResult => {
       const s = ref.current
-      if (!s.cart.length) return { ok: false, reason: "empty", missing: 0 }
-      const total = cartTotal(s.cart)
+      // Solo se canjea lo que sigue disponible en el catálogo (una tienda pudo ocultarse o cambiar de valores).
+      const items = s.cart.filter((i) => availRef.current(i.storeId, i.usd))
+      if (!items.length) return { ok: false, reason: "empty", missing: 0 }
+      const total = cartTotal(items)
       if (total > s.balance) return { ok: false, reason: "insufficient", missing: total - s.balance }
-      const codes = s.cart.flatMap((i) => Array.from({ length: i.qty }, () => ({ storeId: i.storeId, usd: i.usd, code: genCode(i.storeId) })))
+      const codes = items.flatMap((i) => Array.from({ length: i.qty }, () => ({ storeId: i.storeId, usd: i.usd, code: genCode(i.storeId) })))
       const order: Order = { id: `ORD-${Date.now()}`, date: new Date().toISOString(), points: total, codes, ...opts }
       commit({ ...s, balance: s.balance - total, cart: [], orders: [order, ...s.orders] })
       return { ok: true, order }
@@ -131,11 +138,15 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     [commit],
   )
 
+  // Carrito visible: solo ítems vigentes en el catálogo actual.
+  const cart = useMemo(() => state.cart.filter((i) => isAvailable(i.storeId, i.usd)), [state.cart, isAvailable])
+
   const value: Ctx = {
     ...state,
+    cart,
     ready,
-    cartTotal: cartTotal(state.cart),
-    cartCount: state.cart.reduce((n, i) => n + i.qty, 0),
+    cartTotal: cartTotal(cart),
+    cartCount: cart.reduce((n, i) => n + i.qty, 0),
     addToCart,
     setQty,
     clearCart,

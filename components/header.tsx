@@ -11,7 +11,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Badge } from "@/components/ui/badge"
 import PointsBalance from "@/components/points-balance"
 import { usePoints } from "@/lib/points-store"
-import { CATEGORIES } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -19,6 +19,7 @@ export default function Header() {
   const [mobileSearch, setMobileSearch] = useState("")
   const router = useRouter()
   const { cartCount, ready } = usePoints()
+  const { categories } = useCatalog()
 
   const handleDesktopSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -57,7 +58,7 @@ export default function Header() {
                 Categorías <ChevronDown className="h-4 w-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <DropdownMenuItem key={c} asChild>
                     <Link href={`/shop?categoria=${encodeURIComponent(c)}`} className="w-full">
                       {c}
@@ -147,7 +148,7 @@ export default function Header() {
                 Categorías <ChevronDown className="h-4 w-4" />
               </summary>
               <nav className="mt-2 ml-4 flex flex-col space-y-2">
-                {CATEGORIES.map((c) => (
+                {categories.map((c) => (
                   <Link
                     key={c}
                     href={`/shop?categoria=${encodeURIComponent(c)}`}

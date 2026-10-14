@@ -7,11 +7,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GiftCardFace } from "@/components/gift-card"
-import { findStore, formatPoints, pointsFor } from "@/lib/catalog"
+import { formatPoints, pointsFor } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
   const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
+  const { findStore } = useCatalog()
 
   if (!ready) {
     return (

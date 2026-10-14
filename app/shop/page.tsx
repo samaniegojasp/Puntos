@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GiftCardTile } from "@/components/gift-card"
-import { CATEGORIES, STORES, pointsFor } from "@/lib/catalog"
+import { pointsFor } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 
 type SortOption = "featured" | "asc" | "desc"
 
@@ -19,9 +20,10 @@ function normalize(str: string): string {
 
 function ShopContent() {
   const searchParams = useSearchParams()
+  const { stores, categories, ready } = useCatalog()
 
   const catParam = searchParams.get("categoria")
-  const initialCategory = catParam && CATEGORIES.includes(catParam) ? catParam : "Todas"
+  const initialCategory = catParam && categories.includes(catParam) ? catParam : "Todas"
   const initialQuery = searchParams.get("q") || ""
 
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory)
@@ -30,14 +32,14 @@ function ShopContent() {
 
   useEffect(() => {
     const cat = searchParams.get("categoria")
-    setSelectedCategory(cat && CATEGORIES.includes(cat) ? cat : "Todas")
+    setSelectedCategory(cat && categories.includes(cat) ? cat : "Todas")
     setQuery(searchParams.get("q") || "")
-  }, [searchParams])
+  }, [searchParams, ready])
 
   const filteredStores = useMemo(() => {
     const q = normalize(query.trim())
 
-    const list = STORES.filter((s) => {
+    const list = stores.filter((s) => {
       const matchesCategory = selectedCategory === "Todas" || s.category === selectedCategory
       const matchesQuery =
         !q || normalize(s.name).includes(q) || normalize(s.category).includes(q)
@@ -58,7 +60,7 @@ function ShopContent() {
       }
       return 0
     })
-  }, [selectedCategory, query, sortOrder])
+  }, [stores, selectedCategory, query, sortOrder])
 
   const handleClearFilters = () => {
     setQuery("")
@@ -114,7 +116,7 @@ function ShopContent() {
 
       {/* Chips de categoría */}
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filtro por categoría">
-        {["Todas", ...CATEGORIES].map((cat) => {
+        {["Todas", ...categories].map((cat) => {
           const isActive = selectedCategory === cat
           return (
             <Button

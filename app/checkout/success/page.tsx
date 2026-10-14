@@ -9,13 +9,15 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { GiftCardFace } from "@/components/gift-card"
-import { findStore, formatPoints } from "@/lib/catalog"
+import { formatPoints } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams()
   const orderId = searchParams.get("order")
   const { orders, balance, ready } = usePoints()
+  const { findStore } = useCatalog()
 
   if (!ready) {
     return (
