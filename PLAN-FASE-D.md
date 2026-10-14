@@ -83,7 +83,7 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 
 **Prompt para Haiku:**
 
-> Lee `PLAN-FASE-D.md` secciones 0 y 1. Trabaja sobre `app/register/page.tsx` (ya existe, mantén su aviso de demostración), `components/header.tsx`, `app/cuenta/perfil/page.tsx` y dos páginas nuevas `app/terminos/page.tsx` y `app/privacidad/page.tsx`.
+> Lee `PLAN-FASE-D.md` secciones 0 y 1. Trabaja sobre `app/register/page.tsx` (ya existe, mantén su aviso de demostración), `components/header.tsx`, `components/footer.tsx` (solo los enlaces "Términos" y "Privacidad", que hoy apuntan a `#`: deben ir a `/terminos` y `/privacidad`), `app/cuenta/perfil/page.tsx` y dos páginas nuevas `app/terminos/page.tsx` y `app/privacidad/page.tsx`.
 >
 > **Registro:** agrega "Tipo de documento" (`Select`: Cédula / RUC / Pasaporte, etiquetas de `DOC_TYPE_LABEL`), "Número de documento" (se valida con `validateDocument` al salir del campo y al enviar; muestra el `error` en español), "Fecha de nacimiento" (`input type=date`; si `isAdult` es falso: "Debes ser mayor de 18 años para registrarte."). Casilla obligatoria: "Declaro ser mayor de 18 años y acepto los [Términos y Condiciones](/terminos) y la [Política de Privacidad](/privacidad)". El botón "Crear cuenta" queda deshabilitado hasta que todo sea válido. Al enviar, el comportamiento sigue siendo de demostración (no se crea ninguna cuenta), pero muestra una pantalla de éxito clara con el aviso "Prototipo: no se creó ninguna cuenta".
 >
@@ -91,11 +91,11 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 >
 > **Perfil (`/cuenta/perfil`):** tarjeta de solo lectura con `useMockSession().profile`: nombre, correo, tipo de documento, número **enmascarado** (`maskDocument`) con botón "Mostrar" que lo revela, fecha de nacimiento, "Términos aceptados el <fecha> (versión X)". Texto: "Para corregir tu documento, escríbenos desde Contacto."
 >
-> **Menú del header:** el ícono de usuario pasa a un `DropdownMenu` que muestra el nombre, el rol (`ROLE_LABEL`) y estos enlaces según `useMockSession().role`: todos → "Mi cuenta" (`/cuenta`); cliente → "Panel de Cliente" (`/cliente`); proveedor → "Panel de Proveedor" (`/proveedor`); admin → "Panel de Cliente", "Panel de Proveedor" y "Administración" (`/admin/clientes`). Un ítem deshabilitado "Cerrar sesión (prototipo)". En el menú móvil, los mismos enlaces. No toques la lógica del saldo ni del carrito.
+> **Menú del header:** el ícono de usuario pasa a un `DropdownMenu` que muestra el nombre, el rol (`ROLE_LABEL`) y estos enlaces según `useMockSession().role`: todos → "Mi cuenta" (`/cuenta`); cliente → "Panel de Cliente" (`/cliente`); proveedor → "Panel de Proveedor" (`/proveedor`); admin → "Panel de Cliente", "Panel de Proveedor" y "Administración" (`/admin/clientes`). Además un ítem "Iniciar sesión" (`/login`) y un ítem deshabilitado "Cerrar sesión (prototipo)". En el menú móvil, los mismos enlaces. No toques la lógica del saldo ni del carrito.
 >
 > Pruebas manuales: registro con cédula inválida, con fecha de menor de edad, sin casilla, y todo correcto; menú con cada rol; `/cuenta/perfil`; enlaces a /terminos y /privacidad. Luego regla 12.
 
-**Criterio de aceptación:** cédula `1712345670` rechazada, `1712345675` aceptada; fecha del 15-10-2010 rechazada; el menú cambia por rol; no hay enlaces rotos.
+**Criterio de aceptación:** cédula `1712345670` rechazada, `1712345675` aceptada; fecha del 15-10-2010 rechazada; el menú cambia por rol; no hay enlaces rotos (incluidos los del pie de página).
 
 ---
 
