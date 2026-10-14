@@ -185,15 +185,28 @@ export default function AdminClientesPage() {
   }
 
   // Manejo de tramos propios
+  // Tramo nuevo: se crea con los puntos en la mitad del rango permitido para que nazca válido
   const handleAddPack = () => {
-    setCustomPacks((prev) => [
-      ...prev,
-      {
-        id: `pack-${Date.now()}`,
-        usdCents: 10000,
-        points: 12000,
-      },
-    ])
+    const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 12000 }
+    const next = [...customPacks, fresh]
+    const b = boundsFor(next, next.length - 1)
+    if (b) fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
+    setCustomPacks(next.map((p) => (p.id === fresh.id ? fresh : p)))
+  }
+
+  // Al cambiar el monto de un tramo se conserva su proporción de puntos por dólar y se ajusta al nuevo rango permitido
+  const handleUsdChange = (idx: number, usdCents: number) => {
+    const cur = customPacks[idx]
+    if (!cur || usdCents <= 0 || cur.usdCents <= 0) {
+      handlePackChange(idx, "usdCents", usdCents)
+      return
+    }
+    const ptsPerDollar = cur.points / (cur.usdCents / 100)
+    let pts = Math.max(POINTS_STEP, Math.round(((usdCents / 100) * ptsPerDollar) / POINTS_STEP) * POINTS_STEP)
+    const next = customPacks.map((p, i) => (i === idx ? { ...p, usdCents, points: pts } : p))
+    const b = boundsFor(next, idx)
+    if (b) pts = Math.min(Math.max(pts, b.min), b.max)
+    setCustomPacks(next.map((p, i) => (i === idx ? { ...p, points: pts } : p)))
   }
 
   const handleRemovePack = (idx: number) => {
@@ -266,18 +279,23 @@ export default function AdminClientesPage() {
     if (!own || own.usdCents <= 0) return null
     const tag = `tramo $${(own.usdCents / 100).toFixed(2)}:`
     const withPoints = (pts: number) => packs.map((x, i) => (i === idx ? { ...x, points: pts } : x))
-    const lowOk = (pts: number) =>
-      !buildIssues(withPoints(pts), forceCustom).some(
+    // Se cuentan los errores que dependen de ESTE tramo y se comparan con el mejor caso posible.
+    // Así, un error que ya traen otros tramos no hace desaparecer el rango de este.
+    const countLow = (pts: number) =>
+      buildIssues(withPoints(pts), forceCustom).filter(
         (i) => i.rule === 2 || (i.rule === 6 && i.limit === "max"),
-      )
-    const highOk = (pts: number) =>
-      !buildIssues(withPoints(pts), forceCustom).some(
+      ).length
+    const countHigh = (pts: number) =>
+      buildIssues(withPoints(pts), forceCustom).filter(
         (i) => (i.rule === 3 && i.message.includes(tag)) || (i.rule === 6 && i.limit === "min"),
-      )
-
+      ).length
     const maxK = Math.floor(POINTS_CAP / POINTS_STEP)
+    const baseLow = countLow(maxK * POINTS_STEP)
+    const baseHigh = countHigh(POINTS_STEP)
+    const lowOk = (pts: number) => countLow(pts) <= baseLow
+    const highOk = (pts: number) => countHigh(pts) <= baseHigh
+
     // Menor valor que cumple la regla 2 (válido de ahí hacia arriba)
-    if (!lowOk(maxK * POINTS_STEP) || !highOk(POINTS_STEP)) return null
     let a = 1
     let b = maxK
     while (a < b) {
@@ -645,11 +663,7 @@ export default function AdminClientesPage() {
                               step="1"
                               value={usdAmount}
                               onChange={(e) =>
-                                handlePackChange(
-                                  idx,
-                                  "usdCents",
-                                  Math.round((parseFloat(e.target.value) || 0) * 100)
-                                )
+                                handleUsdChange(idx, Math.round((parseFloat(e.target.value) || 0) * 100))
                               }
                             />
                           </div>
