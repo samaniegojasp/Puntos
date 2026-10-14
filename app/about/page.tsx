@@ -48,7 +48,7 @@ export default function AboutPage() {
               </div>
               <h3 className="font-bold text-base">100% Digital</h3>
               <p className="text-xs text-muted-foreground">
-                Códigos inmediatos entregados en tu pantalla o por correo.
+                Códigos inmediatos entregados en tu pantalla.
               </p>
             </CardContent>
           </Card>
@@ -127,7 +127,7 @@ export default function AboutPage() {
             </div>
             <h3 className="font-semibold text-lg">Confianza</h3>
             <p className="text-sm text-muted-foreground">
-              Seguridad en cada transacción y garantía de validez en cada código canjeado.
+              Transparencia en cada canje: ves cuántos Puntos usas y cuál es tu saldo.
             </p>
           </div>
 

@@ -77,7 +77,7 @@ function OrderSuccessContent() {
           {order.recipientEmail && (
             <div className="rounded-lg border bg-muted/40 p-4 text-sm space-y-1">
               <p className="font-medium text-foreground">
-                Enviaremos las gift cards a {order.recipientEmail}
+                Destinatario: {order.recipientEmail} (en esta demo no se envía ningún correo; copia el código y compártelo)
               </p>
               {order.message && (
                 <p className="italic text-muted-foreground">

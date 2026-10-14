@@ -240,13 +240,13 @@ export default function HomePage() {
             <AccordionItem value="item-3">
               <AccordionTrigger>¿Cómo recibo mi gift card?</AccordionTrigger>
               <AccordionContent>
-                Una vez confirmado el canje, recibirás de inmediato tu código digital en pantalla y podrás copiarlo para utilizarlo en tus compras.
+                Al confirmar el canje, tu código se muestra directamente en pantalla; en esta demo no se envía por correo, se comparte copiándolo.
               </AccordionContent>
             </AccordionItem>
             <AccordionItem value="item-4">
               <AccordionTrigger>¿Puedo regalarla a otra persona?</AccordionTrigger>
               <AccordionContent>
-                ¡Sí! Al momento del canje en el checkout puedes especificar el correo del destinatario y un mensaje personalizado.
+                ¡Sí! Puedes ingresar el correo y dedicatoria al canjear, pero en esta demo no se envía correo: el código se muestra en pantalla y se comparte copiándolo.
               </AccordionContent>
             </AccordionItem>
           </Accordion>

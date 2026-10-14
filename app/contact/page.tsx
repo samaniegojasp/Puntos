@@ -40,9 +40,9 @@ export default function ContactPage() {
 
               {formSubmitted ? (
                 <div className="bg-primary/10 text-primary p-6 rounded-xl mb-6 space-y-2">
-                  <h3 className="font-semibold text-lg">¡Gracias por escribirnos!</h3>
+                  <h3 className="font-semibold text-lg">Esto es una demostración</h3>
                   <p className="text-sm">
-                    Tu mensaje ha sido enviado con éxito. Te responderemos lo antes posible a tu correo.
+                    Tu mensaje no se envió porque este sitio todavía no tiene servidor. Cuando esté en producción te responderemos por correo.
                   </p>
                 </div>
               ) : (

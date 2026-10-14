@@ -63,7 +63,7 @@ export default function CheckoutPage() {
                 <Label htmlFor="message">Mensaje</Label>
                 <Textarea id="message" maxLength={200} placeholder="¡Feliz cumpleaños!" value={message} onChange={(e) => setMessage(e.target.value)} />
               </div>
-              <p className="text-xs text-muted-foreground">Entrega digital: los códigos aparecen al instante tras el canje.</p>
+              <p className="text-xs text-muted-foreground">Demo: no se envía correo; los códigos aparecen al instante en pantalla.</p>
             </CardContent>
           </Card>
         </div>
