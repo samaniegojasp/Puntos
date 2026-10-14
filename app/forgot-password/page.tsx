@@ -18,10 +18,13 @@ export default function ForgotPasswordPage() {
           </div>
           <CardTitle className="text-2xl text-center">¿Olvidaste tu contraseña?</CardTitle>
           <CardDescription className="text-center">
-            Ingresa tu correo electrónico y te enviaremos un enlace para restablecerla
+            Ingresa tu correo electrónico para recuperar el acceso a tu cuenta
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-xl bg-muted/60 p-3 text-center text-sm text-muted-foreground border">
+            Demostración: la recuperación de contraseña aún no está activa.
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Correo electrónico</Label>
             <Input id="email" type="email" placeholder="nombre@correo.com" />

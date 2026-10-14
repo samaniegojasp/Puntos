@@ -30,7 +30,7 @@ export default function RegisterPage() {
             Demostración: el registro aún no crea cuentas.
           </div>
           <div className="rounded-xl bg-primary/10 p-3 text-center text-sm font-medium text-primary">
-            Recibe 500 Puntos de bienvenida
+            En esta demo, todos parten con 500 Puntos de bienvenida
           </div>
 
           <div className="grid grid-cols-2 gap-4">

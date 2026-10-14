@@ -1,6 +1,6 @@
 # Regala — Gift Cards de Ecuador con Puntos
 
-**Regala** es una aplicación e-commerce de demostración construida con Next.js 15 (App Router) que permite a los usuarios canjear tarjetas de regalo (gift cards) digitales de marcas reconocidas de Ecuador (Supermaxi, Fybeca, Marathon Sports, Sukasa, Juguetón, De Prati, entre otras) utilizando una moneda virtual acumulable denominada **Puntos**.
+**Regala** es una aplicación e-commerce de demostración construida con Next.js 15 (App Router) que permite a los usuarios canjear tarjetas de regalo (gift cards) digitales de marcas reconocidas de Ecuador (Supermaxi, Megamaxi, Fybeca, Marathon Sports, Kywi, Juguetón y De Prati) utilizando una moneda virtual acumulable denominada **Puntos**.
 
 ---
 
@@ -67,10 +67,10 @@ pnpm start
 
 1. **Recargar Puntos (`/recargar`)**:
    - Cada usuario inicia con un saldo de bienvenida de 500 Puntos.
-   - En la página de recarga se pueden simular compras de paquetes de Puntos (1.000 pts por $6, 2.500 pts por $15, 5.000 pts por $28) utilizando una tarjeta de crédito o débito de prueba (`4242 4242 4242 4242`, fecha futura, CVV de 3 dígitos).
+   - En la página de recarga se pueden simular compras de paquetes de Puntos (1.000 pts por $10, 2.500 pts por $20 y 5.000 pts por $35) utilizando una tarjeta de crédito o débito de prueba (`4242 4242 4242 4242`, fecha futura, CVV de 3 dígitos).
 
 2. **Elegir Gift Cards (`/shop` o Home `/`)**:
-   - Catálogo interactivo de tiendas organizado por categorías (Supermercados, Farmacias, Deportes, Hogar, Juguetes, Moda).
+   - Catálogo interactivo de tiendas organizado por categorías (Supermercado, Salud y belleza, Deportes, Hogar y ferretería, Juguetes y Moda).
    - Filtros dinámicos por nombre/tienda y ordenamiento por puntos requeridos.
    - Cada tienda ofrece denominaciones fijas en dólares (ej. $10, $20, $50). La tasa de conversión base es de **150 Puntos por cada $1 USD**.
 
@@ -98,7 +98,7 @@ $hash = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($clave)) | ForEac
 "NEXT_PUBLIC_ADMIN_HASH=$hash" | Out-File -Encoding ascii .env.local
 ```
 
-2. Reinicia el servidor de desarrollo (`npm run dev` o `pnpm dev`).
+2. Reinicia el servidor de desarrollo (`npm run dev` o `pnpm dev`). Si usas una compilación de producción, vuelve a ejecutar `npm run build`: la variable se incorpora al compilar.
 3. Ingresa a `/admin` e introduce la clave en texto plano (`mi-clave-secreta-personalizada`) para acceder.
 
 > **Nota**: El archivo `.env.local` está ignorado en `.gitignore` y **no** debe subirse al repositorio.
@@ -112,5 +112,5 @@ Este proyecto fue desarrollado como una prueba de concepto interactiva y demostr
 - **Almacenamiento en `localStorage`**: El saldo de Puntos, los pedidos canjeados, el carrito y las modificaciones del catálogo en `/admin` se guardan exclusivamente en el `localStorage` del navegador. Son visibles y manipulables solo en el dispositivo y navegador donde se realizan.
 - **Autenticación en el cliente**: La verificación de la clave de `/admin` se ejecuta del lado del cliente calculando el hash SHA-256 en el navegador. Es suficiente para evitar accesos accidentales, pero no constituye una barrera de seguridad de grado de producción.
 - **Pasarela de pago simulada**: El módulo de recarga valida la estructura básica de la tarjeta mediante algoritmo de Luhn, pero no realiza ningún cargo bancario ni se conecta a pasarelas reales (como Payphone, Kushki o Datafast).
-- **Sin backend ni envío de correos**: No hay servidor ni servicio SMTP configurado. Los formularios de contacto, registro, inicio de sesión y recuperación de contraseña son simulados y no transmiten información exterior.
-- **Códigos ficticios y marcas referenciales**: Los códigos alfanuméricos generados tras el canje son aleatorios y no tienen validez legal ni comercial en tiendas físicas ni digitales. Los nombres comerciales, marcas y logotipos pertenecen a sus respectivos dueños y se utilizan únicamente con propósitos ilustrativos.
+- **Sin backend ni envío de correos**: No hay servidor ni servicio SMTP configurado. Los formularios de contacto, registro, inicio de sesión y recuperación de contraseña son simulados: no envían ni guardan nada.
+- **Códigos ficticios y marcas referenciales**: Los códigos alfanuméricos generados tras el canje son aleatorios y no tienen validez legal ni comercial en tiendas físicas ni digitales. Los nombres comerciales pertenecen a sus respectivos dueños y se mencionan únicamente con propósitos ilustrativos; el sitio no usa sus logotipos ni colores corporativos.
