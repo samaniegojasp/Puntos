@@ -19,17 +19,22 @@ import {
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct } from "@/lib/domain/format"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { validatePricing } from "@/lib/domain/pricing"
 import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
   const [loading, setLoading] = useState(true)
+  const { settings: current, setSettings } = useAdminSettings()
 
   // Estado del formulario de ajustes
-  const [minMarginPctInput, setMinMarginPctInput] = useState((MOCK_SETTINGS.minMarginPct * 100).toString())
-  const [exchangeFeePctInput, setExchangeFeePctInput] = useState((MOCK_SETTINGS.exchangeFeePct * 100).toString())
-  const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(MOCK_SETTINGS.exchangeWindowDays.toString())
-  const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(MOCK_SETTINGS.pendingGrantDays.toString())
+  const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
+  const [exchangeFeePctInput, setExchangeFeePctInput] = useState((current.exchangeFeePct * 100).toString())
+  const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
+  const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
+  const fmtPrice = (n: number | undefined) => (n === undefined ? "" : n.toFixed(5))
+  const [priceMinInput, setPriceMinInput] = useState(fmtPrice(current.pricePerPointMin))
+  const [priceMaxInput, setPriceMaxInput] = useState(fmtPrice(current.pricePerPointMax))
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -61,6 +66,21 @@ export default function AdminAjustesPage() {
     errors.push("Los días para repartos pendientes deben ser al menos 1.")
   }
 
+  // Límites opcionales del precio por punto (vacío = sin límite adicional)
+  const parsePrice = (raw: string): number | undefined | "invalid" => {
+    const t = raw.trim().replace(",", ".")
+    if (!t) return undefined
+    const n = Number(t)
+    return Number.isFinite(n) && n > 0 && n < 100 ? Math.round(n * 100000) / 100000 : "invalid"
+  }
+  const priceMin = parsePrice(priceMinInput)
+  const priceMax = parsePrice(priceMaxInput)
+  if (priceMin === "invalid" || priceMax === "invalid") {
+    errors.push("Los límites del precio por punto deben ser números mayores que 0 (USD, hasta 5 decimales) o quedar vacíos.")
+  } else if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
+    errors.push("El precio mínimo por punto no puede ser mayor que el máximo.")
+  }
+
   // Fracciones redondeadas para evitar números flotantes largos
   const parsedMinMarginFraction = !isNaN(rawMinMargin) ? Math.round(rawMinMargin * 1000) / 100000 : 0.05
   const parsedExchangeFeeFraction = !isNaN(rawExchangeFee) ? Math.round(rawExchangeFee * 1000) / 100000 : 0.1
@@ -73,6 +93,8 @@ export default function AdminAjustesPage() {
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     pointsMultiple: MOCK_SETTINGS.pointsMultiple,
+    pricePerPointMin: priceMin === "invalid" ? undefined : priceMin,
+    pricePerPointMax: priceMax === "invalid" ? undefined : priceMax,
   }
 
   // Validación con validatePricing usando los ajustes candidatos
@@ -94,6 +116,7 @@ export default function AdminAjustesPage() {
     e.preventDefault()
     if (!canSave) return
 
+    setSettings(candidateSettings)
     toast.success("Ajustes del sistema guardados con éxito")
   }
 
@@ -102,6 +125,9 @@ export default function AdminAjustesPage() {
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
+    setPriceMinInput(fmtPrice(MOCK_SETTINGS.pricePerPointMin))
+    setPriceMaxInput(fmtPrice(MOCK_SETTINGS.pricePerPointMax))
+    setSettings(MOCK_SETTINGS)
     toast.info("Ajustes restablecidos a sus valores originales")
   }
 
@@ -217,6 +243,40 @@ export default function AdminAjustesPage() {
                 <p className="text-xs text-muted-foreground">
                   Días para que un reparto no reclamado vuelva a la bolsa del cliente (por defecto 90).
                 </p>
+              </div>
+
+              {/* Límites del precio por punto */}
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
+                <div>
+                  <h4 className="text-sm font-semibold">Rango del precio por punto de los clientes (USD, opcional)</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Estos límites estrechan la barra de precio por punto en Clientes. Solo pueden achicar el rango que ya imponen las reglas del sistema (margen mínimo y &ldquo;el Canjeador paga más&rdquo;); nunca ampliarlo. Déjalos vacíos para usar solo las reglas.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="priceMin">Precio mínimo por punto</Label>
+                    <Input
+                      id="priceMin"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ej. 0.00780"
+                      value={priceMinInput}
+                      onChange={(e) => setPriceMinInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="priceMax">Precio máximo por punto</Label>
+                    <Input
+                      id="priceMax"
+                      type="text"
+                      inputMode="decimal"
+                      placeholder="Ej. 0.00900"
+                      value={priceMaxInput}
+                      onChange={(e) => setPriceMaxInput(e.target.value)}
+                    />
+                  </div>
+                </div>
               </div>
 
               {/* pointsMultiple (solo lectura) */}

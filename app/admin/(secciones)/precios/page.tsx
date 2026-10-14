@@ -49,7 +49,6 @@ import {
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
-  MOCK_SETTINGS,
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
@@ -62,6 +61,7 @@ import {
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
 
 export default function AdminPreciosPage() {
@@ -72,7 +72,7 @@ export default function AdminPreciosPage() {
   const [standardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
   const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
   const [clients] = useState(MOCK_CLIENTS_ADMIN)
-  const [settings] = useState(MOCK_SETTINGS)
+  const { settings } = useAdminSettings()
 
   // Selector de tabla de paquetes
   const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")

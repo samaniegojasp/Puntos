@@ -41,14 +41,15 @@ import {
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
-  MOCK_SETTINGS,
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { validatePricing } from "@/lib/domain/pricing"
 import type { ClientAdminRow, PointsPack } from "@/lib/domain/types"
 
 export default function AdminClientesPage() {
+  const { settings } = useAdminSettings()
   const [loading, setLoading] = useState(true)
   const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
 
@@ -148,7 +149,7 @@ export default function AdminClientesPage() {
       ? clients.map((c) => (c.id === editingClient.id ? cand : c))
       : [...clients, cand]
     return validatePricing({
-      settings: MOCK_SETTINGS,
+      settings,
       providers: MOCK_PROVIDERS,
       products: MOCK_PRODUCTS,
       standardPacks: MOCK_STANDARD_PACKS,
@@ -173,9 +174,14 @@ export default function AdminClientesPage() {
     if (!own || own.usdCents <= 0) return null
     const tag = `tramo $${(own.usdCents / 100).toFixed(2)}:`
     const withPoints = (pts: number) => packs.map((x, i) => (i === idx ? { ...x, points: pts } : x))
-    const lowOk = (pts: number) => !buildIssues(withPoints(pts), forceCustom).some((i) => i.rule === 2)
+    const lowOk = (pts: number) =>
+      !buildIssues(withPoints(pts), forceCustom).some(
+        (i) => i.rule === 2 || (i.rule === 6 && i.limit === "max"),
+      )
     const highOk = (pts: number) =>
-      !buildIssues(withPoints(pts), forceCustom).some((i) => i.rule === 3 && i.message.includes(tag))
+      !buildIssues(withPoints(pts), forceCustom).some(
+        (i) => (i.rule === 3 && i.message.includes(tag)) || (i.rule === 6 && i.limit === "min"),
+      )
 
     const maxK = Math.floor(POINTS_CAP / POINTS_STEP)
     // Menor valor que cumple la regla 2 (válido de ahí hacia arriba)

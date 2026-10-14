@@ -33,7 +33,6 @@ import {
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
-  MOCK_SETTINGS,
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatDate, formatPct, formatPts, formatUsd } from "@/lib/domain/format"
@@ -45,9 +44,11 @@ import {
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
+  const { settings } = useAdminSettings()
   const [loading, setLoading] = useState(true)
   const [providers, setProviders] = useState<Provider[]>(MOCK_PROVIDERS)
 
@@ -98,7 +99,7 @@ export default function AdminProveedoresPage() {
     : [...providers, candidateProvider]
 
   const issues = validatePricing({
-    settings: MOCK_SETTINGS,
+    settings,
     providers: simulatedProviders,
     products: MOCK_PRODUCTS,
     standardPacks: MOCK_STANDARD_PACKS,
@@ -317,9 +318,9 @@ export default function AdminProveedoresPage() {
                       {providerProducts.map((prod) => {
                         const cost = productCostCents(prod, candidateProvider)
                         const price = productPriceCents(prod, candidateProvider)
-                        const pts = pointsPrice(price, refCents, MOCK_SETTINGS.pointsMultiple)
+                        const pts = pointsPrice(price, refCents, settings.pointsMultiple)
                         const margin = marginAtPack(pts, std10Pack, cost)
-                        const isMarginLow = margin.marginPct < MOCK_SETTINGS.minMarginPct
+                        const isMarginLow = margin.marginPct < settings.minMarginPct
 
                         return (
                           <TableRow key={prod.id}>

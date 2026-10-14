@@ -124,6 +124,21 @@ export function validatePricing({ settings, providers, products, standardPacks, 
       issues.push({ rule: 4, severity: "warning", message: `${prod.storeName} ${money(prod.faceCents)}: el precio (${money(price)}) supera el valor facial; un paquete de ${money(prod.faceCents)} no alcanzaría.` })
     }
   }
+  // Regla 6: límites opcionales del precio por punto de cada cliente (USD por punto).
+  const { pricePerPointMin: pMin, pricePerPointMax: pMax } = settings
+  if (pMin !== undefined || pMax !== undefined) {
+    for (const c of clients) {
+      const base = [...c.customPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
+      const price = c.packMode === "custom" && base ? base.usdCents / base.points / 100 : c.usdPerPoint
+      const fmt = (n: number) => `$${n.toFixed(5)}`
+      if (pMin !== undefined && price < pMin - 1e-9) {
+        issues.push({ rule: 6, severity: "error", limit: "min", message: `${c.name}: el precio por punto (${fmt(price)}) está por debajo del mínimo permitido (${fmt(pMin)}).` })
+      }
+      if (pMax !== undefined && price > pMax + 1e-9) {
+        issues.push({ rule: 6, severity: "error", limit: "max", message: `${c.name}: el precio por punto (${fmt(price)}) está por encima del máximo permitido (${fmt(pMax)}).` })
+      }
+    }
+  }
   return issues
 }
 

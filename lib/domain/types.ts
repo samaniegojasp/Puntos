@@ -247,6 +247,9 @@ export type AdminSettings = {
   pendingGrantDays: number
   /** Los puntos de tarjetas y paquetes son múltiplos de este valor */
   pointsMultiple: number
+  /** Límites opcionales del precio por punto (USD) de un cliente. Solo pueden estrechar lo que ya imponen las reglas 2 y 3. */
+  pricePerPointMin?: number
+  pricePerPointMax?: number
 }
 
 export type UserRow = {
@@ -260,7 +263,9 @@ export type UserRow = {
 }
 
 export type PricingIssue = {
-  rule: 1 | 2 | 3 | 4 | 5
+  rule: 1 | 2 | 3 | 4 | 5 | 6
+  /** Regla 6: qué límite se rompe (precio por debajo del mínimo o por encima del máximo) */
+  limit?: "min" | "max"
   severity: "error" | "warning"
   message: string
 }

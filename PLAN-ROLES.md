@@ -160,6 +160,8 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 5. Las tarjetas valen múltiplos de 100 puntos.
 
 ### 5.4 Negociar por Cliente
+**Regla 6 (opcional, decisión del dueño):** Nosotros puede fijar un precio mínimo y/o máximo por punto para los clientes (Ajustes). Solo estrecha lo que permiten las reglas 2 y 3. El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño; el de uno estándar es un valor de referencia que se usa para convertir bono en puntos.
+
 Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus tramos y precio por punto. El panel de Nosotros muestra, para cada tramo, el margen de cada producto, y lo bloquea si rompe las reglas 1–3. Cambiar el precio de un Cliente afecta solo **lotes futuros**: los lotes ya vendidos conservan su `usd_per_point`.
 
 ### 5.5 Sobre el Excel de ejemplo
