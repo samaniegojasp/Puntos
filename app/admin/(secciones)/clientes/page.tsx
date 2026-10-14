@@ -48,6 +48,10 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { validatePricing } from "@/lib/domain/pricing"
 import type { ClientAdminRow, PointsPack } from "@/lib/domain/types"
 
+/** Puntos que recibe el cliente por cada dólar (inverso del precio por punto). */
+const ptsPerUsd = (usdPerPoint: number) =>
+  usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
+
 export default function AdminClientesPage() {
   const { settings } = useAdminSettings()
   const [loading, setLoading] = useState(true)
@@ -310,7 +314,7 @@ export default function AdminClientesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
-                    <TableHead className="text-right">Precio por punto</TableHead>
+                    <TableHead className="text-right">Puntos por dólar</TableHead>
                     <TableHead className="text-right">Bono actual</TableHead>
                     <TableHead className="text-right">Puntos en bolsa</TableHead>
                     <TableHead className="text-center">Modo de paquetes</TableHead>
@@ -325,7 +329,10 @@ export default function AdminClientesPage() {
                         {c.name}
                       </TableCell>
                       <TableCell className="text-right font-mono font-medium text-primary">
-                        {formatUsdPerPoint(c.usdPerPoint)}
+                        {ptsPerUsd(c.usdPerPoint)}
+                        <span className="block text-[10px] font-normal text-muted-foreground">
+                          {formatUsdPerPoint(c.usdPerPoint)} por punto
+                        </span>
                       </TableCell>
                       <TableCell className="text-right font-mono text-muted-foreground">
                         {formatPct(c.bonusPct)}
@@ -397,30 +404,47 @@ export default function AdminClientesPage() {
 
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <Label htmlFor="usdPerPoint">Precio por punto</Label>
+                  <Label htmlFor="usdPerPoint">Puntos por cada dólar</Label>
                   <span className="font-mono text-sm font-semibold text-foreground">
-                    {formatUsdPerPoint(parsedUsdPerPoint)}
+                    {ptsPerUsd(parsedUsdPerPoint)} pts/$
+                    <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                      ({formatUsdPerPoint(parsedUsdPerPoint)} por punto)
+                    </span>
                   </span>
                 </div>
                 {priceBounds ? (
                   <>
-                    <Slider
-                      id="usdPerPoint"
-                      min={Math.ceil(priceBounds.min * PRICE_UNIT)}
-                      max={Math.floor(priceBounds.max * PRICE_UNIT)}
-                      step={1}
-                      value={[
-                        Math.min(
-                          Math.max(Math.round(parsedUsdPerPoint * PRICE_UNIT), Math.ceil(priceBounds.min * PRICE_UNIT)),
-                          Math.floor(priceBounds.max * PRICE_UNIT),
-                        ),
-                      ]}
-                      onValueChange={(v) => handlePriceSlide(v[0])}
-                      aria-label="Precio por punto"
-                    />
+                    {baseIdx !== null && basePack ? (
+                      // Con tramo propio la barra mueve sus puntos directamente (pasos de 50): izquierda = menos puntos por dólar
+                      <Slider
+                        id="usdPerPoint"
+                        min={priceBounds.pointsMin}
+                        max={priceBounds.pointsMax}
+                        step={POINTS_STEP}
+                        value={[Math.min(Math.max(basePack.points, priceBounds.pointsMin), priceBounds.pointsMax)]}
+                        onValueChange={(v) => handlePackChange(baseIdx, "points", v[0])}
+                        aria-label="Puntos por cada dólar"
+                      />
+                    ) : (
+                      <Slider
+                        id="usdPerPoint"
+                        inverted
+                        min={Math.ceil(priceBounds.min * PRICE_UNIT)}
+                        max={Math.floor(priceBounds.max * PRICE_UNIT)}
+                        step={1}
+                        value={[
+                          Math.min(
+                            Math.max(Math.round(parsedUsdPerPoint * PRICE_UNIT), Math.ceil(priceBounds.min * PRICE_UNIT)),
+                            Math.floor(priceBounds.max * PRICE_UNIT),
+                          ),
+                        ]}
+                        onValueChange={(v) => handlePriceSlide(v[0])}
+                        aria-label="Puntos por cada dólar"
+                      />
+                    )}
                     <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Mínimo {formatUsdPerPoint(priceBounds.min)}</span>
-                      <span>Máximo {formatUsdPerPoint(priceBounds.max)}</span>
+                      <span>Mínimo {ptsPerUsd(priceBounds.max)} pts/$</span>
+                      <span>Máximo {ptsPerUsd(priceBounds.min)} pts/$</span>
                     </div>
                     {(parsedUsdPerPoint < priceBounds.min - 1e-9 || parsedUsdPerPoint > priceBounds.max + 1e-9) && (
                       <p className="text-[11px] text-destructive">
@@ -581,9 +605,9 @@ export default function AdminClientesPage() {
                           </div>
 
                           <div className="flex-1 min-w-[130px] space-y-1">
-                            <Label className="text-[10px] text-muted-foreground">USD por punto</Label>
+                            <Label className="text-[10px] text-muted-foreground">Puntos por dólar</Label>
                             <div className="h-10 flex items-center font-mono text-sm font-medium text-foreground">
-                              {cpp > 0 ? formatUsdPerPoint(cpp) : "—"}
+                              {cpp > 0 ? `${ptsPerUsd(cpp)} pts/$` : "—"}
                             </div>
                           </div>
 

@@ -73,6 +73,8 @@ export default function AdminAjustesPage() {
     const n = Number(t)
     return Number.isFinite(n) && n > 0 && n < 100 ? Math.round(n * 100000) / 100000 : "invalid"
   }
+  const ptsPerUsdText = (price: number) =>
+    new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / price)
   const priceMin = parsePrice(priceMinInput)
   const priceMax = parsePrice(priceMaxInput)
   if (priceMin === "invalid" || priceMax === "invalid") {
@@ -264,6 +266,9 @@ export default function AdminAjustesPage() {
                       value={priceMinInput}
                       onChange={(e) => setPriceMinInput(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {typeof priceMin === "number" ? `Equivale a ${ptsPerUsdText(priceMin)} puntos por dólar como máximo.` : "Sin límite."}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="priceMax">Precio máximo por punto</Label>
@@ -275,6 +280,9 @@ export default function AdminAjustesPage() {
                       value={priceMaxInput}
                       onChange={(e) => setPriceMaxInput(e.target.value)}
                     />
+                    <p className="text-xs text-muted-foreground">
+                      {typeof priceMax === "number" ? `Equivale a ${ptsPerUsdText(priceMax)} puntos por dólar como mínimo.` : "Sin límite."}
+                    </p>
                   </div>
                 </div>
               </div>
