@@ -373,7 +373,7 @@ export default function ClienteRepartirPage() {
                   </Badge>
                 ) : (
                   <Badge variant="outline" className="w-fit border-emerald-300 bg-emerald-50 text-emerald-700">
-                    Archivo verificado
+                    Filas sin errores
                   </Badge>
                 )}
               </div>
