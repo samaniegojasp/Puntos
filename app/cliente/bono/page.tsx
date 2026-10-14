@@ -17,7 +17,7 @@ export default function ClienteBonoPage() {
   const [loading, setLoading] = useState(true)
 
   // Campo "Mi % de bono" precargado con MOCK_CLIENT.bonusPct * 100 (0.85)
-  const [bonusInput, setBonusInput] = useState<string>((MOCK_CLIENT.bonusPct * 100).toString())
+  const [bonusInput, setBonusInput] = useState<string>((Math.round(MOCK_CLIENT.bonusPct * 10000) / 100).toString())
   // Campo "Monto de la venta (USD)" precargado con 20000
   const [saleInput, setSaleInput] = useState<string>("20000")
 
