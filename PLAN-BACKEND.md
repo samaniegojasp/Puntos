@@ -19,8 +19,8 @@ Stack: **Supabase** (Auth + Postgres + RLS + `pg_cron`) + **Next.js 15 en Vercel
 Regla de oro: **una fase [UI] no empieza hasta que su [NÚCLEO] esté en la rama y verificado.** Claude revisa cada fase cuando digas "Revisa la fase N".
 
 ### Ramas y despliegue
-- La demo publicada sale de `main`. Para no romperla mientras se construye el backend, el trabajo va en una rama de integración **`backend`**; cada fase es una rama que se fusiona en `backend`.
-- Vercel crea un *Preview* por rama, con las variables de **staging**. `main` y producción solo se actualizan en la fase B11.
+- La demo publicada sale de `main`. Para no romperla, **todo el trabajo (Fase D y B1–B10) va en la rama de integración `claude/pet-store-gift-cards-refactor-n3h79x`**. `main` y producción solo se actualizan en la fase B11.
+- Vercel crea un *Preview* por rama, con las variables de **staging**.
 
 ---
 
@@ -94,7 +94,7 @@ Funciones SQL y tablas: `PLAN-ROLES.md` §3, §3b, §4, §7.
    SUPABASE_SERVICE_ROLE_KEY=...
    ```
    En Vercel: las tres variables con valores de **prod** (entorno *Production*) y de **staging** (entorno *Preview*).
-5. Crea la rama `backend` a partir de `main` y avísame.
+5. La rama de integración ya existe (`claude/pet-store-gift-cards-refactor-n3h79x`); no hace falta crear otra.
 6. Responde D1–D8. Solicita la cuenta de comercio en la pasarela (sandbox primero) y la cuenta de correo transaccional.
 7. En paralelo y fuera del código: RUC y facturación electrónica SRI (venta de puntos y recargo por cambio de caducadas), contratos con Proveedores (D4), abogado y contador (saldos prepagados, caducidad a consumidores, datos de terceros que sube el Cliente).
 

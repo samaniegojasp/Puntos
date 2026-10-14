@@ -142,7 +142,7 @@ points    = CEIL( ROUND(price_usd / pv_ref) / 100 ) × 100
 `pv_ref` es el precio de referencia del punto: el del **primer paquete** (el de $10). Es global: **la misma tarjeta cuesta los mismos puntos para todos**, porque los puntos son acumulables y de distintos orígenes.
 
 ### 5.2 Paquetes por volumen
-Tabla `packs` global (USD → puntos, puntos en múltiplos de 100). Cada paquete grande da más puntos por dólar. Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Proveedor), para una tarjeta de $10 que cuesta $8,50 y vale 1 200 puntos:
+Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de las tarjetas**, no a los paquetes (un paquete negociado, como $170 → 21 250, puede no serlo). Cada paquete grande da más puntos por dólar. Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Proveedor), para una tarjeta de $10 que cuesta $8,50 y vale 1 200 puntos:
 
 | Paquete | Puntos | USD por punto | Ingreso por esa tarjeta | Margen sobre costo |
 |---|---|---|---|---|
@@ -157,7 +157,7 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 2. **Canjeador > Cliente:** el precio por punto del Canjeador (`pv_public`) debe ser **mayor** que el de cualquier Cliente, tramo por tramo. Consecuencia: con $10 el Canjeador compra menos puntos que 1 200 y **no alcanza** una tarjeta de $10. La regla de los $10 aplica al Cliente.
 3. **Margen mínimo:** `puntos × usd_per_point ≥ cost_usd × (1 + min_margin_pct)` para el precio negociado de cada Cliente.
 4. `price_usd ≤ face_usd` en las tarjetas que deban cumplir el piso de $10.
-5. Múltiplos de 100 en tarjetas y paquetes.
+5. Las tarjetas valen múltiplos de 100 puntos.
 
 ### 5.4 Negociar por Cliente
 Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus tramos y precio por punto. El panel de Nosotros muestra, para cada tramo, el margen de cada producto, y lo bloquea si rompe las reglas 1–3. Cambiar el precio de un Cliente afecta solo **lotes futuros**: los lotes ya vendidos conservan su `usd_per_point`.

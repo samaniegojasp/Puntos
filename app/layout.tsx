@@ -7,6 +7,8 @@ import Footer from "@/components/footer"
 import { Toaster } from "@/components/ui/sonner"
 import { PointsProvider } from "@/lib/points-store"
 import { CatalogProvider } from "@/lib/catalog-store"
+import { MockSessionProvider } from "@/lib/mock/session"
+import DevRoleBar from "@/components/panel/dev-role-bar"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -26,12 +28,15 @@ export default function RootLayout({
       <body className={inter.className}>
         <CatalogProvider>
         <PointsProvider>
+        <MockSessionProvider>
           <div className="flex min-h-screen flex-col">
             <Header />
             <main className="flex-1">{children}</main>
             <Footer />
           </div>
+          <DevRoleBar />
           <Toaster richColors position="bottom-center" />
+        </MockSessionProvider>
         </PointsProvider>
         </CatalogProvider>
       </body>
