@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Copy, Lock, LogOut, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
+import { Copy, ImagePlus, Lock, LogOut, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { GiftCardFace } from "@/components/gift-card"
 import { cn } from "@/lib/utils"
 import { THEMES, formatPoints, pointsFor, type Store, type ThemeKey } from "@/lib/catalog"
-import { isActive, useCatalog } from "@/lib/catalog-store"
+import { isActive, isValidImage, useCatalog } from "@/lib/catalog-store"
 import { adminConfigured, endAdminSession, hasAdminSession, verifyAdmin } from "@/lib/admin-auth"
 
 type Draft = {
@@ -26,9 +26,10 @@ type Draft = {
   description: string
   featured: boolean
   active: boolean
+  image: string | null
 }
 
-const EMPTY: Draft = { id: null, name: "", category: "", theme: "super", denoms: "10, 25, 50", description: "", featured: false, active: true }
+const EMPTY: Draft = { id: null, name: "", category: "", theme: "super", denoms: "10, 25, 50", description: "", featured: false, active: true, image: null }
 const THEME_LABELS: Record<ThemeKey, string> = {
   super: "Violeta–rosa",
   salud: "Celeste",
@@ -40,6 +41,40 @@ const THEME_LABELS: Record<ThemeKey, string> = {
 
 const slugify = (t: string) =>
   t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40)
+
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp"]
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const CARD_W = 640
+const CARD_H = 404 // proporción de tarjeta 1,586:1
+
+/** Lee la imagen, la recorta al centro con proporción de tarjeta y la reduce a JPEG (quita metadatos y pesa poco). */
+function prepareCardImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!IMAGE_TYPES.includes(file.type)) return reject(new Error("Usa una imagen PNG, JPG o WebP."))
+    if (file.size > MAX_IMAGE_BYTES) return reject(new Error("La imagen pesa más de 5 MB."))
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement("canvas")
+      canvas.width = CARD_W
+      canvas.height = CARD_H
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return reject(new Error("No se pudo procesar la imagen."))
+      const scale = Math.max(CARD_W / img.width, CARD_H / img.height)
+      const w = img.width * scale
+      const h = img.height * scale
+      ctx.drawImage(img, (CARD_W - w) / 2, (CARD_H - h) / 2, w, h)
+      const out = canvas.toDataURL("image/jpeg", 0.85)
+      isValidImage(out) ? resolve(out) : reject(new Error("La imagen es demasiado grande; prueba con una más simple."))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("No se pudo leer la imagen."))
+    }
+    img.src = url
+  })
+}
 
 function parseDenoms(text: string): number[] | string {
   const parts = text.split(/[\s,;]+/).filter(Boolean)
@@ -143,6 +178,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
       description: s.description,
       featured: s.featured === true,
       active: isActive(s),
+      image: s.image ?? null,
     })
   }
 
@@ -165,8 +201,9 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     }
     setErrors(errs)
     if (Object.keys(errs).length || !id || typeof denoms === "string") return
-    saveStore({ id, name, category, theme: draft.theme, denoms, description: draft.description.trim(), featured: draft.featured, active: draft.active })
-    toast.success(draft.id ? "Tienda actualizada" : "Tienda añadida")
+    const saved = saveStore({ id, name, category, theme: draft.theme, denoms, description: draft.description.trim(), featured: draft.featured, active: draft.active, ...(draft.image ? { image: draft.image } : {}) })
+    if (!saved) toast.error("No se pudo guardar en este navegador (almacenamiento lleno o modo privado). Prueba con una imagen más liviana.")
+    else toast.success(draft.id ? "Tienda actualizada" : "Tienda añadida")
     setDraft(EMPTY)
   }
 
@@ -178,7 +215,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
   }
 
   const preview = typeof parseDenoms(draft.denoms) !== "string" ? (parseDenoms(draft.denoms) as number[]) : []
-  const previewStore: Store = { id: "x", name: draft.name.trim() || "Nombre de la tienda", category: draft.category, theme: draft.theme, denoms: preview, description: draft.description }
+  const previewStore: Store = { id: "x", name: draft.name.trim() || "Nombre de la tienda", category: draft.category, theme: draft.theme, denoms: preview, description: draft.description, ...(draft.image ? { image: draft.image } : {}) }
 
   return (
     <div className="container px-4 py-8 md:px-6 md:py-12">
@@ -265,6 +302,36 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                 )}
               </div>
               <GiftCardFace store={previewStore} usd={preview[0] ?? 0} className="w-full" />
+              <div className="space-y-2">
+                <Label htmlFor="cardImage">Imagen completa de la tarjeta (opcional)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="cardImage"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="max-w-xs"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ""
+                      if (!file) return
+                      try {
+                        set("image", await prepareCardImage(file))
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "No se pudo cargar la imagen.")
+                      }
+                    }}
+                  />
+                  {draft.image && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => set("image", null)}>
+                      <Trash2 className="mr-1 h-4 w-4" /> Quitar imagen
+                    </Button>
+                  )}
+                </div>
+                <p className="flex items-start gap-1 text-xs text-muted-foreground">
+                  <ImagePlus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  PNG, JPG o WebP, hasta 5 MB. Se recorta al centro con proporción de tarjeta (1,586:1) y reemplaza el degradado; el valor en dólares se superpone abajo a la derecha. Demo: se guarda solo en este navegador.
+                </p>
+              </div>
               <Field id="name" label="Nombre" error={errors.name}>
                 <Input id="name" value={draft.name} maxLength={40} onChange={(e) => set("name", e.target.value)} />
               </Field>

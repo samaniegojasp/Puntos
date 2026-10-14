@@ -26,6 +26,8 @@ export type Store = {
   featured?: boolean
   /** Visible en la tienda. `undefined` cuenta como activa. */
   active?: boolean
+  /** Imagen completa de la tarjeta (data URL png/jpeg/webp ya reducida). Si existe, reemplaza el degradado. */
+  image?: string
 }
 
 /** Catálogo inicial (semilla). El catálogo vigente se lee con `useCatalog()` de lib/catalog-store.tsx. */

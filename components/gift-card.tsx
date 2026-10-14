@@ -23,6 +23,29 @@ export function GiftCardFace({
   /** Miniatura (≈110 px de ancho): textos y chip reducidos para que no se pisen. */
   compact?: boolean
 }) {
+  if (store.image) {
+    return (
+      <div
+        className={cn(
+          "relative aspect-[1.586] overflow-hidden bg-muted",
+          compact ? "rounded-lg shadow-md" : "rounded-xl shadow-lg",
+          className,
+        )}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={store.image} alt={store.name} className="absolute inset-0 h-full w-full object-cover" />
+        <span
+          className={cn(
+            "absolute rounded-md bg-black/60 font-extrabold text-white",
+            compact ? "bottom-1 right-1 px-1 text-xs" : "bottom-3 right-3 px-2 py-0.5 text-2xl",
+          )}
+        >
+          ${usd}
+        </span>
+      </div>
+    )
+  }
+
   return (
     <div
       className={cn(

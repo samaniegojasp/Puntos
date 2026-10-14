@@ -8,6 +8,11 @@ import { DEFAULT_STORES, THEMES, type Store } from "@/lib/catalog"
 const STORAGE_KEY = "gc_catalog_v1"
 export const isActive = (s: Store) => s.active !== false
 
+/** Solo data URLs de imagen raster y de tamaño razonable (nunca SVG). */
+const IMAGE_RE = /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/
+const MAX_IMAGE_CHARS = 400_000
+export const isValidImage = (v: unknown): v is string => typeof v === "string" && v.length <= MAX_IMAGE_CHARS && IMAGE_RE.test(v)
+
 function sanitize(raw: unknown): Store[] | null {
   if (!Array.isArray(raw)) return null
   const out: Store[] = []
@@ -34,6 +39,7 @@ function sanitize(raw: unknown): Store[] | null {
       description: typeof s.description === "string" ? s.description : "",
       featured: s.featured === true,
       active: s.active !== false,
+      ...(isValidImage(s.image) ? { image: s.image } : {}),
     })
   }
   return out
@@ -51,7 +57,8 @@ type Ctx = {
   findStore: (id: string) => Store | undefined
   /** ¿Se puede canjear ahora esta tienda con este valor? */
   isAvailable: (storeId: string, usd: number) => boolean
-  saveStore: (store: Store) => void
+  /** Devuelve false si no se pudo guardar en el navegador (por ejemplo, almacenamiento lleno). */
+  saveStore: (store: Store) => boolean
   removeStore: (id: string) => void
   resetCatalog: () => void
 }
@@ -88,22 +95,24 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("storage", onStorage)
   }, [load])
 
-  const commit = useCallback((next: Store[]) => {
+  const commit = useCallback((next: Store[]): boolean => {
     ref.current = next
     setAll(next)
     setCustomized(true)
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
+      return true
     } catch {
-      /* modo privado */
+      /* modo privado o almacenamiento lleno */
+      return false
     }
   }, [])
 
   const saveStore = useCallback(
-    (store: Store) => {
+    (store: Store): boolean => {
       const cur = ref.current
       const exists = cur.some((s) => s.id === store.id)
-      commit(exists ? cur.map((s) => (s.id === store.id ? store : s)) : [...cur, store])
+      return commit(exists ? cur.map((s) => (s.id === store.id ? store : s)) : [...cur, store])
     },
     [commit],
   )

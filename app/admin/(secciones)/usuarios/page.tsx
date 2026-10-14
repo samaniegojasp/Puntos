@@ -91,6 +91,9 @@ export default function AdminUsuariosPage() {
   const [selectedUserForRole, setSelectedUserForRole] = useState<UserRow | null>(null)
   const [newRole, setNewRole] = useState<Role>("canjeador")
   const [selectedClientId, setSelectedClientId] = useState<string>("")
+  const [newClientName, setNewClientName] = useState("")
+  // Empresas creadas aquí durante la sesión (estado local, se pierden al recargar)
+  const [extraClients, setExtraClients] = useState<{ id: string; name: string }[]>([])
   const [selectedProviderId, setSelectedProviderId] = useState<string>("")
 
   // AlertDialog de confirmación para cambio de rol
@@ -128,13 +131,31 @@ export default function AdminUsuariosPage() {
     setSelectedUserForRole(user)
     setNewRole(user.role)
     setSelectedClientId(MOCK_CLIENTS_ADMIN[0]?.id || "")
+    setNewClientName("")
     setSelectedProviderId(MOCK_PROVIDERS[0]?.id || "")
     setRoleDialogOpen(true)
   }
 
+  const clientOptions = [
+    ...MOCK_CLIENTS_ADMIN.map((c) => ({ id: c.id, name: c.name })),
+    ...extraClients,
+  ]
+  const NEW_CLIENT = "__new__"
+  const isNewClient = newRole === "cliente" && selectedClientId === NEW_CLIENT
+  const trimmedNewName = newClientName.trim().replace(/\s+/g, " ")
+  const newNameError = !isNewClient
+    ? null
+    : trimmedNewName.length < 2 || trimmedNewName.length > 60
+      ? "Escribe el nombre de la empresa (entre 2 y 60 caracteres)."
+      : clientOptions.some((c) => c.name.toLowerCase() === trimmedNewName.toLowerCase())
+        ? "Ya existe una empresa con ese nombre. Elígela de la lista."
+        : null
+  const canProceedRole =
+    newRole !== "cliente" || (selectedClientId !== "" && (!isNewClient || !newNameError))
+
   const handleProceedToConfirmRole = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedUserForRole) return
+    if (!selectedUserForRole || !canProceedRole) return
     setRoleDialogOpen(false)
     setConfirmRoleAlertOpen(true)
   }
@@ -149,11 +170,16 @@ export default function AdminUsuariosPage() {
       setUsers((prev) =>
         prev.map((u) => (u.id === selectedUserForRole.id ? { ...u, role: newRole } : u))
       )
+      if (isNewClient) {
+        setExtraClients((prev) => [...prev, { id: `c-new-${Date.now()}`, name: trimmedNewName }])
+      }
       setIsProcessingRole(false)
       isProcessingRoleRef.current = false
       setConfirmRoleAlertOpen(false)
       toast.success(
-        `Rol de ${selectedUserForRole.fullName} actualizado a ${ROLE_LABEL[newRole]}`
+        isNewClient
+          ? `Rol de ${selectedUserForRole.fullName} actualizado a ${ROLE_LABEL[newRole]} y empresa «${trimmedNewName}» creada`
+          : `Rol de ${selectedUserForRole.fullName} actualizado a ${ROLE_LABEL[newRole]}`
       )
     }, 800)
   }
@@ -459,13 +485,33 @@ export default function AdminUsuariosPage() {
                       <SelectValue placeholder="Selecciona una empresa" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_CLIENTS_ADMIN.map((c) => (
+                      {clientOptions.map((c) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>
                       ))}
+                      <SelectItem value={NEW_CLIENT}>＋ Nueva empresa…</SelectItem>
                     </SelectContent>
                   </Select>
+                  {isNewClient && (
+                    <div className="space-y-1 pt-1">
+                      <Label htmlFor="newClientName" className="text-blue-900">
+                        Nombre de la nueva empresa
+                      </Label>
+                      <Input
+                        id="newClientName"
+                        value={newClientName}
+                        maxLength={60}
+                        autoFocus
+                        placeholder="Ej. Ferretería El Roble"
+                        className="bg-background"
+                        onChange={(e) => setNewClientName(e.target.value)}
+                      />
+                      {newClientName && newNameError && (
+                        <p className="text-xs text-destructive">{newNameError}</p>
+                      )}
+                    </div>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     El usuario administrará la bolsa y bonos de esta empresa.
                   </p>
@@ -500,7 +546,7 @@ export default function AdminUsuariosPage() {
                 <Button type="button" variant="outline" onClick={() => setRoleDialogOpen(false)}>
                   Cancelar
                 </Button>
-                <Button type="submit">
+                <Button type="submit" disabled={!canProceedRole}>
                   Continuar
                 </Button>
               </DialogFooter>
@@ -520,6 +566,7 @@ export default function AdminUsuariosPage() {
               <AlertDialogTitle>¿Confirmar cambio de rol?</AlertDialogTitle>
               <AlertDialogDescription>
                 Vas a cambiar el rol de {selectedUserForRole?.fullName} a {ROLE_LABEL[newRole]}.
+                {isNewClient && <> Se creará la empresa «{trimmedNewName}» y quedará vinculada a este usuario.</>}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
