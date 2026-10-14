@@ -11,9 +11,10 @@ Etiquetas: **[NÚCLEO]** lo hace Claude (permisos, saldo, precios, SQL). **[UI]*
 - Al comprar la tarjeta: se **reserva el saldo**, se **notifica** al Proveedor y se **le paga cuando se consume**.
 - Cada Proveedor define la caducidad de sus tarjetas.
 - El **descuento del Proveedor es editable** en el panel de Nosotros y se **muestra** en el panel del Proveedor como condición acordada.
-- En el Excel, `Costo 25` es **lo que se le paga al Proveedor**. El **bono varía de Cliente a Cliente**.
+- En el Excel, `Costo 25` es **lo que se le paga al Proveedor**. El **bono** (celda C3 del Excel) **es del Cliente y lo cambia cuando quiera**; es independiente del precio al que compra cada punto.
 - Los lotes de puntos se gastan **del más antiguo al más nuevo**.
-- Una tarjeta **caducada** puede **cambiarse otra vez por puntos** cobrando un **pequeño recargo**.
+- Una tarjeta **caducada** puede **cambiarse otra vez por puntos** cobrando un **pequeño recargo** (por defecto 10 % y 30 días de plazo, configurables). **Antes de caducar no se puede cambiar.**
+- El Cliente reparte puntos **en lote con un Excel**: descarga la plantilla, la llena, la sube, revisa y pulsa **Enviar**. Al enviar **no hay vuelta atrás**.
 - Los Términos hablan de una **declaración** de mayoría de edad, no de una verificación.
 - A futuro: app para el Proveedor que escanea un QR de la tarjeta virtual para registrar saldo y uso.
 
@@ -49,8 +50,9 @@ Reglas no negociables:
 
 ### Cliente (`/cliente`)
 - **Comprar puntos** con la pasarela, con precios por volumen. Saldo de su "bolsa".
-- **Repartir puntos** a canjeadores por documento: uno a uno o CSV (`documento,puntos`). Si la persona aún no se registró, el reparto queda **pendiente** y se acredita al registrarse con ese documento.
-- **Calculadora de bono:** monto de la venta × el % de bono de ese Cliente (lo fija Nosotros según el acuerdo) → USD de bono → puntos a repartir (`USD ÷ precio del punto de ese Cliente`) y costo para el Cliente. Ejemplo del Excel: $20 000 × 0,85 % = $170 = 20 000 puntos a $0,0085.
+- **Repartir puntos en lote con Excel** (sección 3b), con descarga de plantilla, revisión previa y botón **Enviar** irreversible.
+- **Mi bono:** el Cliente guarda su % de bono (`bonus_pct`) y lo cambia cuando quiera. No cambia el precio de sus puntos ni el de las tarjetas.
+- **Calculadora de bono:** monto de la venta × `bonus_pct` → USD de bono → puntos a repartir (`USD ÷ precio del punto de ese Cliente`). Ejemplo del Excel: $20 000 × 0,85 % = $170 → 20 000 puntos a $0,0085. El costo para el Cliente es esos $170.
 - Lista de lo repartido: a quién, cuánto, cuánto usó, cuánto le queda.
 - Reportes y exportación CSV.
 - Puede canjear para sí mismo.
@@ -82,8 +84,23 @@ Los puntos son acumulables, pero cada punto nació a un precio distinto (lo que 
 - **Repartir** (Cliente → Canjeador): se parte un lote de la bolsa del Cliente y el lote nuevo conserva su `usd_per_point`.
 - **Canjear:** la función consume lotes **del más antiguo al más nuevo** y guarda `redemption_allocations` (orden, lote, puntos, USD). De ahí sale el ingreso real de cada canje y el detalle que ve el Canjeador.
 - El libro `points_ledger` sigue siendo inmutable; los lotes se derivan de él y se verifican contra él.
-- Devolver puntos no gastados al Cliente (pregunta R5): operación inversa explícita y con asiento.
+- Devolver al Cliente puntos ya repartidos: solo lo hace **Nosotros**, por soporte, como excepción y con asiento en el libro (pregunta R4). El Cliente no puede deshacer un envío.
 - **Cambio de tarjeta caducada** (sección 4): crea un lote nuevo que conserva el precio por punto de los lotes con que se compró la tarjeta, para no regalar ni quitar valor.
+
+---
+
+## 3b. Reparto masivo por Excel (`/cliente/repartir`)
+
+1. **Descargar plantilla** (`plantilla-reparto.xlsx`, generada por el servidor). Hoja "Reparto" con columnas `tipo_documento` (lista desplegable: Cédula / RUC / Pasaporte), `numero_documento`, `puntos`, `monto_venta` (opcional) y `referencia` (opcional, ej. "Factura 001-123"). Hoja "Instrucciones". Si `puntos` está vacío y hay `monto_venta`, se calcula `monto_venta × bonus_pct ÷ usd_per_point`, redondeado hacia abajo.
+2. **Subir y revisar** (no cambia nada): el servidor lee el archivo y crea un `grant_batches` en `draft`. La pantalla muestra filas, total de puntos, saldo de la bolsa antes y después, y los errores por fila (número de fila y motivo).
+   - Validaciones: `.xlsx` o `.csv` (nunca `.xlsm`), máximo 5 MB y 1 000 filas [propuesta, ajustable al límite de las funciones de Vercel]; tipo de documento válido; cédula con dígito verificador; `puntos` entero > 0; documento repetido en el archivo = error; saldo de la bolsa suficiente.
+   - **Todo o nada:** con cualquier error o con saldo insuficiente, **Enviar** queda deshabilitado.
+   - Si el mismo archivo (mismo `file_hash`) ya fue enviado, avisa y pide una confirmación extra: enviar dos veces la misma lista es el error irreversible más probable.
+   - La revisión **no dice si un documento ya está registrado** (sin enumeración, sección 6).
+3. **Enviar:** confirmación explícita ("Esta acción no se puede deshacer. Se descontarán N puntos de tu bolsa") y casilla "Declaro estar autorizado a entregar estos puntos a estas personas y a tratar sus datos". `submit_grant_batch(batch_id, idempotency_key)` hace todo en **una sola transacción**: bloquea la bolsa, vuelve a verificar el saldo, parte lotes del más antiguo al más nuevo (conserva el precio por punto), acredita a quienes ya tienen cuenta con ese documento y crea `pending_grants` para el resto. El lote queda `sent` e inmutable; un doble clic o reintento no duplica.
+4. **Después de enviar:** el Cliente no puede editar ni cancelar. Recibe un resumen descargable con estado único "Enviado" (no distingue acreditado de pendiente). Cada Canjeador recibe un aviso por correo.
+5. **Pendientes sin reclamar:** a los N días (propuesta 90) el sistema los devuelve a la bolsa del Cliente. Es una regla del sistema, no una acción del Cliente.
+6. **Seguridad:** leer el archivo en el servidor con `exceljs` (la versión de `xlsx` publicada en npm está desactualizada y con fallos conocidos [probable]); leer solo valores, nunca evaluar fórmulas; en cualquier archivo exportado (reparto, Proveedor, reportes) prefijar con `'` las celdas que empiecen por `=`, `+`, `-` o `@` para evitar inyección de fórmulas.
 
 ---
 
@@ -96,12 +113,13 @@ La tarjeta virtual la **emite nuestro sistema**; el Proveedor la honra en su neg
 3. **Liquidación:** cada consumo genera una cuenta por pagar al Proveedor = `monto consumido × (costo / valor facial)`. `settle_period()` las agrupa por periodo en `provider_settlements`.
 4. **Caducidad:** definida por Proveedor (`providers.card_valid_days`). Al vencer, la tarjeta pasa a `expired` y el Proveedor ya no puede consumirla. Como solo se le paga lo consumido, **no se le debe nada por el saldo vencido**.
 4b. **Cambio de tarjeta caducada por puntos** (`exchange_expired_card`), dentro del plazo `exchange_window_days`:
+   - Recargo y plazo por defecto: 10 % y 30 días (`exchange_fee_pct`, `exchange_window_days`), editables en `/admin`.
    - `puntos = ⌊ (balance_cents / face_cents) × puntos_pagados × (1 − recargo_pct) ⌋`
    - `puntos_pagados` = suma de `redemption_allocations` de esa tarjeta. El lote nuevo usa el precio por punto promedio ponderado de esas asignaciones.
    - El recargo (`exchange_fee_pct`) queda como ingreso de Nosotros y se factura.
    - **Una sola vez por tarjeta:** pasa a `exchanged`, estado final. La operación bloquea la fila de la tarjeta, así no puede coincidir con un consumo del Proveedor.
    - El Proveedor ve el cambio en el historial de la tarjeta y el saldo reservado se libera.
-   - Solo tarjetas caducadas: antes de caducar, la tarjeta se usa. [propuesta]
+   - Solo tarjetas caducadas: antes de caducar, la tarjeta se usa. Decidido por el dueño.
 5. **Aviso al Canjeador:** cada consumo le llega por correo, para que detecte uno falso. [probable] Es la defensa principal contra un Proveedor que se cobre consumos que no ocurrieron.
 
 Preparado para la app: el QR codifica `https://<dominio>/c/<public_token>` (token aleatorio de 128 bits, distinto del código). Las acciones del Proveedor son `POST /api/provider/cards/lookup` y `POST /api/provider/cards/consume`, con autenticación por sesión hoy y por token de dispositivo cuando exista la app. A futuro, el QR del Canjeador puede ser dinámico (válido ~60 s) para que **él autorice** cada consumo.
@@ -141,11 +159,12 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 4. `price_usd ≤ face_usd` en las tarjetas que deban cumplir el piso de $10.
 5. Múltiplos de 100 en tarjetas y paquetes.
 
-### 5.4 Negociar por Cliente (R3)
+### 5.4 Negociar por Cliente
 Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus tramos y precio por punto. El panel de Nosotros muestra, para cada tramo, el margen de cada producto, y lo bloquea si rompe las reglas 1–3. Cambiar el precio de un Cliente afecta solo **lotes futuros**: los lotes ya vendidos conservan su `usd_per_point`.
 
 ### 5.5 Sobre el Excel de ejemplo
-- `20 000` = una venta de $20 000 en el negocio del Cliente; `0,0085` = el % de bono de ese Cliente (0,85 %); `170` = el bono en dólares que recibe el Canjeador. En el Excel la misma celda sirve de % de bono y de precio del punto: eso solo coincide si el Cliente da "1 punto por cada $1 vendido". En el sistema son **dos campos** por Cliente: `bonus_pct` y `usd_per_point` (pregunta R1).
+- `20 000` = una venta de $20 000 en el negocio del Cliente; `0,0085` = el % de bono de ese Cliente (0,85 %); `170` = el bono en dólares que recibe el Canjeador. En el Excel la misma celda (C3) sirve de % de bono y de divisor del precio de la tarjeta. En el sistema son **dos campos** por Cliente: `bonus_pct` (lo cambia el Cliente) y `usd_per_point` (lo fija Nosotros). Si el Cliente fijara también el precio de su punto, podría ponerlo por debajo del costo de la tarjeta (pregunta R1).
+- Consecuencia: el Excel hacía que el precio de la tarjeta en puntos dependiera de C3, o sea, de cada Cliente. Aquí el precio en puntos es **igual para todos** porque los puntos de varios Clientes se acumulan en un mismo saldo.
 - `Costo 25` es lo que se le paga al Proveedor. `25 + 15 % = 28,75 → 3 400 puntos` se conserva como el cálculo de 5.1, con múltiplos de 100.
 - Para cumplir el piso de $10 la tarjeta debe tener valor facial ≥ $28,75 (25 ÷ 0,8696). Equivale a un descuento del Proveedor ≥ 13,04 %. Ejemplo: tarjeta de $30 con descuento 16,7 % cuesta $25 y se vende en 28,75 → 3 400 puntos.
 - La calculadora de bono de `/cliente` usa esos dos campos (sección 2).
@@ -167,7 +186,7 @@ Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus
 | Tabla | Cambio |
 |---|---|
 | `profiles` | + `role` (`canjeador`/`cliente`/`proveedor`/`admin`), `doc_type`, `doc_number`, `birth_date`, `terms_accepted_at`, `terms_version`, `client_id` (solo rol Cliente), `provider_id` (solo rol Proveedor) |
-| `clients` | `id`, `name`, `pack_mode` (`standard`/`custom`), `bonus_pct`, `active` |
+| `clients` | `id`, `name`, `pack_mode` (`standard`/`custom`), `bonus_pct` (lo edita el Cliente), `active` |
 | `client_packs` | `client_id`, `usd_cents`, `points`, `usd_per_point` |
 | `providers` | `id`, `name`, `discount_pct`, `card_valid_days`, contacto y facturación, `active` |
 | `provider_terms` | `provider_id`, `discount_pct`, `card_valid_days`, `effective_from`, `set_by`; historial de condiciones (el Proveedor ve la vigente) |
@@ -175,13 +194,15 @@ Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus
 | `packs` | + `usd_per_point` derivado; paquetes estándar |
 | `settings` | + `pv_ref`, `pv_public_tiers`, `min_margin_pct`, `points_multiple=100`, `exchange_fee_pct`, `exchange_window_days` |
 | `point_lots` / `redemption_allocations` | sección 3 |
-| `pending_grants` | `client_id`, `doc_type`, `doc_number`, `points`, `usd_per_point`; se acredita al registrarse |
+| `pending_grants` | `client_id`, `batch_id`, `doc_type`, `doc_number`, `points`, `usd_per_point`, `expires_at`; se acredita al registrarse, o vuelve a la bolsa al vencer |
+| `grant_batches` | `client_id`, `file_hash`, `status` (`draft`/`sent`), `rows_count`, `total_points`, `idempotency_key` (única), `created_at`, `sent_at` |
+| `grant_batch_rows` | `batch_id`, `row_no`, `doc_type`, `doc_number`, `points`, `sale_amount`, `reference`, `error` |
 | `gift_cards` | `product_id`, `provider_id`, `owner_id`, `face_cents`, `cost_cents` (congelado), `balance_cents`, `public_token`, `status` (`active`/`consumed`/`expired`/`exchanged`), `expires_at`, `order_id` |
 | `gift_card_movements` | `card_id`, `type` (`issue`/`consume`/`adjust`/`expire`), `amount_cents`, `by_user`, `idempotency_key` (única) |
 | `provider_settlements` | `provider_id`, periodo, nº de consumos, monto USD, estado, referencia de factura |
 | `audit_log` | quién, qué, antes, después, cuándo |
 
-Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `grant_points(client_id, doc, points)`, `redeem` (reescrita con lotes y tarjeta), `consume_card(card, amount_cents, key)` (solo Proveedor dueño), `exchange_expired_card(card)` (solo el dueño de la tarjeta), `settle_period(provider_id, from, to)`, `validate_pricing()` (reglas de 5.3).
+Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `validate_grant_batch(batch_id)`, `submit_grant_batch(batch_id, key)` (solo el Cliente dueño), `redeem` (reescrita con lotes y tarjeta), `consume_card(card, amount_cents, key)` (solo Proveedor dueño), `exchange_expired_card(card)` (solo el dueño de la tarjeta), `settle_period(provider_id, from, to)`, `validate_pricing()` (reglas de 5.3).
 
 ---
 
@@ -194,7 +215,7 @@ Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `gr
 | R3 | Haiku [UI] | Registro con documento, fecha de nacimiento y Términos; menú por rol; páginas protegidas vacías |
 | R4 | Claude + Haiku | Admin: Clientes y precios con vista de margen, Usuarios y roles, Proveedores |
 | R5 | Claude + Haiku | Canje con tarjeta virtual y reserva; "Mis puntos por origen"; "Mis tarjetas" |
-| R6 | Claude + Haiku | `/cliente`: comprar, repartir, pendientes, reportes |
+| R6 | Claude + Haiku | `/cliente`: comprar, mi bono, reparto masivo por Excel (plantilla, revisión, envío), reportes |
 | R7 | Claude + Haiku | `/proveedor`: KPIs, caja con saldo exacto, notificaciones |
 | R8 | Claude + Haiku | Liquidación por consumo |
 | R9 | Haiku [UI] | Términos y Privacidad, limpieza de avisos de demo |
@@ -208,10 +229,11 @@ Se entrelazan con B1–B5 de `PLAN-BACKEND.md`; el orden final se fija al fusion
 
 | # | Pregunta | Recomendación |
 |---|---|---|
-| R1 | El bono del Cliente, ¿lo fija Nosotros por contrato (`bonus_pct`) o lo decide el Cliente en cada venta? ¿Y el Cliente da siempre "1 punto por cada $1 vendido", o el número de puntos depende de `bonus_pct` y del precio de su punto? | Lo fija Nosotros por Cliente; la calculadora usa `bonus_pct` y `usd_per_point` como campos separados. |
-| R2 | Recargo por cambiar una tarjeta caducada: ¿qué porcentaje y hasta cuántos días después de caducar? | Configurables. Punto de partida: 10 % y 30 días. [suposición] |
-| R3 | ¿Se puede cambiar una tarjeta **antes** de caducar (con recargo)? | No: antes de caducar se usa. Evita ir y venir entre puntos y tarjetas. |
-| R4 | ¿Pueden volver al Cliente los puntos que repartió y no se gastaron? | Sí, con acción explícita de Cliente o Nosotros y asiento en el libro. |
-| R5 | Riesgos legales: dinero cobrado por puntos que aún no se consumen, caducidad de saldos a consumidores y facturación del recargo. | Consultar a abogado y contador antes de lanzar. |
+| R1 | ¿Confirmas que el % de bono (C3) lo cambia el Cliente libremente, pero el precio al que compra cada punto lo fijas tú? | Sí: son dos campos y solo el bono es del Cliente. |
+| R2 | Reparto masivo: ¿"todo o nada" (cualquier error bloquea el envío) o se envían las filas válidas? | Todo o nada: un envío irreversible a medias es difícil de explicar. |
+| R3 | Puntos pendientes que nadie reclama: ¿vuelven solos a la bolsa del Cliente a los 90 días? | Sí. |
+| R4 | Con "no hay vuelta atrás" para el Cliente: ¿solo Nosotros podemos revertir un envío, por soporte y con asiento? | Sí, solo Nosotros. |
+| R5 | ¿La plantilla lleva la columna opcional `monto_venta` para calcular los puntos con el bono? | Sí: replica tu Excel. |
+| R6 | Riesgos legales: dinero cobrado por puntos que aún no se consumen, caducidad de saldos a consumidores, facturación del recargo y datos personales que el Cliente sube de terceros. | Consultar a abogado y contador antes de lanzar. |
 
-Cerradas: descuento del Proveedor editable y visible para él, `Costo 25` es lo que se le paga, lotes del más antiguo al más nuevo, tarjeta emitida por Nosotros, caducada se cambia por puntos con recargo.
+Cerradas: descuento del Proveedor editable y visible para él; `Costo 25` es lo que se le paga; lotes del más antiguo al más nuevo; tarjeta emitida por Nosotros; tarjeta caducada se cambia por puntos con recargo (10 % y 30 días por defecto); no se cambia antes de caducar; el Cliente reparte con Excel y el envío es irreversible.
