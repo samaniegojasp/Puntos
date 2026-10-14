@@ -61,6 +61,8 @@ import {
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
+import EditableNumber from "@/components/panel/editable-number"
+import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
 
@@ -168,6 +170,53 @@ export default function AdminPreciosPage() {
   const dialogErrors = dialogIssues.filter((i) => i.severity === "error")
   const dialogWarnings = dialogIssues.filter((i) => i.severity === "warning")
   const canSaveProduct = dialogErrors.length === 0 && parsedMarginPct >= 0
+
+  // Rango de margen válido para este producto, calculado con las mismas reglas (sin fórmulas propias).
+  // Regla 3 (margen mínimo en cada tramo): exige un margen mínimo.
+  // Regla 1 (el paquete debe alcanzar para la tarjeta): exige un margen máximo.
+  const MARGIN_UNIT = 1000 // el slider trabaja en décimas de punto porcentual (0,1 %)
+  const MARGIN_CAP_UNITS = 2000 // hasta 200 %
+  const marginBounds = (() => {
+    if (!editingProduct) return null
+    const face = `$${(editingProduct.faceCents / 100).toFixed(2)}`
+    const lowTag = `${editingProduct.storeName} ${face} con`
+    const highTag = `para ${editingProduct.storeName} ${face} (`
+    const at = (units: number) =>
+      validatePricing({
+        settings,
+        providers: MOCK_PROVIDERS,
+        products: products.map((p) =>
+          p.id === editingProduct.id
+            ? { ...editingProduct, marginPct: units / MARGIN_UNIT, costCentsOverride: parsedCostOverride }
+            : p,
+        ),
+        standardPacks,
+        publicPacks,
+        clients,
+      })
+    // Se comparan con el mejor caso para que errores ajenos a este producto no oculten el rango
+    const countLow = (u: number) => at(u).filter((i) => i.rule === 3 && i.message.includes(lowTag)).length
+    const countHigh = (u: number) => at(u).filter((i) => i.rule === 1 && i.message.includes(highTag)).length
+    const baseLow = countLow(MARGIN_CAP_UNITS)
+    const baseHigh = countHigh(0)
+    let a = 0
+    let b = MARGIN_CAP_UNITS
+    while (a < b) {
+      const m = Math.floor((a + b) / 2)
+      if (countLow(m) <= baseLow) b = m
+      else a = m + 1
+    }
+    const min = a
+    a = 0
+    b = MARGIN_CAP_UNITS
+    while (a < b) {
+      const m = Math.ceil((a + b) / 2)
+      if (countHigh(m) <= baseHigh) a = m
+      else b = m - 1
+    }
+    const max = a
+    return min <= max ? { min, max } : null
+  })()
 
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault()
@@ -505,22 +554,60 @@ export default function AdminPreciosPage() {
 
           <form onSubmit={handleSaveProduct} className="space-y-4 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="marginPct">Margen comercial (%)</Label>
-              <div className="relative">
-                <Input
-                  id="marginPct"
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  value={marginPctInput}
-                  onChange={(e) => setMarginPctInput(e.target.value)}
-                  required
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="marginPct">Margen comercial</Label>
+                <EditableNumber
+                  label="Margen comercial"
+                  display={new Intl.NumberFormat("es-EC", { maximumFractionDigits: 2 }).format(parsedMarginPct * 100)}
+                  initial={String(Math.round(parsedMarginPct * 10000) / 100)}
+                  suffix="%"
+                  decimals
+                  onCommit={(v) => setMarginPctInput(String(Math.round(v * 100) / 100))}
                 />
-                <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">
-                  %
-                </span>
               </div>
+              {marginBounds ? (
+                <>
+                  <Slider
+                    id="marginPct"
+                    min={marginBounds.min}
+                    max={marginBounds.max}
+                    step={1}
+                    value={[
+                      Math.min(Math.max(Math.round(parsedMarginPct * MARGIN_UNIT), marginBounds.min), marginBounds.max),
+                    ]}
+                    onValueChange={(v) => setMarginPctInput(String(v[0] / 10))}
+                    aria-label="Margen comercial"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Mínimo {new Intl.NumberFormat("es-EC").format(marginBounds.min / 10)} %</span>
+                    <span>Máximo {new Intl.NumberFormat("es-EC").format(marginBounds.max / 10)} %</span>
+                  </div>
+                  {(parsedMarginPct * MARGIN_UNIT < marginBounds.min - 1e-9 ||
+                    parsedMarginPct * MARGIN_UNIT > marginBounds.max + 1e-9) && (
+                    <p className="text-[11px] text-destructive">
+                      El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                    </p>
+                  )}
+                </>
+              ) : (
+                <>
+                  <p className="text-[11px] text-destructive">
+                    Con el costo y los paquetes actuales no existe un margen que cumpla las reglas. Revisa el costo directo.
+                  </p>
+                  <Input
+                    id="marginPct"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={marginPctInput}
+                    onChange={(e) => setMarginPctInput(e.target.value)}
+                  />
+                </>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Los límites salen de las reglas: abajo, el margen mínimo en cada tramo; arriba, que el paquete de ese valor siga alcanzando para la tarjeta.
+              </p>
             </div>
 
             <div className="space-y-2">
