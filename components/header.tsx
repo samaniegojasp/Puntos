@@ -7,11 +7,20 @@ import { ShoppingCart, Search, ChevronDown, Gift, User, Menu, X } from "lucide-r
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import PointsBalance from "@/components/points-balance"
 import { usePoints } from "@/lib/points-store"
 import { useCatalog } from "@/lib/catalog-store"
+import { useMockSession } from "@/lib/mock/session"
+import { ROLE_LABEL } from "@/lib/domain/types"
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -20,6 +29,7 @@ export default function Header() {
   const router = useRouter()
   const { cartCount, ready } = usePoints()
   const { categories } = useCatalog()
+  const { role, profile } = useMockSession()
 
   const handleDesktopSearch = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -92,12 +102,66 @@ export default function Header() {
               />
             </form>
           </div>
-          <Button variant="ghost" size="icon" className="relative hidden sm:inline-flex" asChild>
-            <Link href="/login">
-              <User className="h-5 w-5" />
-              <span className="sr-only">Iniciar sesión</span>
-            </Link>
-          </Button>
+
+          {/* Menú de usuario con Dropdown por rol */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative hidden sm:inline-flex"
+                aria-label="Cuenta de usuario"
+              >
+                <User className="h-5 w-5" />
+                <span className="sr-only">Cuenta de usuario</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">{profile?.fullName || "Usuario"}</p>
+                  <p className="text-xs leading-none text-muted-foreground">Rol: {ROLE_LABEL[role]}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/cuenta" className="w-full cursor-pointer">
+                  Mi cuenta
+                </Link>
+              </DropdownMenuItem>
+              {(role === "cliente" || role === "admin") && (
+                <DropdownMenuItem asChild>
+                  <Link href="/cliente" className="w-full cursor-pointer">
+                    Panel de Cliente
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {(role === "proveedor" || role === "admin") && (
+                <DropdownMenuItem asChild>
+                  <Link href="/proveedor" className="w-full cursor-pointer">
+                    Panel de Proveedor
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {role === "admin" && (
+                <DropdownMenuItem asChild>
+                  <Link href="/admin/clientes" className="w-full cursor-pointer">
+                    Administración
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/login" className="w-full cursor-pointer">
+                  Iniciar sesión
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled className="text-muted-foreground">
+                Cerrar sesión (prototipo)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="ghost" size="icon" className="relative" asChild>
             <Link href="/cart">
               <ShoppingCart className="h-5 w-5" />
@@ -181,13 +245,64 @@ export default function Header() {
             >
               Contacto
             </Link>
-            <Link
-              href="/login"
-              className="text-sm font-medium transition-colors hover:text-primary"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              Mi cuenta
-            </Link>
+
+            {/* Sección de usuario en móvil */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="flex flex-col space-y-0.5 px-1">
+                <span className="text-sm font-semibold text-foreground">
+                  {profile?.fullName || "Usuario"}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  Rol: {ROLE_LABEL[role]}
+                </span>
+              </div>
+              <div className="flex flex-col space-y-2">
+                <Link
+                  href="/cuenta"
+                  className="text-sm font-medium transition-colors hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Mi cuenta
+                </Link>
+                {(role === "cliente" || role === "admin") && (
+                  <Link
+                    href="/cliente"
+                    className="text-sm font-medium transition-colors hover:text-primary"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Panel de Cliente
+                  </Link>
+                )}
+                {(role === "proveedor" || role === "admin") && (
+                  <Link
+                    href="/proveedor"
+                    className="text-sm font-medium transition-colors hover:text-primary"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Panel de Proveedor
+                  </Link>
+                )}
+                {role === "admin" && (
+                  <Link
+                    href="/admin/clientes"
+                    className="text-sm font-medium transition-colors hover:text-primary"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    Administración
+                  </Link>
+                )}
+                <Link
+                  href="/login"
+                  className="text-sm font-medium transition-colors hover:text-primary"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Iniciar sesión
+                </Link>
+                <span className="text-sm text-muted-foreground/60 cursor-not-allowed">
+                  Cerrar sesión (prototipo)
+                </span>
+              </div>
+            </div>
           </nav>
         </div>
       )}

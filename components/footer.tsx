@@ -40,10 +40,10 @@ export default function Footer() {
               <Link href="/#faq" className="text-sm text-muted-foreground hover:text-primary">
                 Preguntas frecuentes
               </Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary">
+              <Link href="/terminos" className="text-sm text-muted-foreground hover:text-primary">
                 Términos
               </Link>
-              <Link href="#" className="text-sm text-muted-foreground hover:text-primary">
+              <Link href="/privacidad" className="text-sm text-muted-foreground hover:text-primary">
                 Privacidad
               </Link>
             </nav>
