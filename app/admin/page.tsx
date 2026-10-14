@@ -184,7 +184,12 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     <div className="container px-4 py-8 md:px-6 md:py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Catálogo de gift cards</h1>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Catálogo de gift cards</h1>
+            <Link href="/admin/clientes" className="text-sm font-medium text-primary hover:underline">
+              Más secciones →
+            </Link>
+          </div>
           <p className="text-sm text-muted-foreground">
             {allStores.length} tiendas · {allStores.filter(isActive).length} visibles{customized ? " · catálogo personalizado" : " · catálogo original"}
           </p>
