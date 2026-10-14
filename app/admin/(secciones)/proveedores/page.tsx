@@ -44,6 +44,8 @@ import {
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
+import EditableNumber from "@/components/panel/editable-number"
+import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
@@ -98,14 +100,65 @@ export default function AdminProveedoresPage() {
     ? providers.map((p) => (p.id === editingProvider.id ? candidateProvider : p))
     : [...providers, candidateProvider]
 
+  // Los productos de este proveedor se validan como activos aunque hoy estén ocultos
+  const validationProducts = MOCK_PRODUCTS.map((p) =>
+    editingProvider && p.providerId === editingProvider.id ? { ...p, active: true } : p,
+  )
+
   const issues = validatePricing({
     settings,
     providers: simulatedProviders,
-    products: MOCK_PRODUCTS,
+    products: validationProducts,
     standardPacks: MOCK_STANDARD_PACKS,
     publicPacks: MOCK_PUBLIC_PACKS,
     clients: MOCK_CLIENTS_ADMIN,
   })
+
+  // Rango del descuento válido para este proveedor, calculado con las mismas reglas (sin fórmulas propias).
+  // Abajo: el precio no puede superar el valor facial (regla 4) y el paquete debe alcanzar (regla 1).
+  // Arriba: el margen mínimo por tramo (regla 3).
+  const DISCOUNT_UNIT = 1000 // décimas de punto porcentual (0,1 %)
+  const DISCOUNT_CAP_UNITS = 500 // tope de la demo: ningún descuento por encima de 50 %
+  const discountBounds = (() => {
+    if (!editingProvider) return null
+    const tags = MOCK_PRODUCTS.filter((p) => p.providerId === editingProvider.id).map(
+      (p) => `${p.storeName} $${(p.faceCents / 100).toFixed(2)}`,
+    )
+    if (!tags.length) return null
+    const mine = (msg: string) => tags.some((t) => msg.includes(t))
+    const at = (units: number) =>
+      validatePricing({
+        settings,
+        providers: providers.map((p) =>
+          p.id === editingProvider.id ? { ...p, discountPct: units / DISCOUNT_UNIT } : p,
+        ),
+        products: validationProducts,
+        standardPacks: MOCK_STANDARD_PACKS,
+        publicPacks: MOCK_PUBLIC_PACKS,
+        clients: MOCK_CLIENTS_ADMIN,
+      })
+    const countLow = (u: number) => at(u).filter((i) => (i.rule === 1 || i.rule === 4) && mine(i.message)).length
+    const countHigh = (u: number) => at(u).filter((i) => i.rule === 3 && mine(i.message)).length
+    const baseLow = countLow(DISCOUNT_CAP_UNITS)
+    const baseHigh = countHigh(0)
+    let a = 0
+    let b = DISCOUNT_CAP_UNITS
+    while (a < b) {
+      const m = Math.floor((a + b) / 2)
+      if (countLow(m) <= baseLow) b = m
+      else a = m + 1
+    }
+    const min = a
+    a = 0
+    b = DISCOUNT_CAP_UNITS
+    while (a < b) {
+      const m = Math.ceil((a + b) / 2)
+      if (countHigh(m) <= baseHigh) a = m
+      else b = m - 1
+    }
+    const max = a
+    return min <= max ? { min, max } : null
+  })()
 
   const errorIssues = issues.filter((i) => i.severity === "error")
   const warningIssues = issues.filter((i) => i.severity === "warning")
@@ -238,38 +291,79 @@ export default function AdminProveedoresPage() {
           <form onSubmit={handleSave} className="space-y-6 pt-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="discountPct">Descuento sobre valor facial (%)</Label>
-                <div className="relative">
-                  <Input
-                    id="discountPct"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={discountPctInput}
-                    onChange={(e) => setDiscountPctInput(e.target.value)}
-                    required
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="discountPct">Descuento sobre valor facial</Label>
+                  <EditableNumber
+                    label="Descuento sobre valor facial"
+                    display={new Intl.NumberFormat("es-EC", { maximumFractionDigits: 2 }).format(parsedDiscountPct * 100)}
+                    initial={String(Math.round(parsedDiscountPct * 10000) / 100)}
+                    suffix="%"
+                    decimals
+                    allowZero
+                    onCommit={(v) => setDiscountPctInput(String(Math.round(v * 100) / 100))}
                   />
-                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">
-                    %
-                  </span>
                 </div>
+                {discountBounds ? (
+                  <>
+                    <Slider
+                      id="discountPct"
+                      min={discountBounds.min}
+                      max={discountBounds.max}
+                      step={1}
+                      value={[
+                        Math.min(
+                          Math.max(Math.round(parsedDiscountPct * DISCOUNT_UNIT), discountBounds.min),
+                          discountBounds.max,
+                        ),
+                      ]}
+                      onValueChange={(v) => setDiscountPctInput(String(v[0] / 10))}
+                      aria-label="Descuento sobre valor facial"
+                    />
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Mínimo {new Intl.NumberFormat("es-EC").format(discountBounds.min / 10)} %</span>
+                      <span>Máximo {new Intl.NumberFormat("es-EC").format(discountBounds.max / 10)} %</span>
+                    </div>
+                    {(parsedDiscountPct * DISCOUNT_UNIT < discountBounds.min - 1e-9 ||
+                      parsedDiscountPct * DISCOUNT_UNIT > discountBounds.max + 1e-9) && (
+                      <p className="text-[11px] text-destructive">
+                        El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-destructive">
+                    Con los productos y paquetes actuales no existe un descuento que cumpla las reglas para este proveedor.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial.
+                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial. Los límites salen de las reglas: abajo, que el precio no supere el valor facial; arriba, el margen mínimo.
                 </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="cardValidDays">Caducidad de las tarjetas (días)</Label>
-                <Input
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="cardValidDays">Caducidad de las tarjetas</Label>
+                  <EditableNumber
+                    label="Caducidad de las tarjetas"
+                    display={String(parsedDays > 0 ? parsedDays : "—")}
+                    initial={String(parsedDays > 0 ? parsedDays : 180)}
+                    suffix="días"
+                    onCommit={(v) => setCardValidDaysInput(String(v))}
+                  />
+                </div>
+                <Slider
                   id="cardValidDays"
-                  type="number"
-                  min="30"
-                  step="1"
-                  value={cardValidDaysInput}
-                  onChange={(e) => setCardValidDaysInput(e.target.value)}
-                  required
+                  min={30}
+                  max={730}
+                  step={1}
+                  value={[Math.min(Math.max(parsedDays > 0 ? parsedDays : 180, 30), 730)]}
+                  onValueChange={(v) => setCardValidDaysInput(String(v[0]))}
+                  aria-label="Caducidad de las tarjetas en días"
                 />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Mínimo 30 días</span>
+                  <span>Máximo 730 días</span>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Días de validez para el canjeador desde la emisión.
                 </p>

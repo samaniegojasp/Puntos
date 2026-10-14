@@ -588,6 +588,7 @@ export default function AdminPreciosPage() {
                   initial={String(Math.round(parsedMarginPct * 10000) / 100)}
                   suffix="%"
                   decimals
+                  allowZero
                   onCommit={(v) => setMarginPctInput(String(Math.round(v * 100) / 100))}
                 />
               </div>

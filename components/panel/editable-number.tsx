@@ -12,6 +12,7 @@ export default function EditableNumber({
   label,
   suffix,
   decimals = false,
+  allowZero = false,
 }: {
   display: string
   initial: string
@@ -19,7 +20,10 @@ export default function EditableNumber({
   label: string
   suffix: string
   decimals?: boolean
+  /** Permite escribir 0 (por ejemplo, un porcentaje) */
+  allowZero?: boolean
 }) {
+  const isValid = (n: number) => Number.isFinite(n) && (allowZero ? n >= 0 : n > 0) && (decimals || Number.isInteger(n))
   const [editing, setEditing] = useState(false)
   const [text, setText] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -31,9 +35,14 @@ export default function EditableNumber({
   }
   const commit = () => {
     const n = Number(text.trim().replace(",", "."))
-    const valid = Number.isFinite(n) && n > 0 && (decimals || Number.isInteger(n))
-    if (!valid) {
-      setError(decimals ? "Escribe un número mayor que 0." : "Escribe un número entero mayor que 0.")
+    if (text.trim() === "" || !isValid(n)) {
+      setError(
+        allowZero
+          ? "Escribe un número válido (0 o mayor)."
+          : decimals
+            ? "Escribe un número mayor que 0."
+            : "Escribe un número entero mayor que 0.",
+      )
       return
     }
     onCommit(n)
@@ -80,7 +89,7 @@ export default function EditableNumber({
           onBlur={() => {
             // Si es válido se confirma al salir; si no, se descarta
             const n = Number(text.trim().replace(",", "."))
-            if (Number.isFinite(n) && n > 0 && (decimals || Number.isInteger(n))) onCommit(n)
+            if (text.trim() !== "" && isValid(n)) onCommit(n)
             setEditing(false)
           }}
           className="h-8 w-28 text-right font-mono text-sm"
