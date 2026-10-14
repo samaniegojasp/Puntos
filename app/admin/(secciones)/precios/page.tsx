@@ -616,20 +616,22 @@ export default function AdminPreciosPage() {
                   )}
                 </>
               ) : (
-                <>
-                  <p className="text-[11px] text-destructive">
-                    Con el costo y los paquetes actuales no existe un margen que cumpla las reglas. Revisa el costo directo.
+                <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
+                  <p className="text-xs font-medium text-destructive">
+                    Con este costo no existe ningún margen que cumpla las reglas, así que la barra no se puede mostrar.
                   </p>
-                  <Input
-                    id="marginPct"
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={marginPctInput}
-                    onChange={(e) => setMarginPctInput(e.target.value)}
-                  />
-                </>
+                  <p className="text-[11px] text-muted-foreground">
+                    Suele pasar cuando el costo queda muy cerca del valor facial: para ganar el margen mínimo en los paquetes grandes harían falta más puntos de los que el precio permite sin superar el valor facial.
+                    {parsedCostOverride !== undefined
+                      ? " Prueba quitando el costo directo o bajándolo."
+                      : " Revisa el descuento del Proveedor en la pestaña Proveedores."}
+                  </p>
+                  {parsedCostOverride !== undefined && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => setCostOverrideInput("")}>
+                      Quitar costo directo
+                    </Button>
+                  )}
+                </div>
               )}
               <p className="text-xs text-muted-foreground">
                 Los límites salen de las reglas: abajo, el margen mínimo en cada tramo; arriba, que el paquete de ese valor siga alcanzando para la tarjeta y que el precio no supere el valor facial.
