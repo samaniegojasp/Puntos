@@ -130,7 +130,15 @@ Borra arrays de productos/categorías/testimonios de mascotas y todas las imáge
 
 ✅ Checklist: `npx tsc --noEmit` con **cero** errores; a 800 px se ve el botón de menú y su buscador; newsletter muestra el aviso. Commit `chore: textos en español y ajustes de seguimiento`.
 
-## FASE 8 — README
+## FASE 8 — Honestidad de la demo y README
+**Parte A — textos que prometen cosas que la demo no hace** (no hay servidor: no se envían correos, mensajes ni cuentas):
+- `app/contact/page.tsx`: tras enviar, el mensaje dice "enviado con éxito". Cámbialo por: título "Esto es una demostración", texto "Tu mensaje no se envió porque este sitio todavía no tiene servidor. Cuando esté en producción te responderemos por correo."
+- `app/checkout/success/page.tsx`: "Enviaremos las gift cards a {email}" → "Destinatario: {email} (en esta demo no se envía ningún correo; copia el código y compártelo)". `app/checkout/page.tsx`: cambia la nota bajo el formulario por "Demo: no se envía correo; los códigos aparecen al instante en pantalla."
+- `app/page.tsx` (FAQ): en "¿Puedo regalarla a otra persona?" y "¿Cómo recibo mi gift card?" aclara que en la demo el código se muestra en pantalla y se comparte copiándolo.
+- `app/about/page.tsx`: quita "o por correo" de "Códigos inmediatos entregados en tu pantalla o por correo", y reemplaza el texto de "Confianza" ("Seguridad en cada transacción y garantía de validez en cada código canjeado") por "Transparencia en cada canje: ves cuántos Puntos usas y cuál es tu saldo."
+- `app/login/page.tsx` y `app/register/page.tsx`: añade arriba del formulario un aviso "Demostración: el inicio de sesión aún no está activo." (en register: "el registro aún no crea cuentas") y elimina el bloque "O continuar con" (botones de Google y Facebook): no funcionan.
+
+**Parte B — README.**
 Crear `README.md`: qué es, `npm install` / `npm run dev` (o pnpm), flujo (recargar → elegir → canjear), **cómo configurar `/admin`** (generar el hash con el comando de PowerShell que muestra la propia página, guardarlo en `.env.local` como `NEXT_PUBLIC_ADMIN_HASH`, reiniciar el servidor) y sección **Limitaciones de la demo**: saldo y catálogo en `localStorage` (manipulables y visibles solo en el navegador donde se guardan), la clave de `/admin` se comprueba en el navegador (frena el acceso casual, no es seguridad real), pago simulado (tarjeta de prueba 4242 4242 4242 4242), códigos ficticios, marcas solo como referencia. Commit `docs: README`.
 
 ## FASE 9 — Verificación final (PowerShell)
