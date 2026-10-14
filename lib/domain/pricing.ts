@@ -117,11 +117,11 @@ export function validatePricing({ settings, providers, products, standardPacks, 
     }
   }
 
-  // Regla 4 (aviso): precio en dólares por encima del valor facial.
+  // Regla 4: el precio en dólares de una tarjeta nunca puede superar su valor facial.
   for (const prod of active) {
     const price = productPriceCents(prod, providerOf(prod.providerId))
     if (price > prod.faceCents) {
-      issues.push({ rule: 4, severity: "warning", message: `${prod.storeName} ${money(prod.faceCents)}: el precio (${money(price)}) supera el valor facial; un paquete de ${money(prod.faceCents)} no alcanzaría.` })
+      issues.push({ rule: 4, severity: "error", message: `${prod.storeName} ${money(prod.faceCents)}: el precio (${money(price)}) supera el valor facial.` })
     }
   }
   // Regla 6: límites opcionales del precio por punto de cada cliente (USD por punto).

@@ -177,7 +177,7 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 >
 > IMPORTANTE: **NO ejecutes `npm run build`** con `npm run dev` abierto; ejecuta solo `npx tsc --noEmit`. Commit "feat: administración clientes, proveedores y precios (Fase D6a)" y `git push`. Si falta un tipo o dato, DETENTE y pregunta.
 
-**Criterio de aceptación:** con datos originales "Todas las reglas se cumplen"; descuento 0 % en Fybeca genera el error de la regla 1 (más avisos de la regla 4) y bloquea Guardar; el caso con error muestra la regla 2 en rojo; `/admin` sigue funcionando.
+**Criterio de aceptación:** con datos originales "Todas las reglas se cumplen"; descuento 0 % en Fybeca genera el error de la regla 1 (más errores de la regla 4) y bloquea Guardar; el caso con error muestra la regla 2 en rojo; `/admin` sigue funcionando.
 
 ---
 

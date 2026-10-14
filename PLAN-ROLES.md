@@ -156,7 +156,7 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 1. **Piso de $10:** para cada paquete y cada tarjeta con `face_usd ≤ USD del paquete`, los puntos del paquete deben alcanzar la tarjeta. Si no, no se guarda.
 2. **Canjeador > Cliente:** el precio por punto del Canjeador (`pv_public`) debe ser **mayor** que el de cualquier Cliente, tramo por tramo. Consecuencia: con $10 el Canjeador compra menos puntos que 1 200 y **no alcanza** una tarjeta de $10. La regla de los $10 aplica al Cliente.
 3. **Margen mínimo:** `puntos × usd_per_point ≥ cost_usd × (1 + min_margin_pct)` para el precio negociado de cada Cliente.
-4. `price_usd ≤ face_usd` en las tarjetas que deban cumplir el piso de $10.
+4. **Precio máximo = valor facial:** `price_usd ≤ face_usd` en **todas** las tarjetas activas. Es un error que bloquea el guardado (antes era solo un aviso): nadie debería pagar por una tarjeta más que su valor. Limita por arriba el margen y exige un descuento mínimo del Proveedor.
 5. Las tarjetas valen múltiplos de 100 puntos.
 
 ### 5.4 Negociar por Cliente

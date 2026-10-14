@@ -181,6 +181,7 @@ export default function AdminPreciosPage() {
     const face = `$${(editingProduct.faceCents / 100).toFixed(2)}`
     const lowTag = `${editingProduct.storeName} ${face} con`
     const highTag = `para ${editingProduct.storeName} ${face} (`
+    const priceTag = `${editingProduct.storeName} ${face}: el precio`
     const at = (units: number) =>
       validatePricing({
         settings,
@@ -196,7 +197,10 @@ export default function AdminPreciosPage() {
       })
     // Se comparan con el mejor caso para que errores ajenos a este producto no oculten el rango
     const countLow = (u: number) => at(u).filter((i) => i.rule === 3 && i.message.includes(lowTag)).length
-    const countHigh = (u: number) => at(u).filter((i) => i.rule === 1 && i.message.includes(highTag)).length
+    const countHigh = (u: number) =>
+      at(u).filter(
+        (i) => (i.rule === 1 && i.message.includes(highTag)) || (i.rule === 4 && i.message.includes(priceTag)),
+      ).length
     const baseLow = countLow(MARGIN_CAP_UNITS)
     const baseHigh = countHigh(0)
     let a = 0
@@ -606,7 +610,7 @@ export default function AdminPreciosPage() {
                 </>
               )}
               <p className="text-xs text-muted-foreground">
-                Los límites salen de las reglas: abajo, el margen mínimo en cada tramo; arriba, que el paquete de ese valor siga alcanzando para la tarjeta.
+                Los límites salen de las reglas: abajo, el margen mínimo en cada tramo; arriba, que el paquete de ese valor siga alcanzando para la tarjeta y que el precio no supere el valor facial.
               </p>
             </div>
 
