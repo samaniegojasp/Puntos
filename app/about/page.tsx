@@ -1,162 +1,159 @@
-import Image from "next/image"
 import Link from "next/link"
-import { Heart, Award, Users, Truck } from "lucide-react"
+import { Gift, Zap, ShieldCheck, Heart, Sparkles, ShoppingBag } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function AboutPage() {
   return (
-    <div className="container px-4 py-8 md:px-6 md:py-12">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">About PetDo</h1>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-primary">
-            Home
+    <div className="container px-4 py-8 md:px-6 md:py-12 space-y-16">
+      {/* Encabezado y Breadcrumbs */}
+      <div>
+        <nav className="flex items-center text-sm text-muted-foreground mb-2" aria-label="Breadcrumb">
+          <Link href="/" className="hover:text-primary transition-colors">
+            Inicio
           </Link>
           <span className="mx-2">/</span>
-          <span>About</span>
+          <span className="font-medium text-foreground">Nosotros</span>
+        </nav>
+        <h1 className="text-3xl font-bold tracking-tight">Sobre Regala</h1>
+      </div>
+
+      {/* Misión e Historia */}
+      <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="space-y-4">
+          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            Nuestra razón de ser
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Hacer fácil regalar en Ecuador
+          </h2>
+          <p className="text-muted-foreground leading-relaxed">
+            En Regala transformamos la experiencia de dar y recibir obsequios en el país. Creemos firmemente que el mejor regalo es aquel que la persona realmente desea y elige por sí misma.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Nuestra plataforma digital basada en Puntos conecta a los usuarios con las tiendas más queridas y reconocidas de Ecuador, eliminando la incertidumbre, las filas y las demoras de los envíos físicos tradicionales.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            Ya sea para un cumpleaños, un aniversario, un agradecimiento o una recompensa especial, Regala te permite elegir el monto exacto y entregar el código digital al instante.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <Gift className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-base">100% Digital</h3>
+              <p className="text-xs text-muted-foreground">
+                Códigos inmediatos entregados en tu pantalla.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <ShoppingBag className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-base">Marcas líderes</h3>
+              <p className="text-xs text-muted-foreground">
+                Supermercados, salud, deportes, moda, hogar y juguetes.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <Zap className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-base">Sin demoras</h3>
+              <p className="text-xs text-muted-foreground">
+                Canjea en segundos cuando y donde quieras.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-6 flex flex-col items-center text-center space-y-2">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <ShieldCheck className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-base">Transparente</h3>
+              <p className="text-xs text-muted-foreground">
+                Tus Puntos no caducan en esta demo y son fáciles de gestionar.
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="grid md:grid-cols-2 gap-8 items-center mb-16">
-        <div>
-          <h2 className="text-3xl font-bold mb-4">Our Story</h2>
-          <p className="text-muted-foreground mb-4">
-            Founded in 2015, PetDo started with a simple mission: to provide high-quality products for pets and make pet
-            parenting easier and more enjoyable.
-          </p>
-          <p className="text-muted-foreground mb-4">
-            What began as a small local shop has grown into a trusted online destination for pet lovers across the
-            country. Our founder, Sarah Johnson, a passionate dog owner, recognized the need for premium pet products
-            that prioritize both quality and affordability.
-          </p>
+      {/* Valores */}
+      <div className="space-y-8">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold tracking-tight">Nuestros valores</h2>
           <p className="text-muted-foreground">
-            Today, we continue to be guided by our love for animals and commitment to exceptional customer service.
-            Every product in our catalog is carefully selected to ensure it meets our high standards for quality,
-            safety, and value.
-          </p>
-        </div>
-        <div className="relative h-[300px] md:h-[400px] rounded-lg overflow-hidden">
-          <Image
-            src="https://images.unsplash.com/photo-1548199973-03cce0bbc87b?q=80&w=2069&auto=format&fit=crop&ixlib=rb-4.0.3"
-            alt="PetDo team with dogs"
-            fill
-            className="object-cover"
-          />
-        </div>
-      </div>
-
-      {/* Values Section */}
-      <div className="mb-16">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold mb-4">Our Values</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            At PetDo, our core values guide everything we do, from product selection to customer service.
+            Los principios que guían cada decisión en nuestra plataforma.
           </p>
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="bg-card rounded-lg border p-6 text-center">
-            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-4">
+          <div className="bg-card rounded-2xl border p-6 text-center space-y-3">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto">
               <Heart className="h-6 w-6" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Pet Wellbeing</h3>
-            <p className="text-muted-foreground">
-              We prioritize products that contribute to the health, happiness, and wellbeing of your pets.
+            <h3 className="font-semibold text-lg">Empatía y cercanía</h3>
+            <p className="text-sm text-muted-foreground">
+              Pensamos en las necesidades reales de quienes regalan y quienes reciben en Ecuador.
             </p>
           </div>
 
-          <div className="bg-card rounded-lg border p-6 text-center">
-            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-4">
-              <Award className="h-6 w-6" />
+          <div className="bg-card rounded-2xl border p-6 text-center space-y-3">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto">
+              <Zap className="h-6 w-6" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Quality Assurance</h3>
-            <p className="text-muted-foreground">
-              We rigorously test and verify all products to ensure they meet our high standards for quality and safety.
+            <h3 className="font-semibold text-lg">Inmediatez</h3>
+            <p className="text-sm text-muted-foreground">
+              Respuestas y canjes sin fricción, diseñados para el ritmo de vida actual.
             </p>
           </div>
 
-          <div className="bg-card rounded-lg border p-6 text-center">
-            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-4">
-              <Users className="h-6 w-6" />
+          <div className="bg-card rounded-2xl border p-6 text-center space-y-3">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto">
+              <ShieldCheck className="h-6 w-6" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Customer Focus</h3>
-            <p className="text-muted-foreground">
-              We're dedicated to providing exceptional service and building lasting relationships with our customers.
+            <h3 className="font-semibold text-lg">Confianza</h3>
+            <p className="text-sm text-muted-foreground">
+              Transparencia en cada canje: ves cuántos Puntos usas y cuál es tu saldo.
             </p>
           </div>
 
-          <div className="bg-card rounded-lg border p-6 text-center">
-            <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mx-auto mb-4">
-              <Truck className="h-6 w-6" />
+          <div className="bg-card rounded-2xl border p-6 text-center space-y-3">
+            <div className="h-12 w-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary mx-auto">
+              <Gift className="h-6 w-6" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Reliability</h3>
-            <p className="text-muted-foreground">
-              We deliver on our promises with fast shipping, accurate orders, and responsive customer support.
+            <h3 className="font-semibold text-lg">Libertad de elección</h3>
+            <p className="text-sm text-muted-foreground">
+              El destinatario siempre tiene el poder de decidir exactamente lo que necesita.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Team Section */}
-      <div className="mb-16">
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-bold mb-4">Meet Our Team</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
-            The passionate people behind PetDo who work tirelessly to bring the best products to you and your pets.
-          </p>
-        </div>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            {
-              name: "Sarah Johnson",
-              role: "Founder & CEO",
-              image:
-                "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3",
-            },
-            {
-              name: "Michael Chen",
-              role: "Head of Product",
-              image:
-                "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3",
-            },
-            {
-              name: "Emily Rodriguez",
-              role: "Customer Experience",
-              image:
-                "https://images.unsplash.com/photo-1580489944761-15a19d654956?q=80&w=1961&auto=format&fit=crop&ixlib=rb-4.0.3",
-            },
-            {
-              name: "David Kim",
-              role: "Logistics Manager",
-              image:
-                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=1974&auto=format&fit=crop&ixlib=rb-4.0.3",
-            },
-          ].map((member, index) => (
-            <div key={index} className="bg-card rounded-lg border overflow-hidden">
-              <div className="relative h-64 w-full">
-                <Image src={member.image || "/placeholder.svg"} alt={member.name} fill className="object-cover" />
-              </div>
-              <div className="p-4 text-center">
-                <h3 className="font-semibold text-lg">{member.name}</h3>
-                <p className="text-muted-foreground">{member.role}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* CTA Section */}
-      <div className="bg-primary text-primary-foreground rounded-lg p-8 md:p-12 text-center">
-        <h2 className="text-2xl md:text-3xl font-bold mb-4">Join the PetDo Family</h2>
-        <p className="max-w-2xl mx-auto mb-6">
-          Discover premium products for your furry friends and join thousands of satisfied pet parents who trust PetDo.
+      {/* CTA Final */}
+      <div className="bg-primary text-primary-foreground rounded-3xl p-8 md:p-12 text-center space-y-4">
+        <h2 className="text-2xl md:text-3xl font-bold">Empieza a regalar hoy</h2>
+        <p className="max-w-xl mx-auto text-primary-foreground/90 text-sm md:text-base">
+          Explora nuestro catálogo de gift cards de las tiendas favoritas de Ecuador y canjea con tus Puntos.
         </p>
-        <Button size="lg" variant="secondary" asChild>
-          <Link href="/shop">Shop Now</Link>
-        </Button>
+        <div className="pt-2">
+          <Button size="lg" variant="secondary" asChild>
+            <Link href="/shop">Explorar gift cards</Link>
+          </Button>
+        </div>
       </div>
     </div>
   )

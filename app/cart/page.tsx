@@ -1,230 +1,177 @@
 "use client"
 
-import { useState } from "react"
-import Image from "next/image"
 import Link from "next/link"
-import { Minus, Plus, Trash2, ArrowRight } from 'lucide-react'
+import { Minus, Plus, Trash2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { GiftCardFace } from "@/components/gift-card"
+import { formatPoints, pointsFor } from "@/lib/catalog"
+import { useCatalog } from "@/lib/catalog-store"
+import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
-  const [cartItems, setCartItems] = useState([
-    {
-      id: 1,
-      name: "Premium Dog Food",
-      image: "https://images.unsplash.com/photo-1589924691995-400dc9ecc119?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.0.3",
-      price: 39.99,
-      quantity: 2,
-    },
-    {
-      id: 2,
-      name: "Comfortable Dog Bed",
-      image: "https://images.unsplash.com/photo-1541599468348-e96984315921?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-      price: 69.99,
-      quantity: 1,
-    },
-    {
-      id: 3,
-      name: "Interactive Dog Toy",
-      image: "https://images.unsplash.com/photo-1575425186775-b8de9a427e67?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3",
-      price: 19.99,
-      quantity: 3,
-    },
-  ])
+  const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
+  const { findStore } = useCatalog()
 
-  const updateQuantity = (id: number, newQuantity: number) => {
-    if (newQuantity < 1) return
-    setCartItems((prev) => prev.map((item) => (item.id === id ? { ...item, quantity: newQuantity } : item)))
+  if (!ready) {
+    return (
+      <div className="container px-4 py-12 text-center text-muted-foreground">
+        Cargando…
+      </div>
+    )
   }
 
-  const removeItem = (id: number) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id))
+  if (cart.length === 0) {
+    return (
+      <div className="container px-4 py-12 text-center">
+        <h1 className="mb-4 text-2xl font-semibold">Tu carrito está vacío</h1>
+        <p className="mb-8 text-muted-foreground">
+          Aún no has añadido gift cards a tu carrito.
+        </p>
+        <Button asChild>
+          <Link href="/shop">Ver gift cards</Link>
+        </Button>
+      </div>
+    )
   }
-
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const shipping = 5.99
-  const tax = subtotal * 0.08
-  const total = subtotal + shipping + tax
 
   return (
     <div className="container px-4 py-8 md:px-6 md:py-12">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Shopping Cart</h1>
-        <div className="flex items-center text-sm text-muted-foreground">
-          <Link href="/" className="hover:text-primary">
-            Home
+        <nav className="mb-2 flex items-center text-sm text-muted-foreground" aria-label="Breadcrumb">
+          <Link href="/" className="transition-colors hover:text-primary">
+            Inicio
           </Link>
           <span className="mx-2">/</span>
-          <span>Cart</span>
-        </div>
+          <span className="font-medium text-foreground">Carrito</span>
+        </nav>
+        <h1 className="text-3xl font-bold tracking-tight">Carrito</h1>
       </div>
 
-      {cartItems.length === 0 ? (
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-semibold mb-4">Your cart is empty</h2>
-          <p className="text-muted-foreground mb-8">
-            {"Looks like you haven't added any products to your cart yet."}
-          </p>
-          <Button asChild>
-            <Link href="/shop">Continue Shopping</Link>
-          </Button>
-        </div>
-      ) : (
-        <div className="grid md:grid-cols-3 gap-8">
-          <div className="md:col-span-2">
-            <div className="rounded-lg border bg-card">
-              <div className="p-6">
-                <div className="hidden md:grid grid-cols-12 gap-4 pb-4 text-sm font-medium text-muted-foreground">
-                  <div className="col-span-6">Product</div>
-                  <div className="col-span-2 text-center">Price</div>
-                  <div className="col-span-2 text-center">Quantity</div>
-                  <div className="col-span-2 text-right">Subtotal</div>
-                </div>
-                <Separator />
-                {cartItems.map((item, index) => (
-                  <div key={item.id}>
-                    <div className="py-6">
-                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                        <div className="col-span-6 flex items-center gap-4">
-                          <div className="relative h-20 w-20 rounded-md overflow-hidden">
-                            <Image 
-                              src={item.image || "/placeholder.svg"} 
-                              alt={item.name} 
-                              fill 
-                              className="object-cover" 
-                            />
-                          </div>
-                          <div>
-                            <h3 className="font-medium">{item.name}</h3>
-                            <p className="text-sm text-muted-foreground md:hidden">
-                              ${item.price.toFixed(2)}
-                            </p>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="mt-1 h-auto p-0 text-sm text-destructive hover:text-destructive/80 md:hidden"
-                              onClick={() => removeItem(item.id)}
-                            >
-                              <Trash2 className="mr-1 h-3 w-3" />
-                              Remove
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="col-span-2 text-center hidden md:block">
-                          ${item.price.toFixed(2)}
-                        </div>
-                        <div className="col-span-2 flex items-center justify-center">
-                          <div className="flex items-center border rounded-md">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-none"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                            >
-                              <Minus className="h-3 w-3" />
-                              <span className="sr-only">Decrease</span>
-                            </Button>
-                            <span className="w-8 text-center text-sm">{item.quantity}</span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-none"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                            >
-                              <Plus className="h-3 w-3" />
-                              <span className="sr-only">Increase</span>
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="col-span-2 text-right flex items-center justify-between md:justify-end">
-                          <span className="font-medium">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive/80 hidden md:inline-flex"
-                            onClick={() => removeItem(item.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Remove</span>
-                          </Button>
-                        </div>
-                      </div>
+      <div className="grid gap-8 lg:grid-cols-3">
+        <div className="space-y-4 lg:col-span-2">
+          <div className="rounded-2xl border bg-card p-4 sm:p-6 divide-y">
+            {cart.map((item) => {
+              const store = findStore(item.storeId)
+              if (!store) return null
+              const unitPoints = pointsFor(item.usd)
+              const itemTotalPoints = unitPoints * item.qty
+
+              return (
+                <div
+                  key={`${item.storeId}-${item.usd}`}
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-4 first:pt-0 last:pb-0"
+                >
+                  <div className="flex items-center gap-3">
+                    <GiftCardFace store={store} usd={item.usd} compact className="w-28 shrink-0" />
+                    <div>
+                      <h3 className="font-semibold">
+                        {store.name} · ${item.usd}
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {formatPoints(unitPoints)} pts c/u
+                      </p>
                     </div>
-                    {index < cartItems.length - 1 && <Separator />}
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between bg-muted p-6 rounded-b-lg">
-                <Button variant="outline" asChild>
-                  <Link href="/shop">Continue Shopping</Link>
-                </Button>
-                <Button variant="ghost" onClick={() => setCartItems([])}>
-                  Clear Cart
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold mb-4">Order Summary</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Shipping</span>
-                    <span>${shipping.toFixed(2)}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span>${tax.toFixed(2)}</span>
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between font-medium text-lg">
-                    <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
                   </div>
 
-                  <div className="pt-4">
-                    <Button className="w-full" size="lg" asChild>
-                      <Link href="/checkout">
-                        Proceed to Checkout
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Link>
+                  <div className="flex w-full sm:w-auto items-center justify-between sm:justify-end gap-4">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        disabled={item.qty <= 1}
+                        onClick={() => setQty(item.storeId, item.usd, item.qty - 1)}
+                        aria-label="Disminuir cantidad"
+                      >
+                        <Minus className="h-3 w-3" />
+                        <span className="sr-only">Disminuir cantidad</span>
+                      </Button>
+                      <span className="w-8 text-center text-sm font-medium">{item.qty}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setQty(item.storeId, item.usd, item.qty + 1)}
+                        aria-label="Aumentar cantidad"
+                      >
+                        <Plus className="h-3 w-3" />
+                        <span className="sr-only">Aumentar cantidad</span>
+                      </Button>
+                    </div>
+
+                    <div className="min-w-[80px] text-right font-semibold whitespace-nowrap">
+                      {formatPoints(itemTotalPoints)} pts
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                      onClick={() => setQty(item.storeId, item.usd, 0)}
+                      aria-label="Eliminar ítem"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span className="sr-only">Eliminar ítem</span>
                     </Button>
                   </div>
-
-                  <div className="pt-4 space-y-4">
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">or</span>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-2">
-                      <div className="flex items-center">
-                        <Input type="text" placeholder="Coupon code" className="rounded-r-none" />
-                        <Button className="rounded-l-none">Apply</Button>
-                      </div>
-                    </div>
-                  </div>
                 </div>
-              </CardContent>
-            </Card>
+              )
+            })}
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
+            <Button variant="outline" asChild>
+              <Link href="/shop">Seguir explorando</Link>
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={clearCart}
+            >
+              Vaciar carrito
+            </Button>
           </div>
         </div>
-      )}
+
+        <div>
+          <Card>
+            <CardContent className="p-6 space-y-4">
+              <h2 className="text-xl font-semibold">Resumen</h2>
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Tu saldo</span>
+                  <span className="font-medium">{formatPoints(balance)} pts</span>
+                </div>
+                <Separator />
+                <div className="flex justify-between text-base font-semibold">
+                  <span>Total</span>
+                  <span>{formatPoints(cartTotal)} pts</span>
+                </div>
+              </div>
+
+              {cartTotal > balance ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
+                    Te faltan {formatPoints(cartTotal - balance)} pts
+                  </div>
+                  <Button className="w-full" asChild>
+                    <Link href="/recargar">Recargar Puntos</Link>
+                  </Button>
+                </div>
+              ) : (
+                <Button className="w-full" asChild>
+                  <Link href="/checkout">
+                    Canjear {formatPoints(cartTotal)} puntos
+                  </Link>
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }
