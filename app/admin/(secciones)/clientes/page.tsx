@@ -48,6 +48,94 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { validatePricing } from "@/lib/domain/pricing"
 import type { ClientAdminRow, PointsPack } from "@/lib/domain/types"
 
+/** Cantidad que se puede escribir: al hacer clic se convierte en un campo; Enter o salir del campo confirma, Esc cancela. */
+function EditableNumber({
+  display,
+  initial,
+  onCommit,
+  label,
+  suffix,
+  decimals = false,
+}: {
+  display: string
+  initial: string
+  onCommit: (value: number) => void
+  label: string
+  suffix: string
+  decimals?: boolean
+}) {
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState("")
+  const [error, setError] = useState<string | null>(null)
+
+  const start = () => {
+    setText(initial)
+    setError(null)
+    setEditing(true)
+  }
+  const commit = () => {
+    const n = Number(text.trim().replace(",", "."))
+    const valid = Number.isFinite(n) && n > 0 && (decimals || Number.isInteger(n))
+    if (!valid) {
+      setError(decimals ? "Escribe un número mayor que 0." : "Escribe un número entero mayor que 0.")
+      return
+    }
+    onCommit(n)
+    setEditing(false)
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={start}
+        title="Haz clic para escribir un valor"
+        aria-label={`${label}: ${display} ${suffix}. Haz clic para escribir un valor`}
+        className="rounded px-1 font-mono text-sm font-semibold text-foreground underline decoration-dotted underline-offset-4 hover:bg-muted"
+      >
+        {display} {suffix}
+      </button>
+    )
+  }
+  return (
+    <span className="inline-flex flex-col items-end gap-0.5">
+      <span className="inline-flex items-center gap-1">
+        <Input
+          autoFocus
+          data-inline-edit="true"
+          type="text"
+          inputMode="decimal"
+          aria-label={label}
+          value={text}
+          onChange={(e) => {
+            setText(e.target.value)
+            setError(null)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault()
+              commit()
+            } else if (e.key === "Escape") {
+              e.preventDefault()
+              e.stopPropagation()
+              setEditing(false)
+            }
+          }}
+          onBlur={() => {
+            // Si es válido se confirma al salir; si no, se descarta
+            const n = Number(text.trim().replace(",", "."))
+            if (Number.isFinite(n) && n > 0 && (decimals || Number.isInteger(n))) onCommit(n)
+            setEditing(false)
+          }}
+          className="h-8 w-28 text-right font-mono text-sm"
+        />
+        <span className="text-xs text-muted-foreground">{suffix}</span>
+      </span>
+      {error && <span className="text-[10px] text-destructive">{error}</span>}
+    </span>
+  )
+}
+
 /** Puntos que recibe el cliente por cada dólar (inverso del precio por punto). */
 const ptsPerUsd = (usdPerPoint: number) =>
   usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
@@ -379,7 +467,13 @@ export default function AdminClientesPage() {
 
       {/* Dialog para Crear o Editar Cliente */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent
+          className="max-w-2xl max-h-[90vh] overflow-y-auto"
+          onEscapeKeyDown={(e) => {
+            // Esc dentro de un valor que se está escribiendo solo cancela ese valor, no cierra la ventana
+            if (document.activeElement?.hasAttribute("data-inline-edit")) e.preventDefault()
+          }}
+        >
           <DialogHeader>
             <DialogTitle>
               {editingClient ? `Editar cliente: ${editingClient.name}` : "Nuevo cliente corporativo"}
@@ -405,9 +499,23 @@ export default function AdminClientesPage() {
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
                   <Label htmlFor="usdPerPoint">Puntos por cada dólar</Label>
-                  <span className="font-mono text-sm font-semibold text-foreground">
-                    {ptsPerUsd(parsedUsdPerPoint)} pts/$
-                    <span className="ml-2 text-[11px] font-normal text-muted-foreground">
+                  <span className="inline-flex items-baseline gap-2">
+                    <EditableNumber
+                      label="Puntos por cada dólar"
+                      display={ptsPerUsd(parsedUsdPerPoint)}
+                      initial={parsedUsdPerPoint > 0 ? String(Math.round((1 / parsedUsdPerPoint) * 100) / 100) : ""}
+                      suffix="pts/$"
+                      decimals
+                      onCommit={(v) => {
+                        if (baseIdx !== null && basePack) {
+                          // Puntos del tramo más pequeño = puntos por dólar × dólares del tramo
+                          handlePackChange(baseIdx, "points", Math.max(1, Math.round(v * (basePack.usdCents / 100))))
+                        } else {
+                          setUsdPerPoint((1 / v).toFixed(5))
+                        }
+                      }}
+                    />
+                    <span className="text-[11px] font-normal text-muted-foreground">
                       ({formatUsdPerPoint(parsedUsdPerPoint)} por punto)
                     </span>
                   </span>
@@ -562,9 +670,13 @@ export default function AdminClientesPage() {
                           <div className="min-w-[220px] flex-1 space-y-2">
                             <div className="flex items-baseline justify-between">
                               <Label className="text-[10px] text-muted-foreground">Puntos recibidos</Label>
-                              <span className="font-mono text-sm font-semibold text-foreground">
-                                {formatPts(pack.points)} pts
-                              </span>
+                              <EditableNumber
+                                label="Puntos recibidos"
+                                display={formatPts(pack.points)}
+                                initial={String(pack.points)}
+                                suffix="pts"
+                                onCommit={(v) => handlePackChange(idx, "points", v)}
+                              />
                             </div>
                             {bounds ? (
                               <>
