@@ -151,6 +151,8 @@ export default function AdminPreciosPage() {
         ...editingProduct,
         marginPct: parsedMarginPct,
         costCentsOverride: parsedCostOverride,
+        // Se valida como si estuviera activo: un producto oculto hoy podría activarse mañana con un margen absurdo
+        active: true,
       }
     : (products[0] ?? MOCK_PRODUCTS[0])
 
@@ -188,7 +190,7 @@ export default function AdminPreciosPage() {
         providers: MOCK_PROVIDERS,
         products: products.map((p) =>
           p.id === editingProduct.id
-            ? { ...editingProduct, marginPct: units / MARGIN_UNIT, costCentsOverride: parsedCostOverride }
+            ? { ...editingProduct, marginPct: units / MARGIN_UNIT, costCentsOverride: parsedCostOverride, active: true }
             : p,
         ),
         standardPacks,
@@ -226,7 +228,8 @@ export default function AdminPreciosPage() {
     e.preventDefault()
     if (!editingProduct || !canSaveProduct) return
 
-    setProducts(simulatedProducts)
+    // Se guarda con su estado original (activo/inactivo); la validación sí lo trató como activo
+    setProducts(simulatedProducts.map((p) => (p.id === editingProduct.id ? { ...p, active: editingProduct.active } : p)))
     toast.success(`Parámetros de ${editingProduct.storeName} actualizados`)
     setDialogOpen(false)
   }
