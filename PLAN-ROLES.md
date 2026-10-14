@@ -1,6 +1,6 @@
 # PLAN-ROLES — Roles, puntos por origen, precios por volumen y perfil de identidad
 
-Complementa a `PLAN-BACKEND.md`. Cuando se cierren las preguntas de la sección 9, se fusiona con él y se renumeran las fases.
+Especificación de negocio y datos. El **orden de fases y el reparto de trabajo** están en `PLAN-BACKEND.md` (B0–B12); si hay contradicción, aquí manda el negocio y allá el proceso.
 Etiquetas: **[NÚCLEO]** lo hace Claude (permisos, saldo, precios, SQL). **[UI]** lo hace Haiku/Antigravity sobre contratos ya probados.
 
 **Decisiones ya tomadas por el dueño**
@@ -69,7 +69,7 @@ Reglas no negociables:
 - **Clientes:** alta, precio negociado del punto, % de bono, vista de margen.
 - **Usuarios y roles:** asignar rol, bloquear.
 - **Proveedores:** alta, **descuento sobre valor facial (editable)**, caducidad, liquidaciones. Cambiar el descuento recalcula el costo de sus productos y muestra el margen resultante antes de guardar.
-- **Ajustes de canje de caducadas:** recargo (%) y plazo máximo para cambiar.
+- **Ajustes:** recargo (%) y plazo máximo para cambiar tarjetas caducadas; días para que un reparto pendiente vuelva al Cliente; margen mínimo.
 - Pedidos y soporte, auditoría, "ver como".
 
 ---
@@ -99,7 +99,7 @@ Los puntos son acumulables, pero cada punto nació a un precio distinto (lo que 
    - La revisión **no dice si un documento ya está registrado** (sin enumeración, sección 6).
 3. **Enviar:** confirmación explícita ("Esta acción no se puede deshacer. Se descontarán N puntos de tu bolsa") y casilla "Declaro estar autorizado a entregar estos puntos a estas personas y a tratar sus datos". `submit_grant_batch(batch_id, idempotency_key)` hace todo en **una sola transacción**: bloquea la bolsa, vuelve a verificar el saldo, parte lotes del más antiguo al más nuevo (conserva el precio por punto), acredita a quienes ya tienen cuenta con ese documento y crea `pending_grants` para el resto. El lote queda `sent` e inmutable; un doble clic o reintento no duplica.
 4. **Después de enviar:** el Cliente no puede editar ni cancelar. Recibe un resumen descargable con estado único "Enviado" (no distingue acreditado de pendiente). Cada Canjeador recibe un aviso por correo.
-5. **Pendientes sin reclamar:** a los N días (propuesta 90) el sistema los devuelve a la bolsa del Cliente. Es una regla del sistema, no una acción del Cliente.
+5. **Pendientes sin reclamar:** a los N días el sistema los devuelve a la bolsa del Cliente. **N es editable por Nosotros en `/admin`** (`settings.pending_grant_days`, por defecto 90). Es una regla del sistema, no una acción del Cliente.
 6. **Seguridad:** leer el archivo en el servidor con `exceljs` (la versión de `xlsx` publicada en npm está desactualizada y con fallos conocidos [probable]); leer solo valores, nunca evaluar fórmulas; en cualquier archivo exportado (reparto, Proveedor, reportes) prefijar con `'` las celdas que empiecen por `=`, `+`, `-` o `@` para evitar inyección de fórmulas.
 
 ---
@@ -192,7 +192,7 @@ Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus
 | `provider_terms` | `provider_id`, `discount_pct`, `card_valid_days`, `effective_from`, `set_by`; historial de condiciones (el Proveedor ve la vigente) |
 | `products` (reemplaza `stores.denoms`) | `store_id`, `provider_id`, `face_cents`, `cost_cents_override` (opcional), `shipping_cents`, `margin_pct`, `active` |
 | `packs` | + `usd_per_point` derivado; paquetes estándar |
-| `settings` | + `pv_ref`, `pv_public_tiers`, `min_margin_pct`, `points_multiple=100`, `exchange_fee_pct`, `exchange_window_days` |
+| `settings` | + `pv_ref`, `pv_public_tiers`, `min_margin_pct`, `points_multiple=100`, `exchange_fee_pct`, `exchange_window_days`, `pending_grant_days` |
 | `point_lots` / `redemption_allocations` | sección 3 |
 | `pending_grants` | `client_id`, `batch_id`, `doc_type`, `doc_number`, `points`, `usd_per_point`, `expires_at`; se acredita al registrarse, o vuelve a la bolsa al vencer |
 | `grant_batches` | `client_id`, `file_hash`, `status` (`draft`/`sent`), `rows_count`, `total_points`, `idempotency_key` (única), `created_at`, `sent_at` |
@@ -208,32 +208,18 @@ Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `va
 
 ## 8. Reparto de trabajo
 
-| Fase | Quién | Contenido |
-|---|---|---|
-| R1 | Claude [NÚCLEO] | Roles, perfil con documento, `requireRole()`, RLS, pruebas de acceso cruzado |
-| R2 | Claude [NÚCLEO] | Lotes de puntos, `price_points`, paquetes por volumen, `validate_pricing`, pruebas contra los ejemplos |
-| R3 | Haiku [UI] | Registro con documento, fecha de nacimiento y Términos; menú por rol; páginas protegidas vacías |
-| R4 | Claude + Haiku | Admin: Clientes y precios con vista de margen, Usuarios y roles, Proveedores |
-| R5 | Claude + Haiku | Canje con tarjeta virtual y reserva; "Mis puntos por origen"; "Mis tarjetas" |
-| R6 | Claude + Haiku | `/cliente`: comprar, mi bono, reparto masivo por Excel (plantilla, revisión, envío), reportes |
-| R7 | Claude + Haiku | `/proveedor`: KPIs, caja con saldo exacto, notificaciones |
-| R8 | Claude + Haiku | Liquidación por consumo |
-| R9 | Haiku [UI] | Términos y Privacidad, limpieza de avisos de demo |
-| R10 | Después | App del Proveedor con escaneo de QR |
-
-Se entrelazan con B1–B5 de `PLAN-BACKEND.md`; el orden final se fija al fusionarlos.
+Ver `PLAN-BACKEND.md`: B1 roles y perfil, B2 cuentas, B3 lotes y precios, B4 admin, B5 canje con tarjeta virtual, B6 pagos, B7 panel del Cliente y Excel, B8 panel del Proveedor, B9 liquidación y caducidad, B10 legales, B11 producción, B12 app con QR.
 
 ---
 
-## 9. Preguntas abiertas
+## 9. Estado de las decisiones
 
-| # | Pregunta | Recomendación |
-|---|---|---|
-| R1 | ¿Confirmas que el % de bono (C3) lo cambia el Cliente libremente, pero el precio al que compra cada punto lo fijas tú? | Sí: son dos campos y solo el bono es del Cliente. |
-| R2 | Reparto masivo: ¿"todo o nada" (cualquier error bloquea el envío) o se envían las filas válidas? | Todo o nada: un envío irreversible a medias es difícil de explicar. |
-| R3 | Puntos pendientes que nadie reclama: ¿vuelven solos a la bolsa del Cliente a los 90 días? | Sí. |
-| R4 | Con "no hay vuelta atrás" para el Cliente: ¿solo Nosotros podemos revertir un envío, por soporte y con asiento? | Sí, solo Nosotros. |
-| R5 | ¿La plantilla lleva la columna opcional `monto_venta` para calcular los puntos con el bono? | Sí: replica tu Excel. |
-| R6 | Riesgos legales: dinero cobrado por puntos que aún no se consumen, caducidad de saldos a consumidores, facturación del recargo y datos personales que el Cliente sube de terceros. | Consultar a abogado y contador antes de lanzar. |
+Todas las preguntas de negocio están cerradas:
+- Descuento del Proveedor editable y visible para él; `Costo 25` es lo que se le paga.
+- El bono (C3) es del Cliente y lo cambia cuando quiera; el precio de su punto lo fija Nosotros.
+- Lotes del más antiguo al más nuevo; la tarjeta es emitida por Nosotros.
+- Tarjeta caducada: se cambia una vez por puntos con recargo (10 % y 30 días por defecto, editables); no se cambia antes de caducar.
+- Reparto masivo por Excel: todo o nada, plantilla con columna opcional `monto_venta`, envío irreversible; solo Nosotros puede revertir un envío por soporte.
+- Puntos pendientes sin reclamar vuelven a la bolsa del Cliente; los días son editables por Nosotros (90 por defecto).
 
-Cerradas: descuento del Proveedor editable y visible para él; `Costo 25` es lo que se le paga; lotes del más antiguo al más nuevo; tarjeta emitida por Nosotros; tarjeta caducada se cambia por puntos con recargo (10 % y 30 días por defecto); no se cambia antes de caducar; el Cliente reparte con Excel y el envío es irreversible.
+Pendiente fuera del código (dueño): contratos con Proveedores, pasarela, correo transaccional con dominio propio, Vercel Pro, y consulta legal y contable sobre saldos prepagados, caducidad a consumidores, facturación del recargo y datos personales de terceros.
