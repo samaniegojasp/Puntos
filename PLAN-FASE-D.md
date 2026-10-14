@@ -39,7 +39,7 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 6. **Cada área tiene un `layout.tsx` de servidor** que copia el patrón de `app/admin/layout.tsx` (metadata `robots: noindex`) y renderiza un componente cliente `components/panel/<area>-shell.tsx` con `<RoleGate allow=[...]>` + `<PanelShell tabs=[...]>`. Las páginas solo pintan su contenido.
 7. **Acciones irreversibles** (enviar reparto, cambiar tarjeta caducada, consumir, cambiar rol): siempre `AlertDialog` de confirmación con el texto exacto indicado, botón deshabilitado con `Spinner` mientras "procesa" (simula 800 ms con `setTimeout`), y ningún botón de "Deshacer".
 8. **Estados obligatorios en cada lista o tabla:** vacío (mensaje + qué hacer), cargando (`Skeleton`, simula 400 ms) y los casos "incómodos" que indique la fase.
-9. **Privacidad:** el Proveedor nunca ve documento completo ni correo del Canjeador. El Cliente nunca ve si un documento ya está registrado.
+9. **Privacidad:** el Proveedor nunca ve documento completo ni correo del Canjeador. Al revisar un archivo de reparto, el Cliente nunca ve si un documento está registrado. Decisión del dueño (D3): en "Lo repartido" el Cliente SÍ ve puntos usados y disponibles por documento; eso deja inferir que quien usó puntos ya tiene cuenta, y se acepta porque le sirve para medir su programa.
 10. Textos sobre mayoría de edad: siempre **"declaración"**, nunca "verificamos".
 11. Los avisos de "Prototipo" ya los pone `PanelShell`; no agregues más.
 12. Al terminar: `npx tsc --noEmit` **sin errores**, `npm run build` **sin errores**, pruebas manuales de la fase (cambiando de rol con la barra), `git add` **solo** los archivos de la fase (nunca `package-lock.json` ni `.env*`), commit y `git push`.

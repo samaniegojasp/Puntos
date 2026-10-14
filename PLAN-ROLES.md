@@ -177,7 +177,7 @@ Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus
 - `doc_type + doc_number` único, normalizado. Validación en cliente **y** servidor. El documento también sirve para acreditar repartos pendientes de un Cliente.
 - **Fecha de nacimiento** obligatoria; el servidor rechaza menores de 18. Casilla de Términos y Privacidad con versión y fecha guardadas.
 - Texto de los Términos: *"Declaro ser mayor de 18 años"*. Sin KYC no se puede comprobar; el texto dice declaración, no verificación.
-- El documento es dato personal (LOPDP): lo ven el dueño y Nosotros; el Proveedor ve solo los últimos 4 dígitos. El Cliente no puede saber si un documento ya está registrado (sin enumeración).
+- El documento es dato personal (LOPDP): lo ven el dueño y Nosotros; el Proveedor ve solo los últimos 4 dígitos. Al revisar un archivo de reparto, el Cliente no puede saber si un documento ya está registrado (sin enumeración). Excepción aceptada por el dueño: en "Lo repartido" ve puntos usados y disponibles por documento, de lo que puede inferir que quien usó puntos tiene cuenta.
 
 ---
 
