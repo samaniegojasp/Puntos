@@ -54,6 +54,7 @@ No negociables:
 3. **Idempotencia** en pagos, canjes, consumos y envíos de reparto (`unique` por referencia o clave).
 4. **RLS en todas las tablas**; el acceso por rol se decide en el servidor (`requireRole()`), no ocultando pestañas.
 5. `service_role`/`secret` de Supabase solo en el servidor, sin prefijo `NEXT_PUBLIC_`.
+6b. **El precio por punto (`usd_per_point`), los costos del proveedor y los márgenes son datos solo de Nosotros.** Ninguna consulta o función que sirva a Canjeador, Cliente o Proveedor los devuelve: se exponen vistas/RPC sin esas columnas y las tablas base solo las lee `admin` (RLS). Los paquetes se muestran como "USD → puntos". Se prueba en B1/B3 con un usuario no admin.
 6. **Dinero en centavos enteros**, puntos enteros, precios por punto en `numeric(10,6)`.
 7. **Operaciones sobre una misma fila** (consumo vs. cambio de tarjeta, canje vs. canje) con bloqueo `FOR UPDATE`.
 8. Todo cambio sensible a `audit_log`.

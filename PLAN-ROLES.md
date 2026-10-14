@@ -223,3 +223,5 @@ Todas las preguntas de negocio están cerradas:
 - Puntos pendientes sin reclamar vuelven a la bolsa del Cliente; los días son editables por Nosotros (90 por defecto).
 
 Pendiente fuera del código (dueño): contratos con Proveedores, pasarela, correo transaccional con dominio propio, Vercel Pro, y consulta legal y contable sobre saldos prepagados, caducidad a consumidores, facturación del recargo y datos personales de terceros.
+
+> **Confidencialidad (decisión posterior):** el precio por punto, los márgenes y los costos del proveedor solo los ve Nosotros. El Canjeador ve sus lotes por origen, fecha y puntos, pero nunca el precio por punto. Aunque "USD → puntos" de un paquete permite deducir el precio de ese paquete, el valor explícito y las comparaciones no se muestran.

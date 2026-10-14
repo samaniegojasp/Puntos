@@ -18,7 +18,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { MOCK_LEDGER, MOCK_LOTS } from "@/lib/mock/data"
-import { formatDate, formatPts, formatUsdPerPoint } from "@/lib/domain/format"
+import { formatDate, formatPts } from "@/lib/domain/format"
 import type { LotOrigin } from "@/lib/domain/types"
 
 function getOriginLabel(origin: LotOrigin, clientName?: string): string {
@@ -97,7 +97,7 @@ export default function CuentaPuntosPage() {
             <div>
               <CardTitle className="text-lg">Mis lotes de puntos</CardTitle>
               <CardDescription>
-                Detalle por origen y antigüedad. Consumo FIFO (primero en entrar, primero en salir).
+                Detalle por origen y antigüedad. Se gasta primero el lote más antiguo.
               </CardDescription>
             </div>
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
@@ -126,7 +126,6 @@ export default function CuentaPuntosPage() {
                     <TableHead>Fecha</TableHead>
                     <TableHead className="text-right">Puntos iniciales</TableHead>
                     <TableHead className="text-right">Puntos restantes</TableHead>
-                    <TableHead className="text-right">Precio por punto</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -173,9 +172,6 @@ export default function CuentaPuntosPage() {
                               </span>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell className="align-middle text-right font-mono text-sm tabular-nums text-foreground whitespace-nowrap">
-                          {formatUsdPerPoint(lot.usdPerPoint)}
                         </TableCell>
                       </TableRow>
                     )

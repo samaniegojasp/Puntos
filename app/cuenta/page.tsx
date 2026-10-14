@@ -103,7 +103,7 @@ export default function CuentaResumenPage() {
         <KpiCard
           label="Puntos totales"
           value={formatPts(totalPoints)}
-          hint="En 4 lotes acumulados"
+          hint={`En ${MOCK_LOTS.filter((l) => l.pointsRemaining > 0).length} lotes con saldo`}
         />
         <KpiCard
           label="Tarjetas activas"
