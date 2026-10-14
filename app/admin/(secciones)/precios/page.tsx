@@ -224,6 +224,25 @@ export default function AdminPreciosPage() {
     return min <= max ? { min, max } : null
   })()
 
+  // Vista previa de lo que produce el margen que se está editando (y lo que hay guardado hoy)
+  const preview = editingProduct
+    ? (() => {
+        const provider = providerOf(editingProduct.providerId)
+        const calc = (prod: Product) => {
+          const cost = productCostCents(prod, provider)
+          const price = productPriceCents(prod, provider)
+          const pts = pointsPrice(price, refCents, settings.pointsMultiple)
+          return {
+            cost,
+            price,
+            pts,
+            margins: standardPacks.slice(0, 3).map((pack) => ({ usd: pack.usdCents, ...marginAtPack(pts, pack, cost) })),
+          }
+        }
+        return { now: calc(editingProduct), next: calc(candidateProduct) }
+      })()
+    : null
+
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault()
     if (!editingProduct || !canSaveProduct) return
@@ -637,6 +656,52 @@ export default function AdminPreciosPage() {
                 />
               </div>
             </div>
+
+            {preview && (
+              <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Vista previa con este margen
+                </p>
+                <div className="grid grid-cols-[auto_1fr_1fr] gap-x-4 gap-y-1 text-xs">
+                  <span />
+                  <span className="text-muted-foreground">Guardado hoy</span>
+                  <span className="text-muted-foreground">Con este margen</span>
+                  <span className="text-muted-foreground">Precio</span>
+                  <span className="font-mono">{formatUsd(preview.now.price)}</span>
+                  <span className="font-mono font-semibold">{formatUsd(preview.next.price)}</span>
+                  <span className="text-muted-foreground">Puntos de la tarjeta</span>
+                  <span className="font-mono">{formatPts(preview.now.pts)}</span>
+                  <span className="font-mono font-semibold text-primary">
+                    {formatPts(preview.next.pts)}
+                    {preview.next.pts !== preview.now.pts && (
+                      <span className="ml-1 font-normal text-muted-foreground">
+                        ({preview.next.pts > preview.now.pts ? "+" : "−"}
+                        {formatPts(Math.abs(preview.next.pts - preview.now.pts))})
+                      </span>
+                    )}
+                  </span>
+                  {preview.next.margins.map((m, i) => (
+                    <div key={m.usd} className="contents">
+                      <span className="text-muted-foreground">Margen en tramo de {formatUsd(m.usd)}</span>
+                      <span className="font-mono">{formatPct(preview.now.margins[i].marginPct)}</span>
+                      <span
+                        className={
+                          "font-mono font-semibold " +
+                          (m.marginPct < settings.minMarginPct ? "text-destructive" : "")
+                        }
+                      >
+                        {formatPct(m.marginPct)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {preview.next.pts === preview.now.pts && (
+                  <p className="text-[11px] text-muted-foreground">
+                    Los puntos no cambian: se redondean hacia arriba a múltiplos de {settings.pointsMultiple} y este margen no cruza al siguiente escalón.
+                  </p>
+                )}
+              </div>
+            )}
 
             {dialogErrors.length > 0 && (
               <Alert variant="destructive">
