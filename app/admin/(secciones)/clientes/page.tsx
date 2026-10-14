@@ -302,7 +302,6 @@ export default function AdminClientesPage() {
   // Rango del precio por punto: el de un tramo de referencia ($10 si no hay tramos propios).
   // Más puntos por el mismo monto = punto más barato, por eso los extremos se invierten.
   const REF_USD_CENTS = 1000
-  const PRICE_UNIT = 100_000 // el slider trabaja en unidades de $0,00001
   const priceBounds = (() => {
     const b =
       baseIdx !== null && basePack
@@ -312,18 +311,6 @@ export default function AdminClientesPage() {
     const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
     return { min: usd / b.max, max: usd / b.min, pointsMin: b.min, pointsMax: b.max, usd }
   })()
-
-  const handlePriceSlide = (units: number) => {
-    const price = units / PRICE_UNIT
-    if (!priceBounds || price <= 0) return
-    if (baseIdx !== null) {
-      const raw = priceBounds.usd / price
-      const snapped = Math.round(raw / POINTS_STEP) * POINTS_STEP
-      handlePackChange(baseIdx, "points", Math.min(Math.max(snapped, priceBounds.pointsMin), priceBounds.pointsMax))
-    } else {
-      setUsdPerPoint(price.toFixed(5))
-    }
-  }
 
   const errorIssues = issues.filter((i) => i.severity === "error")
   const warningIssues = issues.filter((i) => i.severity === "warning")
@@ -534,19 +521,19 @@ export default function AdminClientesPage() {
                         aria-label="Puntos por cada dólar"
                       />
                     ) : (
+                      // Sin tramo propio la barra va directamente en puntos por dólar (pasos de 0,1): izquierda = menos puntos
                       <Slider
                         id="usdPerPoint"
-                        inverted
-                        min={Math.ceil(priceBounds.min * PRICE_UNIT)}
-                        max={Math.floor(priceBounds.max * PRICE_UNIT)}
+                        min={Math.ceil(10 / priceBounds.max)}
+                        max={Math.floor(10 / priceBounds.min)}
                         step={1}
                         value={[
                           Math.min(
-                            Math.max(Math.round(parsedUsdPerPoint * PRICE_UNIT), Math.ceil(priceBounds.min * PRICE_UNIT)),
-                            Math.floor(priceBounds.max * PRICE_UNIT),
+                            Math.max(Math.round(10 / parsedUsdPerPoint), Math.ceil(10 / priceBounds.max)),
+                            Math.floor(10 / priceBounds.min),
                           ),
                         ]}
-                        onValueChange={(v) => handlePriceSlide(v[0])}
+                        onValueChange={(v) => v[0] > 0 && setUsdPerPoint((10 / v[0]).toFixed(5))}
                         aria-label="Puntos por cada dólar"
                       />
                     )}
