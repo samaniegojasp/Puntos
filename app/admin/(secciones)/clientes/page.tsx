@@ -116,7 +116,16 @@ export default function AdminClientesPage() {
   }
 
   // Validación en tiempo real con validatePricing
-  const parsedUsdPerPoint = parseFloat(usdPerPoint) || 0.008
+  // Con tramos propios, el precio por punto sale de su tramo más pequeño (una sola fuente de verdad).
+  const baseIdx =
+    packMode === "custom" && customPacks.length > 0
+      ? customPacks.reduce((best, p, i) => (p.usdCents < customPacks[best].usdCents ? i : best), 0)
+      : null
+  const basePack = baseIdx !== null ? customPacks[baseIdx] : null
+  const parsedUsdPerPoint =
+    basePack && basePack.points > 0
+      ? basePack.usdCents / basePack.points / 100
+      : parseFloat(usdPerPoint) || 0.008
   const candidateClient: ClientAdminRow = {
     id: editingClient?.id ?? "c-temp",
     name: name.trim() || (editingClient?.name ?? "Cliente Temporal"),
@@ -129,8 +138,12 @@ export default function AdminClientesPage() {
   }
 
   // Revisa las reglas del sistema con un conjunto de tramos propios dado
-  const buildIssues = (packs: PointsPack[]) => {
-    const cand: ClientAdminRow = { ...candidateClient, customPacks: packMode === "custom" ? packs : [] }
+  const buildIssues = (packs: PointsPack[], forceCustom = false) => {
+    const cand: ClientAdminRow = {
+      ...candidateClient,
+      packMode: forceCustom ? "custom" : packMode,
+      customPacks: forceCustom || packMode === "custom" ? packs : [],
+    }
     const simulated = editingClient
       ? clients.map((c) => (c.id === editingClient.id ? cand : c))
       : [...clients, cand]
@@ -151,15 +164,18 @@ export default function AdminClientesPage() {
   // Regla 3 (margen mínimo): exige un máximo de puntos.
   const POINTS_STEP = 50
   const POINTS_CAP = 5_000_000
-  const pointsBounds = (idx: number): { min: number; max: number } | null => {
-    const own = customPacks[idx]
+  const boundsFor = (
+    packs: PointsPack[],
+    idx: number,
+    forceCustom = false,
+  ): { min: number; max: number } | null => {
+    const own = packs[idx]
     if (!own || own.usdCents <= 0) return null
     const tag = `tramo $${(own.usdCents / 100).toFixed(2)}:`
-    const withPoints = (pts: number) =>
-      customPacks.map((x, i) => (i === idx ? { ...x, points: pts } : x))
-    const lowOk = (pts: number) => !buildIssues(withPoints(pts)).some((i) => i.rule === 2)
+    const withPoints = (pts: number) => packs.map((x, i) => (i === idx ? { ...x, points: pts } : x))
+    const lowOk = (pts: number) => !buildIssues(withPoints(pts), forceCustom).some((i) => i.rule === 2)
     const highOk = (pts: number) =>
-      !buildIssues(withPoints(pts)).some((i) => i.rule === 3 && i.message.includes(tag))
+      !buildIssues(withPoints(pts), forceCustom).some((i) => i.rule === 3 && i.message.includes(tag))
 
     const maxK = Math.floor(POINTS_CAP / POINTS_STEP)
     // Menor valor que cumple la regla 2 (válido de ahí hacia arriba)
@@ -182,6 +198,33 @@ export default function AdminClientesPage() {
     }
     const max = a * POINTS_STEP
     return min <= max ? { min, max } : null
+  }
+  const pointsBounds = (idx: number) => boundsFor(customPacks, idx)
+
+  // Rango del precio por punto: el de un tramo de referencia ($10 si no hay tramos propios).
+  // Más puntos por el mismo monto = punto más barato, por eso los extremos se invierten.
+  const REF_USD_CENTS = 1000
+  const PRICE_UNIT = 100_000 // el slider trabaja en unidades de $0,00001
+  const priceBounds = (() => {
+    const b =
+      baseIdx !== null && basePack
+        ? pointsBounds(baseIdx)
+        : boundsFor([{ id: "ref", usdCents: REF_USD_CENTS, points: 1250 }], 0, true)
+    if (!b) return null
+    const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
+    return { min: usd / b.max, max: usd / b.min, pointsMin: b.min, pointsMax: b.max, usd }
+  })()
+
+  const handlePriceSlide = (units: number) => {
+    const price = units / PRICE_UNIT
+    if (!priceBounds || price <= 0) return
+    if (baseIdx !== null) {
+      const raw = priceBounds.usd / price
+      const snapped = Math.round(raw / POINTS_STEP) * POINTS_STEP
+      handlePackChange(baseIdx, "points", Math.min(Math.max(snapped, priceBounds.pointsMin), priceBounds.pointsMax))
+    } else {
+      setUsdPerPoint(price.toFixed(5))
+    }
   }
 
   const errorIssues = issues.filter((i) => i.severity === "error")
@@ -347,19 +390,47 @@ export default function AdminClientesPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="usdPerPoint">Precio por punto (USD, 5 decimales)</Label>
-                <Input
-                  id="usdPerPoint"
-                  type="number"
-                  step="0.00001"
-                  min="0.00001"
-                  value={usdPerPoint}
-                  onChange={(e) => setUsdPerPoint(e.target.value)}
-                  placeholder="0.00800"
-                  required
-                />
+                <div className="flex items-baseline justify-between">
+                  <Label htmlFor="usdPerPoint">Precio por punto</Label>
+                  <span className="font-mono text-sm font-semibold text-foreground">
+                    {formatUsdPerPoint(parsedUsdPerPoint)}
+                  </span>
+                </div>
+                {priceBounds ? (
+                  <>
+                    <Slider
+                      id="usdPerPoint"
+                      min={Math.ceil(priceBounds.min * PRICE_UNIT)}
+                      max={Math.floor(priceBounds.max * PRICE_UNIT)}
+                      step={1}
+                      value={[
+                        Math.min(
+                          Math.max(Math.round(parsedUsdPerPoint * PRICE_UNIT), Math.ceil(priceBounds.min * PRICE_UNIT)),
+                          Math.floor(priceBounds.max * PRICE_UNIT),
+                        ),
+                      ]}
+                      onValueChange={(v) => handlePriceSlide(v[0])}
+                      aria-label="Precio por punto"
+                    />
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Mínimo {formatUsdPerPoint(priceBounds.min)}</span>
+                      <span>Máximo {formatUsdPerPoint(priceBounds.max)}</span>
+                    </div>
+                    {(parsedUsdPerPoint < priceBounds.min - 1e-9 || parsedUsdPerPoint > priceBounds.max + 1e-9) && (
+                      <p className="text-[11px] text-destructive">
+                        El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-[11px] text-destructive">
+                    No existe un precio por punto que cumpla las reglas con los datos actuales.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
-                  Ejemplo: 0.00800 significa $0,008 por punto.
+                  {baseIdx !== null
+                    ? "Sale del tramo propio más pequeño: mover la barra ajusta los puntos de ese tramo. Los límites vienen de las reglas del sistema."
+                    : "Valor de referencia para convertir bono en puntos. Los límites vienen de las reglas del sistema."}
                 </p>
               </div>
             </div>
