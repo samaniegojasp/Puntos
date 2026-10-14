@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Gift } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,29 +18,25 @@ export default function LoginPage() {
       <Card>
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <Image
-              src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2064&auto=format&fit=crop&ixlib=rb-4.0.3"
-              alt="PetDo Logo"
-              width={40}
-              height={40}
-              className="rounded-full bg-primary"
-            />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Gift className="h-6 w-6" />
+            </span>
           </div>
-          <CardTitle className="text-2xl text-center">Sign in to your account</CardTitle>
+          <CardTitle className="text-2xl text-center">Inicia sesión en tu cuenta</CardTitle>
           <CardDescription className="text-center">
-            Enter your email and password to access your account
+            Ingresa tu correo y contraseña para acceder
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="name@example.com" />
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input id="email" type="email" placeholder="nombre@correo.com" />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Link href="/forgot-password" className="text-xs text-primary hover:underline">
-                Forgot password?
+                ¿Olvidaste tu contraseña?
               </Link>
             </div>
             <div className="relative">
@@ -58,18 +53,18 @@ export default function LoginPage() {
                 ) : (
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
               </Button>
             </div>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox id="remember" />
             <Label htmlFor="remember" className="text-sm font-normal">
-              Remember me
+              Recordarme
             </Label>
           </div>
           <Button className="w-full" size="lg">
-            Sign In
+            Iniciar sesión
           </Button>
 
           <div className="relative">
@@ -77,7 +72,7 @@ export default function LoginPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-card px-2 text-muted-foreground">O continuar con</span>
             </div>
           </div>
 
@@ -97,7 +92,7 @@ export default function LoginPage() {
                   fill="#FBBC05"
                 />
                 <path
-                  d="M12 5.38c1.62 0 3.কিন্ত 06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   fill="#EA4335"
                 />
               </svg>
@@ -113,9 +108,9 @@ export default function LoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-center text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            ¿No tienes una cuenta?{" "}
             <Link href="/register" className="text-primary hover:underline">
-              Sign up
+              Regístrate
             </Link>
           </p>
         </CardFooter>

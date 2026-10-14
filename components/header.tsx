@@ -46,7 +46,7 @@ export default function Header() {
             </span>
             <span className="hidden text-xl font-bold sm:inline">Regala</span>
           </Link>
-          <nav className="hidden md:flex gap-6">
+          <nav className="hidden lg:flex gap-6">
             <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
               Inicio
             </Link>
@@ -109,7 +109,7 @@ export default function Header() {
               <span className="sr-only">Carrito</span>
             </Link>
           </Button>
-          <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
             {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             <span className="sr-only">Menú</span>
           </Button>
@@ -117,7 +117,7 @@ export default function Header() {
       </div>
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t p-4 space-y-4 bg-background">
+        <div className="lg:hidden border-t p-4 space-y-4 bg-background">
           <form onSubmit={handleMobileSearch} className="relative mb-4">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input

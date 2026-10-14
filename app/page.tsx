@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { NewsletterForm } from "@/components/newsletter-form"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import {
@@ -266,16 +266,7 @@ export default function HomePage() {
               </p>
             </div>
             <div className="w-full max-w-md space-y-2">
-              <form className="flex flex-col sm:flex-row gap-2">
-                <Input
-                  type="email"
-                  placeholder="Ingresa tu correo"
-                  className="bg-primary-foreground text-foreground placeholder:text-muted-foreground"
-                />
-                <Button variant="secondary" type="submit" className="shrink-0">
-                  Suscribirme
-                </Button>
-              </form>
+              <NewsletterForm />
               <p className="text-xs text-primary-foreground/80">
                 No enviamos spam. Puedes cancelar tu suscripción en cualquier momento.
               </p>

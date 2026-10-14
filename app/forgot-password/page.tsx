@@ -1,5 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
+import { Gift } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -12,33 +12,29 @@ export default function ForgotPasswordPage() {
       <Card>
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <Image
-              src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2064&auto=format&fit=crop&ixlib=rb-4.0.3"
-              alt="PetDo Logo"
-              width={40}
-              height={40}
-              className="rounded-full bg-primary"
-            />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Gift className="h-6 w-6" />
+            </span>
           </div>
-          <CardTitle className="text-2xl text-center">Forgot Password</CardTitle>
+          <CardTitle className="text-2xl text-center">¿Olvidaste tu contraseña?</CardTitle>
           <CardDescription className="text-center">
-            Enter your email address and we'll send you a link to reset your password
+            Ingresa tu correo electrónico y te enviaremos un enlace para restablecerla
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="name@example.com" />
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input id="email" type="email" placeholder="nombre@correo.com" />
           </div>
           <Button className="w-full" size="lg">
-            Send Reset Link
+            Enviar enlace de recuperación
           </Button>
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-center text-sm text-muted-foreground">
-            Remember your password?{" "}
+            ¿Recordaste tu contraseña?{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Back to login
+              Volver a iniciar sesión
             </Link>
           </p>
         </CardFooter>

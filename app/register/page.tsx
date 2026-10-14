@@ -2,8 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import Image from "next/image"
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Gift } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,34 +18,34 @@ export default function RegisterPage() {
       <Card>
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
-            <Image
-              src="https://images.unsplash.com/photo-1583337130417-3346a1be7dee?q=80&w=2064&auto=format&fit=crop&ixlib=rb-4.0.3"
-              alt="PetDo Logo"
-              width={40}
-              height={40}
-              className="rounded-full bg-primary"
-            />
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <Gift className="h-6 w-6" />
+            </span>
           </div>
-          <CardTitle className="text-2xl text-center">Create an account</CardTitle>
-          <CardDescription className="text-center">Enter your information to create an account</CardDescription>
+          <CardTitle className="text-2xl text-center">Crea tu cuenta</CardTitle>
+          <CardDescription className="text-center">Ingresa tus datos para registrarte</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-xl bg-primary/10 p-3 text-center text-sm font-medium text-primary">
+            Recibe 500 Puntos de bienvenida
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="first-name">First Name</Label>
-              <Input id="first-name" placeholder="John" />
+              <Label htmlFor="first-name">Nombre</Label>
+              <Input id="first-name" placeholder="Juan" />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="last-name">Last Name</Label>
-              <Input id="last-name" placeholder="Doe" />
+              <Label htmlFor="last-name">Apellido</Label>
+              <Input id="last-name" placeholder="Pérez" />
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="name@example.com" />
+            <Label htmlFor="email">Correo electrónico</Label>
+            <Input id="email" type="email" placeholder="nombre@correo.com" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">Contraseña</Label>
             <div className="relative">
               <Input id="password" type={showPassword ? "text" : "password"} placeholder="••••••••" />
               <Button
@@ -61,28 +60,28 @@ export default function RegisterPage() {
                 ) : (
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="sr-only">{showPassword ? "Hide password" : "Show password"}</span>
+                <span className="sr-only">{showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}</span>
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Password must be at least 8 characters long and include a number and a special character.
+              La contraseña debe tener al menos 8 caracteres.
             </p>
           </div>
           <div className="flex items-center space-x-2">
             <Checkbox id="terms" />
             <Label htmlFor="terms" className="text-sm font-normal">
-              I agree to the{" "}
+              Acepto los{" "}
               <Link href="#" className="text-primary hover:underline">
-                Terms of Service
+                Términos de Servicio
               </Link>{" "}
-              and{" "}
+              y la{" "}
               <Link href="#" className="text-primary hover:underline">
-                Privacy Policy
+                Política de Privacidad
               </Link>
             </Label>
           </div>
           <Button className="w-full" size="lg">
-            Create Account
+            Crear cuenta
           </Button>
 
           <div className="relative">
@@ -90,7 +89,7 @@ export default function RegisterPage() {
               <span className="w-full border-t" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
+              <span className="bg-card px-2 text-muted-foreground">O continuar con</span>
             </div>
           </div>
 
@@ -126,9 +125,9 @@ export default function RegisterPage() {
         </CardContent>
         <CardFooter className="flex flex-col">
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            ¿Ya tienes una cuenta?{" "}
             <Link href="/login" className="text-primary hover:underline">
-              Sign in
+              Inicia sesión
             </Link>
           </p>
         </CardFooter>
