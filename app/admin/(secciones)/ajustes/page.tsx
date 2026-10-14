@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { AlertCircle, AlertTriangle, Check, RefreshCw, RotateCcw, Settings, Sliders } from "lucide-react"
 import { toast } from "sonner"
 
@@ -32,9 +32,16 @@ export default function AdminAjustesPage() {
   const [exchangeFeePctInput, setExchangeFeePctInput] = useState((current.exchangeFeePct * 100).toString())
   const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
   const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
+  // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
+  type LimitUnit = "ppd" | "price"
   const fmtPrice = (n: number | undefined) => (n === undefined ? "" : n.toFixed(5))
-  const [priceMinInput, setPriceMinInput] = useState(fmtPrice(current.pricePerPointMin))
-  const [priceMaxInput, setPriceMaxInput] = useState(fmtPrice(current.pricePerPointMax))
+  const fmtPpd = (n: number | undefined) => (n === undefined ? "" : String(Math.round((1 / n) * 100) / 100))
+  const [limitUnit, setLimitUnit] = useState<LimitUnit>("ppd")
+  // lo = límite inferior de la cantidad mostrada; hi = límite superior (en puntos por dólar, el inferior es el precio máximo)
+  const [limitLoInput, setLimitLoInput] = useState(fmtPpd(current.pricePerPointMax))
+  const [limitHiInput, setLimitHiInput] = useState(fmtPpd(current.pricePerPointMin))
+  // Último texto escrito por la persona y su unidad: al volver a esa unidad se restaura tal cual (sin redondeos acumulados)
+  const typedRef = useRef<{ unit: LimitUnit; lo: string; hi: string } | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -67,20 +74,48 @@ export default function AdminAjustesPage() {
   }
 
   // Límites opcionales del precio por punto (vacío = sin límite adicional)
-  const parsePrice = (raw: string): number | undefined | "invalid" => {
+  const parseQty = (raw: string): number | undefined | "invalid" => {
     const t = raw.trim().replace(",", ".")
     if (!t) return undefined
     const n = Number(t)
-    return Number.isFinite(n) && n > 0 && n < 100 ? Math.round(n * 100000) / 100000 : "invalid"
+    const max = limitUnit === "price" ? 100 : 100000
+    return Number.isFinite(n) && n > 0 && n < max ? n : "invalid"
   }
-  const ptsPerUsdText = (price: number) =>
-    new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / price)
-  const priceMin = parsePrice(priceMinInput)
-  const priceMax = parsePrice(priceMaxInput)
-  if (priceMin === "invalid" || priceMax === "invalid") {
-    errors.push("Los límites del precio por punto deben ser números mayores que 0 (USD, hasta 5 decimales) o quedar vacíos.")
-  } else if (priceMin !== undefined && priceMax !== undefined && priceMin > priceMax) {
-    errors.push("El precio mínimo por punto no puede ser mayor que el máximo.")
+  const loQty = parseQty(limitLoInput)
+  const hiQty = parseQty(limitHiInput)
+  const round5 = (n: number) => Math.round(n * 100000) / 100000
+  // Precio por punto equivalente (USD). En puntos por dólar el límite inferior es el precio máximo.
+  const toPrice = (q: number | undefined | "invalid"): number | undefined =>
+    typeof q === "number" ? round5(limitUnit === "price" ? q : 1 / q) : undefined
+  const priceMin = limitUnit === "price" ? toPrice(loQty) : toPrice(hiQty)
+  const priceMax = limitUnit === "price" ? toPrice(hiQty) : toPrice(loQty)
+  const unitLabel = limitUnit === "price" ? "precio por punto" : "puntos por dólar"
+  if (loQty === "invalid" || hiQty === "invalid") {
+    errors.push(
+      limitUnit === "price"
+        ? "Los límites del precio por punto deben ser números mayores que 0 (USD, hasta 5 decimales) o quedar vacíos."
+        : "Los límites de puntos por dólar deben ser números mayores que 0 o quedar vacíos.",
+    )
+  } else if (typeof loQty === "number" && typeof hiQty === "number" && loQty > hiQty) {
+    errors.push(`El mínimo de ${unitLabel} no puede ser mayor que el máximo.`)
+  }
+  const fmtEq = (n: number) => new Intl.NumberFormat("es-EC", { maximumFractionDigits: limitUnit === "price" ? 1 : 5 }).format(n)
+
+  // Cambia de unidad convirtiendo lo que ya escribiste (el límite inferior y el superior se intercambian)
+  const switchUnit = (next: LimitUnit) => {
+    if (next === limitUnit) return
+    const conv = (raw: string) => {
+      const q = parseQty(raw)
+      if (typeof q !== "number") return raw.trim() ? raw : ""
+      return next === "price" ? fmtPrice(round5(1 / q)) : String(Math.round((1 / q) * 100) / 100)
+    }
+    const typed = typedRef.current
+    const restore = typed !== null && typed.unit === next
+    const newLo = restore ? typed.lo : conv(typed ? typed.hi : limitHiInput)
+    const newHi = restore ? typed.hi : conv(typed ? typed.lo : limitLoInput)
+    setLimitUnit(next)
+    setLimitLoInput(newLo)
+    setLimitHiInput(newHi)
   }
 
   // Fracciones redondeadas para evitar números flotantes largos
@@ -95,8 +130,8 @@ export default function AdminAjustesPage() {
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     pointsMultiple: MOCK_SETTINGS.pointsMultiple,
-    pricePerPointMin: priceMin === "invalid" ? undefined : priceMin,
-    pricePerPointMax: priceMax === "invalid" ? undefined : priceMax,
+    pricePerPointMin: priceMin,
+    pricePerPointMax: priceMax,
   }
 
   // Validación con validatePricing usando los ajustes candidatos
@@ -127,8 +162,9 @@ export default function AdminAjustesPage() {
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
-    setPriceMinInput(fmtPrice(MOCK_SETTINGS.pricePerPointMin))
-    setPriceMaxInput(fmtPrice(MOCK_SETTINGS.pricePerPointMax))
+    setLimitUnit("ppd")
+    setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
+    setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
     setSettings(MOCK_SETTINGS)
     toast.info("Ajustes restablecidos a sus valores originales")
   }
@@ -249,39 +285,78 @@ export default function AdminAjustesPage() {
 
               {/* Límites del precio por punto */}
               <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
-                <div>
-                  <h4 className="text-sm font-semibold">Rango del precio por punto de los clientes (USD, opcional)</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Estos límites estrechan la barra de precio por punto en Clientes. Solo pueden achicar el rango que ya imponen las reglas del sistema (margen mínimo y &ldquo;el Canjeador paga más&rdquo;); nunca ampliarlo. Déjalos vacíos para usar solo las reglas.
-                  </p>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="max-w-xl">
+                    <h4 className="text-sm font-semibold">Rango del precio por punto de los clientes (opcional)</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Estos límites estrechan la barra de Clientes. Solo pueden achicar el rango que ya imponen las reglas del sistema (margen mínimo y &ldquo;el Canjeador paga más&rdquo;); nunca ampliarlo. Déjalos vacíos para usar solo las reglas.
+                    </p>
+                  </div>
+                  <div className="inline-flex rounded-md border bg-background p-0.5" role="group" aria-label="Unidad de los límites">
+                    {([
+                      ["ppd", "Puntos por dólar"],
+                      ["price", "Precio por punto"],
+                    ] as const).map(([value, label]) => (
+                      <button
+                        key={value}
+                        type="button"
+                        aria-pressed={limitUnit === value}
+                        onClick={() => switchUnit(value)}
+                        className={
+                          "rounded px-3 py-1 text-xs font-medium transition-colors " +
+                          (limitUnit === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+                        }
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="priceMin">Precio mínimo por punto</Label>
+                    <Label htmlFor="limitLo">
+                      {limitUnit === "price" ? "Precio mínimo por punto (USD)" : "Mínimo de puntos por dólar"}
+                    </Label>
                     <Input
-                      id="priceMin"
+                      id="limitLo"
                       type="text"
                       inputMode="decimal"
-                      placeholder="Ej. 0.00780"
-                      value={priceMinInput}
-                      onChange={(e) => setPriceMinInput(e.target.value)}
+                      placeholder={limitUnit === "price" ? "Ej. 0.00780" : "Ej. 111"}
+                      value={limitLoInput}
+                      onChange={(e) => {
+                        setLimitLoInput(e.target.value)
+                        typedRef.current = { unit: limitUnit, lo: e.target.value, hi: limitHiInput }
+                      }}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {typeof priceMin === "number" ? `Equivale a ${ptsPerUsdText(priceMin)} puntos por dólar como máximo.` : "Sin límite."}
+                      {typeof loQty === "number"
+                        ? limitUnit === "price"
+                          ? `Equivale a ${fmtEq(1 / loQty)} puntos por dólar como máximo.`
+                          : `Equivale a un precio máximo de $${(1 / loQty).toFixed(5)} por punto.`
+                        : "Sin límite."}
                     </p>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="priceMax">Precio máximo por punto</Label>
+                    <Label htmlFor="limitHi">
+                      {limitUnit === "price" ? "Precio máximo por punto (USD)" : "Máximo de puntos por dólar"}
+                    </Label>
                     <Input
-                      id="priceMax"
+                      id="limitHi"
                       type="text"
                       inputMode="decimal"
-                      placeholder="Ej. 0.00900"
-                      value={priceMaxInput}
-                      onChange={(e) => setPriceMaxInput(e.target.value)}
+                      placeholder={limitUnit === "price" ? "Ej. 0.00900" : "Ej. 128"}
+                      value={limitHiInput}
+                      onChange={(e) => {
+                        setLimitHiInput(e.target.value)
+                        typedRef.current = { unit: limitUnit, lo: limitLoInput, hi: e.target.value }
+                      }}
                     />
                     <p className="text-xs text-muted-foreground">
-                      {typeof priceMax === "number" ? `Equivale a ${ptsPerUsdText(priceMax)} puntos por dólar como mínimo.` : "Sin límite."}
+                      {typeof hiQty === "number"
+                        ? limitUnit === "price"
+                          ? `Equivale a ${fmtEq(1 / hiQty)} puntos por dólar como mínimo.`
+                          : `Equivale a un precio mínimo de $${(1 / hiQty).toFixed(5)} por punto.`
+                        : "Sin límite."}
                     </p>
                   </div>
                 </div>
