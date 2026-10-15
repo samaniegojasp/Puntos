@@ -2,7 +2,7 @@
 
 // Estado global: saldo de Puntos, carrito, órdenes y recargas. Persistido en localStorage (DEMO: manipulable por el usuario).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { PACKS, WELCOME_POINTS, pointsFor } from "@/lib/catalog"
+import { CUSTOM_MAX_USD, CUSTOM_MIN_USD, CUSTOM_POINTS_PER_USD, PACKS, WELCOME_POINTS, pointsFor } from "@/lib/catalog"
 import { useCatalog } from "@/lib/catalog-store"
 
 export type CartItem = { storeId: string; usd: number; qty: number }
@@ -53,6 +53,8 @@ type Ctx = State & {
   clearCart: () => void
   redeem: (opts?: { recipientEmail?: string; message?: string }) => RedeemResult
   topUp: (packId: string, last4: string) => boolean
+  /** Compra de un monto en dólares enteros a tu medida (100 pts por $1). */
+  topUpCustom: (usd: number, last4: string) => boolean
 }
 
 const PointsContext = createContext<Ctx | null>(null)
@@ -138,6 +140,19 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     [commit],
   )
 
+  // Llamar SOLO después de que la pasarela confirme el pago.
+  const topUpCustom = useCallback(
+    (usd: number, last4: string) => {
+      if (!Number.isInteger(usd) || usd < CUSTOM_MIN_USD || usd > CUSTOM_MAX_USD) return false
+      const s = ref.current
+      const points = usd * CUSTOM_POINTS_PER_USD
+      const t: TopUp = { id: `TOP-${Date.now()}`, date: new Date().toISOString(), packId: "custom", points, usd, last4 }
+      commit({ ...s, balance: s.balance + points, topups: [t, ...s.topups] })
+      return true
+    },
+    [commit],
+  )
+
   // Carrito visible: solo ítems vigentes en el catálogo actual.
   const cart = useMemo(() => state.cart.filter((i) => isAvailable(i.storeId, i.usd)), [state.cart, isAvailable])
 
@@ -152,6 +167,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     clearCart,
     redeem,
     topUp,
+    topUpCustom,
   }
 
   return <PointsContext.Provider value={value}>{children}</PointsContext.Provider>

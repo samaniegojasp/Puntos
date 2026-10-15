@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Gem, Lock, ShieldCheck, Info } from "lucide-react"
 import { toast } from "sonner"
@@ -10,14 +10,49 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { PACKS, formatPoints, type PointsPack } from "@/lib/catalog"
+import {
+  CUSTOM_MAX_USD,
+  CUSTOM_MIN_USD,
+  CUSTOM_POINTS_PER_USD,
+  PACKS,
+  formatPoints,
+  usdForPoints,
+  type PointsPack,
+} from "@/lib/catalog"
 import { usePoints } from "@/lib/points-store"
 import { formatCardNumber, formatExp, validateCard, type CardErrors, type CardInput } from "@/lib/payment"
 
 // ÚNICA página del sitio con pago en dinero real (simulado).
 export default function RecargarPage() {
-  const { balance, ready, topUp } = usePoints()
+  const { balance, ready, topUp, topUpCustom } = usePoints()
   const [pack, setPack] = useState<PointsPack | null>(null)
+  // "A tu medida": dólares enteros al precio del paquete más pequeño (100 pts por $1)
+  const [customUsd, setCustomUsd] = useState("")
+  const [missing, setMissing] = useState(0)
+  const customN = Number(customUsd)
+  const customValid = Number.isInteger(customN) && customN >= CUSTOM_MIN_USD && customN <= CUSTOM_MAX_USD
+  const isCustom = pack?.id === "custom"
+
+  // Si llegas desde el carrito con "faltan N puntos", se propone exactamente el monto que cubre lo que falta
+  useEffect(() => {
+    const n = Number(new URLSearchParams(window.location.search).get("faltan"))
+    if (Number.isInteger(n) && n > 0) {
+      const usd = usdForPoints(n)
+      setMissing(n)
+      setCustomUsd(String(usd))
+      setPack({ id: "custom", points: usd * CUSTOM_POINTS_PER_USD, usd })
+    }
+  }, [])
+
+  const chooseCustom = (value: string) => {
+    setCustomUsd(value)
+    const n = Number(value)
+    if (Number.isInteger(n) && n >= CUSTOM_MIN_USD && n <= CUSTOM_MAX_USD) {
+      setPack({ id: "custom", points: n * CUSTOM_POINTS_PER_USD, usd: n })
+    } else {
+      setPack(null)
+    }
+  }
   const [card, setCard] = useState<CardInput>({ holder: "", number: "", exp: "", cvv: "" })
   const [errors, setErrors] = useState<CardErrors>({})
   const [processing, setProcessing] = useState(false)
@@ -33,10 +68,14 @@ export default function RecargarPage() {
     setProcessing(true)
     // DEMO: aquí se llamaría a la pasarela. No se guarda ni envía la tarjeta.
     await new Promise((r) => setTimeout(r, 1200))
-    topUp(pack.id, card.number.replace(/\D/g, "").slice(-4))
+    const last4 = card.number.replace(/\D/g, "").slice(-4)
+    if (pack.id === "custom") topUpCustom(pack.usd, last4)
+    else topUp(pack.id, last4)
     toast.success(`+${formatPoints(pack.points)} Puntos añadidos a tu saldo`)
     setCard({ holder: "", number: "", exp: "", cvv: "" })
     setPack(null)
+    setCustomUsd("")
+    setMissing(0)
     setProcessing(false)
   }
 
@@ -55,7 +94,7 @@ export default function RecargarPage() {
         Modo demostración: no se realiza ningún cobro real. Prueba con 4242 4242 4242 4242.
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-3" role="radiogroup" aria-label="Paquetes de Puntos">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="Paquetes de Puntos">
         {PACKS.map((p) => (
           <button
             key={p.id}
@@ -77,7 +116,51 @@ export default function RecargarPage() {
             <span className="mt-2 text-lg font-semibold">${p.usd}</span>
           </button>
         ))}
+
+        {/* A tu medida */}
+        <div
+          role="radio"
+          aria-checked={isCustom}
+          tabIndex={0}
+          onClick={() => customUsd && chooseCustom(customUsd)}
+          className={cn(
+            "relative flex flex-col items-center gap-2 rounded-2xl border-2 bg-card p-6 text-center transition-all hover:-translate-y-1 hover:border-primary",
+            isCustom && "border-primary shadow-lg",
+          )}
+        >
+          <span className="absolute -top-3 rounded-full bg-secondary px-3 py-0.5 text-xs font-semibold text-secondary-foreground">
+            A tu medida
+          </span>
+          <Gem className="h-10 w-10 text-primary" />
+          <span className="text-2xl font-extrabold tabular-nums">
+            {customValid ? formatPoints(customN * CUSTOM_POINTS_PER_USD) : "—"}
+          </span>
+          <span className="text-sm text-muted-foreground">Puntos</span>
+          <div className="mt-2 flex items-center gap-1 text-lg font-semibold">
+            $
+            <Input
+              aria-label="Monto en dólares"
+              inputMode="numeric"
+              placeholder="0"
+              value={customUsd}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => chooseCustom(e.target.value.replace(/\D/g, "").slice(0, 3))}
+              className="h-9 w-20 text-center"
+            />
+          </div>
+          {customUsd && !customValid && (
+            <span className="text-xs text-destructive">Entre ${CUSTOM_MIN_USD} y ${CUSTOM_MAX_USD}</span>
+          )}
+        </div>
       </div>
+
+      {missing > 0 && isCustom && (
+        <p className="mb-6 rounded-lg bg-primary/10 p-3 text-center text-sm">
+          Te faltan <strong>{formatPoints(missing)} pts</strong>. Con <strong>${pack?.usd}</strong> compras{" "}
+          <strong>{formatPoints(pack?.points ?? 0)} pts</strong>
+          {pack && pack.points > missing ? ` (te sobran ${formatPoints(pack.points - missing)})` : ""}.
+        </p>
+      )}
 
       {pack && (
         <Card>

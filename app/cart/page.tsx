@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GiftCardFace } from "@/components/gift-card"
-import { formatPoints, pointsFor } from "@/lib/catalog"
+import { formatPoints, pointsFor, usdForPoints } from "@/lib/catalog"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
@@ -158,7 +158,12 @@ export default function CartPage() {
                     Te faltan {formatPoints(cartTotal - balance)} pts
                   </div>
                   <Button className="w-full" asChild>
-                    <Link href="/recargar">Recargar Puntos</Link>
+                    <Link href={`/recargar?faltan=${cartTotal - balance}`}>
+                      Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance)})
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/recargar">Ver todos los paquetes</Link>
                   </Button>
                 </div>
               ) : (
