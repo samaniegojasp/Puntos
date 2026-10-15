@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { AlertCircle, AlertTriangle, Check, RefreshCw, RotateCcw, Settings, Sliders } from "lucide-react"
 import { toast } from "sonner"
 
@@ -77,6 +77,20 @@ export default function AdminAjustesPage() {
   const smallestPublic = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
   const smallestPoints = smallestPublic ? smallestPublic.points : 1000 * currentFactor
   const previewPoints = isFactorValid ? Math.round((smallestPoints * parsedFactor) / currentFactor) : null
+
+  const factorIssues = useMemo(
+    () =>
+      isFactorValid && factorHasChanged
+        ? validatePricing(
+            rescaleForFactor(
+              { settings: current, publicPacks, standardPacks, clients, providers, products },
+              currentFactor,
+              parsedFactor,
+            ),
+          ).filter((i) => i.severity === "error")
+        : [],
+    [parsedFactor, isFactorValid, factorHasChanged, currentFactor, current, publicPacks, standardPacks, clients, providers, products],
+  )
 
   // Estado del formulario de ajustes
   const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
@@ -395,10 +409,22 @@ export default function AdminAjustesPage() {
             En producción, cambiar el factor exige convertir todos los saldos; lo hará el servidor. En este prototipo los saldos de ejemplo no cambian.
           </p>
 
+          {factorIssues.length > 0 && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Con este factor se rompen reglas de precios</AlertTitle>
+              <AlertDescription className="space-y-1 mt-2 text-xs">
+                {factorIssues.map((issue, i) => (
+                  <p key={i}>• {issue.message}</p>
+                ))}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div>
             <Button
               type="button"
-              disabled={!adminConfigured || !factorHasChanged || !isFactorValid}
+              disabled={!adminConfigured || !factorHasChanged || !isFactorValid || factorIssues.length > 0}
               onClick={() => {
                 setAdminPass("")
                 setPassError("")

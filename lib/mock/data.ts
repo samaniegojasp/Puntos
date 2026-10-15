@@ -123,14 +123,14 @@ export const MOCK_CARDS: GiftCard[] = [
 // ---------- Cliente ----------
 
 export const MOCK_CLIENT: ClientAccount = {
-  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00971429, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
+  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00971984, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
 }
 
 /** Paquetes estándar (precio por volumen). Ilustrativos. */
 export const MOCK_STANDARD_PACKS: PointsPack[] = [
   { id: "std-10", usdCents: c(10), points: 1020 },
-  { id: "std-50", usdCents: c(50), points: 5150, badge: "Popular" },
-  { id: "std-100", usdCents: c(100), points: 10300, badge: "Mejor valor" },
+  { id: "std-50", usdCents: c(50), points: 5140, badge: "Popular" },
+  { id: "std-100", usdCents: c(100), points: 10280, badge: "Mejor valor" },
 ]
 
 /** Paquetes que ve un Canjeador (cada punto cuesta más que al Cliente). */
@@ -141,8 +141,8 @@ export const MOCK_PUBLIC_PACKS: PointsPack[] = [
 ]
 
 export const MOCK_CLIENT_PACKS: PointsPack[] = [
-  { id: "cp-1", usdCents: c(170), points: 17500 },
-  { id: "cp-2", usdCents: c(400), points: 41200, badge: "Acuerdo" },
+  { id: "cp-1", usdCents: c(170), points: 17490 },
+  { id: "cp-2", usdCents: c(400), points: 41150, badge: "Acuerdo" },
 ]
 
 const row = (rowNo: number, docNumber: string, points: number | null, extra: Partial<GrantBatch["rows"][number]> = {}) => ({
