@@ -52,8 +52,10 @@ import KpiCard from "@/components/panel/kpi-card"
 import { MOCK_BATCHES, MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatDate, formatPct, formatPts } from "@/lib/domain/format"
+import { toast } from "sonner"
 import { DOC_TYPE_LABEL, type GrantBatch } from "@/lib/domain/types"
 import { downloadCsv } from "@/lib/domain/csv"
+import { downloadGrantTemplate } from "@/lib/domain/xlsx-template"
 
 type ScenarioKey = "ok" | "errors" | "insufficient" | "duplicate"
 
@@ -67,6 +69,14 @@ const SCENARIO_LABELS: Record<ScenarioKey, string> = {
 export default function ClienteRepartirPage() {
   const { clients } = useAdminSettings()
   const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
+
+  // Estado para la generación de plantilla Excel
+  const [rowCountInput, setRowCountInput] = useState("100")
+  const [generating, setGenerating] = useState(false)
+
+  const rowCountNum = Number(rowCountInput.trim())
+  const isRowCountValid = Number.isInteger(rowCountNum) && rowCountNum >= 1 && rowCountNum <= 1000
+
   // Estado de subida y simulación
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedScenario, setSelectedScenario] = useState<ScenarioKey>("ok")
@@ -85,7 +95,20 @@ export default function ClienteRepartirPage() {
   const isSendingRef = useRef(false)
   const [isSent, setIsSent] = useState(false)
 
-  // Paso 1: Descargar plantilla
+  // Paso 1: Descargar plantilla Excel (.xlsx) o CSV
+  const handleDownloadExcel = async () => {
+    if (!isRowCountValid || generating) return
+    setGenerating(true)
+    try {
+      await downloadGrantTemplate(rowCountNum)
+    } catch (err) {
+      console.error(err)
+      toast.error("No se pudo generar la plantilla. Prueba de nuevo.")
+    } finally {
+      setGenerating(false)
+    }
+  }
+
   const handleDownloadTemplate = () => {
     const headers = ["tipo_documento", "numero_documento", "puntos", "monto_venta", "referencia"]
     const rows = [
@@ -275,19 +298,53 @@ export default function ClienteRepartirPage() {
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground space-y-2">
             <p>
-              <strong>Tipos de documento válidos:</strong> Cédula (<code className="text-foreground">cedula</code>), RUC (<code className="text-foreground">ruc</code>) o Pasaporte (<code className="text-foreground">pasaporte</code>).
+              <strong>Tipos de documento válidos:</strong> Cédula, RUC o Pasaporte (elige de la lista).
             </p>
             <p>
               Los campos <code className="text-foreground">monto_venta</code> y <code className="text-foreground">referencia</code> son opcionales. Si dejas <code className="text-foreground">puntos</code> vacío y pones <code className="text-foreground">monto_venta</code>, calculamos los puntos con tu bono ({formatPct(client.bonusPct)}).
             </p>
-            <p className="text-xs italic text-muted-foreground">
-              Nota: En la versión real será un archivo Excel (.xlsx) con lista desplegable.
-            </p>
           </div>
 
-          <Button variant="outline" onClick={handleDownloadTemplate}>
-            <Download className="mr-2 h-4 w-4" /> Descargar plantilla
-          </Button>
+          <div className="space-y-2">
+            <Label htmlFor="rowCountInput">Cantidad de filas de la plantilla</Label>
+            <Input
+              id="rowCountInput"
+              type="number"
+              min={1}
+              max={1000}
+              value={rowCountInput}
+              onChange={(e) => setRowCountInput(e.target.value)}
+              className="w-28"
+            />
+            <p className="text-xs text-muted-foreground">
+              Entre 1 y 1.000. Cada fila tiene su lista desplegable de tipo de documento.
+            </p>
+            {!isRowCountValid && (
+              <p className="text-xs text-destructive">
+                Escribe un número entero entre 1 y 1.000.
+              </p>
+            )}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 pt-1">
+            <Button
+              onClick={handleDownloadExcel}
+              disabled={!isRowCountValid || generating}
+            >
+              {generating ? (
+                <>
+                  <Spinner className="mr-2 h-4 w-4" /> Generando…
+                </>
+              ) : (
+                <>
+                  <Download className="mr-2 h-4 w-4" /> Descargar plantilla Excel (.xlsx)
+                </>
+              )}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={handleDownloadTemplate}>
+              Descargar versión CSV (sin lista desplegable)
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

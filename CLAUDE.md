@@ -28,6 +28,7 @@ Código clave:
 - **Modelo de precios (oct 2026):** el punto de referencia es el del paquete más pequeño del Canjeador ($15 = 1.500 pts). Precio en puntos de una tarjeta = valor facial × (1 + recargo) (recargo global en Ajustes, 3 % por defecto; $10 → 1.030 pts). Los Clientes compran más barato (beneficio mínimo 1 %). Reglas: 1 el paquete más pequeño del Canjeador da ≥ 30 % (editable) más puntos que la tarjeta más barata, 2 el Canjeador paga más por punto que cualquier Cliente, 3 margen mínimo (también con paquetes del Canjeador; costo + transporte), 4 recargo ≥ 0, 5 múltiplo de puntos (10/50/100, por defecto 10), 6 límites opcionales de precio por punto, 7 beneficio mínimo del Cliente, 8 compra a tu medida no más barata que el paquete más pequeño.
 - El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño. El bono (%) lo edita el Cliente; el precio del punto lo fija Nosotros.
 - Reparto por Excel: todo o nada, irreversible, idempotente, sin enumeración de documentos al revisar. El Cliente SÍ ve usados/disponibles por documento en "Lo repartido" (decisión del dueño).
+- **Planilla de reparto:** .xlsx con N filas (1 a 1.000), lista desplegable de tipo de documento (Cédula/RUC/Pasaporte) por fila y hoja de instrucciones; el servidor siempre vuelve a validar cada fila.
 - **Compra a tu medida:** solo la ven y usan Cliente y Nosotros en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos, se le propone el paquete más pequeño que cubra lo que falta.
 - Edad: siempre "declaración", nunca "verificamos".
 
