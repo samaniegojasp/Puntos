@@ -25,13 +25,14 @@ import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
   const [loading, setLoading] = useState(true)
-  const { settings: current, setSettings } = useAdminSettings()
+  const { settings: current, setSettings, providers, products, clients } = useAdminSettings()
 
   // Estado del formulario de ajustes
   const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
   const [exchangeFeePctInput, setExchangeFeePctInput] = useState((current.exchangeFeePct * 100).toString())
   const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
   const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
+  const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
   // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
   type LimitUnit = "ppd" | "price"
   const fmtPrice = (n: number | undefined) => (n === undefined ? "" : n.toFixed(5))
@@ -53,6 +54,7 @@ export default function AdminAjustesPage() {
   const rawExchangeFee = parseFloat(exchangeFeePctInput.replace(",", "."))
   const rawWindowDays = parseInt(exchangeWindowDaysInput, 10)
   const rawGrantDays = parseInt(pendingGrantDaysInput, 10)
+  const rawBenefit = parseFloat(benefitInput.replace(",", "."))
 
   // Validaciones individuales
   const errors: string[] = []
@@ -67,6 +69,10 @@ export default function AdminAjustesPage() {
 
   if (isNaN(rawWindowDays) || rawWindowDays < 0) {
     errors.push("El plazo para cambiar tarjetas vencidas debe ser un número entero mayor o igual a 0.")
+  }
+
+  if (isNaN(rawBenefit) || rawBenefit < 0 || rawBenefit > 50) {
+    errors.push("El beneficio mínimo del Cliente debe ser un porcentaje entre 0 y 50 %.")
   }
 
   if (isNaN(rawGrantDays) || rawGrantDays < 1) {
@@ -130,6 +136,7 @@ export default function AdminAjustesPage() {
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     pointsMultiple: MOCK_SETTINGS.pointsMultiple,
+    clientBenefitPct: !isNaN(rawBenefit) ? Math.round(rawBenefit * 1000) / 100000 : 0.01,
     pricePerPointMin: priceMin,
     pricePerPointMax: priceMax,
   }
@@ -137,11 +144,11 @@ export default function AdminAjustesPage() {
   // Validación con validatePricing usando los ajustes candidatos
   const pricingIssues = validatePricing({
     settings: candidateSettings,
-    providers: MOCK_PROVIDERS,
-    products: MOCK_PRODUCTS,
+    providers,
+    products,
     standardPacks: MOCK_STANDARD_PACKS,
     publicPacks: MOCK_PUBLIC_PACKS,
-    clients: MOCK_CLIENTS_ADMIN,
+    clients,
   })
 
   const pricingErrors = pricingIssues.filter((i) => i.severity === "error")
@@ -162,6 +169,7 @@ export default function AdminAjustesPage() {
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
+    setBenefitInput(((MOCK_SETTINGS.clientBenefitPct ?? 0.01) * 100).toString())
     setLimitUnit("ppd")
     setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
     setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
@@ -280,6 +288,27 @@ export default function AdminAjustesPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Días para que un reparto no reclamado vuelva a la bolsa del cliente (por defecto 90).
+                </p>
+              </div>
+
+              {/* Beneficio mínimo del Cliente */}
+              <div className="space-y-2">
+                <Label htmlFor="clientBenefit">Beneficio mínimo del Cliente (%)</Label>
+                <div className="relative">
+                  <Input
+                    id="clientBenefit"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="50"
+                    value={benefitInput}
+                    onChange={(e) => setBenefitInput(e.target.value)}
+                    required
+                  />
+                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Cada tramo de un Cliente debe dar al menos este % más de puntos por dólar que el Canjeador. Así quien recibe un bono ve que le rinde más (con 1 %, una tarjeta que cuesta 1.000 pts equivale a unos 990 pts del Cliente).
                 </p>
               </div>
 

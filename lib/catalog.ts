@@ -1,7 +1,7 @@
 // Catálogo de gift cards y paquetes de Puntos. Fuente única de verdad.
 
-/** Puntos que cuesta cada $1 de valor facial. El mejor paquete da ~143 pts/$; por debajo se vende con pérdida. */
-export const POINTS_PER_USD = 150
+/** Puntos que cuesta cada $1 de valor facial. Coherente con el paquete del Canjeador: $10 compran 1 000 pts y la tarjeta de $10 cuesta 1 000 pts. */
+export const POINTS_PER_USD = 100
 export const WELCOME_POINTS = 500
 
 export type ThemeKey = "super" | "salud" | "deporte" | "hogar" | "juguete" | "moda"
@@ -44,9 +44,10 @@ export const DEFAULT_STORES: Store[] = [
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }
 
 export const PACKS: PointsPack[] = [
+  // Paquetes del Canjeador (mismos del modelo de precios). Los ids se conservan por compatibilidad con datos guardados.
   { id: "p1000", points: 1000, usd: 10 },
-  { id: "p2500", points: 2500, usd: 20, badge: "Popular" },
-  { id: "p5000", points: 5000, usd: 35, badge: "Mejor valor" },
+  { id: "p2500", points: 2500, usd: 25, badge: "Popular" },
+  { id: "p5000", points: 5200, usd: 50, badge: "Mejor valor" },
 ]
 
 export const pointsFor = (usd: number) => usd * POINTS_PER_USD

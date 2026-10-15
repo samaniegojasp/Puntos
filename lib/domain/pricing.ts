@@ -15,9 +15,13 @@ import type {
 /** Centavos de USD por punto de un paquete. */
 export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 
-/** Precio de referencia del punto: el del paquete estándar más pequeño (el de $10). */
-export const referenceCentsPerPoint = (standardPacks: PointsPack[]) =>
-  centsPerPoint([...standardPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
+/**
+ * Precio de referencia del punto: el del paquete más pequeño que compra el Canjeador por su cuenta (el de $10).
+ * Con él se expresan las tarjetas en puntos, de modo que lo que cuesta una tarjeta nunca supere
+ * lo que el Canjeador compra con el paquete del mismo valor (p. ej. tarjeta de $10 ≤ 1 000 pts si $10 = 1 000 pts).
+ */
+export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
+  centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
 
 /** Costo que se le paga al Proveedor por la tarjeta. */
 export const productCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
@@ -66,7 +70,7 @@ type PricingInput = {
 /** Reglas de PLAN-ROLES.md §5.3. Devuelve la lista de problemas (vacía = todo bien). */
 export function validatePricing({ settings, providers, products, standardPacks, publicPacks, clients }: PricingInput): PricingIssue[] {
   const issues: PricingIssue[] = []
-  const ref = referenceCentsPerPoint(standardPacks)
+  const ref = referenceCentsPerPoint(publicPacks)
   const providerOf = (id: string) => providers.find((x) => x.id === id) ?? { discountPct: 0 }
   const active = products.filter((p) => p.active)
   const money = (c: number) => `$${(c / 100).toFixed(2)}`
@@ -80,12 +84,15 @@ export function validatePricing({ settings, providers, products, standardPacks, 
   }
 
   // Regla 1: piso. Un paquete debe alcanzar para cualquier tarjeta cuyo valor facial no lo supere.
-  for (const pack of standardPacks) {
-    for (const prod of active) {
-      if (prod.faceCents > pack.usdCents) continue
-      const pts = pointsPrice(productPriceCents(prod, providerOf(prod.providerId)), ref, settings.pointsMultiple)
-      if (pack.points < pts) {
-        issues.push({ rule: 1, severity: "error", message: `El paquete de ${money(pack.usdCents)} (${pack.points} pts) no alcanza para ${prod.storeName} ${money(prod.faceCents)} (${pts} pts).` })
+  // Vale para los paquetes estándar y también para los del Canjeador: si compra $10 en puntos, la tarjeta de $10 le debe alcanzar.
+  for (const [who, packs] of [["", standardPacks], ["del Canjeador ", publicPacks]] as const) {
+    for (const pack of packs) {
+      for (const prod of active) {
+        if (prod.faceCents > pack.usdCents) continue
+        const pts = pointsPrice(productPriceCents(prod, providerOf(prod.providerId)), ref, settings.pointsMultiple)
+        if (pack.points < pts) {
+          issues.push({ rule: 1, severity: "error", message: `El paquete ${who}de ${money(pack.usdCents)} (${pack.points} pts) no alcanza para ${prod.storeName} ${money(prod.faceCents)} (${pts} pts).` })
+        }
       }
     }
   }
@@ -124,6 +131,17 @@ export function validatePricing({ settings, providers, products, standardPacks, 
       issues.push({ rule: 4, severity: "error", message: `${prod.storeName} ${money(prod.faceCents)}: el precio (${money(price)}) supera el valor facial.` })
     }
   }
+  // Regla 7: beneficio mínimo del Cliente. Cada tramo de cada tabla de Cliente debe dar al menos `clientBenefitPct`
+  // más puntos por dólar que el punto de referencia (el del Canjeador). Así quien recibe un bono ve que le rinde más.
+  const benefit = settings.clientBenefitPct ?? 0.01
+  for (const t of tables) {
+    for (const pack of t.packs) {
+      if (centsPerPoint(pack) > ref * (1 - benefit) + 1e-12) {
+        issues.push({ rule: 7, severity: "error", message: `Tabla "${t.who}", tramo ${money(pack.usdCents)}: da menos de ${(benefit * 100).toFixed(1)} % de beneficio sobre el punto del Canjeador.` })
+      }
+    }
+  }
+
   // Regla 6: límites opcionales del precio por punto de cada cliente (USD por punto).
   const { pricePerPointMin: pMin, pricePerPointMax: pMax } = settings
   if (pMin !== undefined || pMax !== undefined) {

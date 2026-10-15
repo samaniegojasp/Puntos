@@ -252,6 +252,8 @@ export type AdminSettings = {
   /** Límites opcionales del precio por punto (USD) de un cliente. Solo pueden estrechar lo que ya imponen las reglas 2 y 3. */
   pricePerPointMin?: number
   pricePerPointMax?: number
+  /** Beneficio mínimo del Cliente sobre el punto de referencia (0.01 = 1 %). Por defecto 1 %. */
+  clientBenefitPct?: number
 }
 
 export type UserRow = {
@@ -265,7 +267,7 @@ export type UserRow = {
 }
 
 export type PricingIssue = {
-  rule: 1 | 2 | 3 | 4 | 5 | 6
+  rule: 1 | 2 | 3 | 4 | 5 | 6 | 7
   /** Regla 6: qué límite se rompe (precio por debajo del mínimo o por encima del máximo) */
   limit?: "min" | "max"
   severity: "error" | "warning"

@@ -142,22 +142,28 @@ points    = CEIL( ROUND(price_usd / pv_ref) / 100 ) × 100
 `pv_ref` es el precio de referencia del punto: el del **primer paquete** (el de $10). Es global: **la misma tarjeta cuesta los mismos puntos para todos**, porque los puntos son acumulables y de distintos orígenes.
 
 ### 5.2 Paquetes por volumen
-Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de las tarjetas**, no a los paquetes (un paquete negociado, como $170 → 21 250, puede no serlo). Cada paquete grande da más puntos por dólar. Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Proveedor), para una tarjeta de $10 que cuesta $8,50 y vale 1 200 puntos:
+Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de las tarjetas**, no a los paquetes (un paquete negociado, como $170 → 18 800, puede no serlo). Cada paquete grande da más puntos por dólar.
 
-| Paquete | Puntos | USD por punto | Ingreso por esa tarjeta | Margen sobre costo |
-|---|---|---|---|---|
-| $10 | 1 200 | 0,00833 | $10,00 | 17,6 % |
-| $50 | 6 500 | 0,00769 | $9,23 | 8,6 % |
-| $100 | 14 000 | 0,00714 | $8,57 | 0,8 % |
+**Decisión de modelo (dueño, octubre 2026): el punto de referencia es el del Canjeador.** Las tarjetas se expresan en puntos con el precio del paquete más pequeño que compra el Canjeador ($10 → 1 000 pts, 0,01 por punto). Así, **lo que cuesta una tarjeta nunca supera lo que el Canjeador compra con el paquete del mismo valor**: con $10 compra 1 000 pts y la tarjeta de $10 cuesta 1 000 pts. Los Clientes compran más barato (más puntos por dólar) y quien recibe su bono ve que le rinde más que el bono.
+
+Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Proveedor), para una tarjeta de $10 que cuesta $8,50 y vale 1 000 puntos:
+
+| Quién compra | Paquete | Puntos | USD por punto | Ingreso por esa tarjeta | Margen sobre costo |
+|---|---|---|---|---|---|
+| Canjeador | $10 | 1 000 | 0,01000 | $10,00 | 17,6 % |
+| Cliente (estándar) | $10 | 1 020 | 0,00980 | $9,80 | 15,3 % |
+| Cliente (estándar) | $50 | 5 400 | 0,00926 | $9,26 | 8,9 % |
+| Cliente (estándar) | $100 | 10 800 | 0,00926 | $9,26 | 8,9 % |
 
 Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el margen por producto y por precio, y **bloquea** un precio que baje del `min_margin_pct` global salvo confirmación explícita con nota.
 
 ### 5.3 Reglas que el sistema valida al guardar
-1. **Piso de $10:** para cada paquete y cada tarjeta con `face_usd ≤ USD del paquete`, los puntos del paquete deben alcanzar la tarjeta. Si no, no se guarda.
-2. **Canjeador > Cliente:** el precio por punto del Canjeador (`pv_public`) debe ser **mayor** que el de cualquier Cliente, tramo por tramo. Consecuencia: con $10 el Canjeador compra menos puntos que 1 200 y **no alcanza** una tarjeta de $10. La regla de los $10 aplica al Cliente.
+1. **Piso de $10:** para cada paquete (estándar **y del Canjeador**) y cada tarjeta con `face_usd ≤ USD del paquete`, los puntos del paquete deben alcanzar la tarjeta. Si no, no se guarda.
+2. **Canjeador > Cliente:** el precio por punto del Canjeador (`pv_public`) debe ser **mayor** que el de cualquier Cliente, tramo por tramo. Con el modelo de octubre 2026 la tarjeta de $10 cuesta 1 000 pts y el Canjeador la alcanza con su paquete de $10 (regla 1 aplicada también a sus paquetes).
 3. **Margen mínimo:** `puntos × usd_per_point ≥ cost_usd × (1 + min_margin_pct)` para el precio negociado de cada Cliente.
 4. **Precio máximo = valor facial:** `price_usd ≤ face_usd` en **todas** las tarjetas activas. Es un error que bloquea el guardado (antes era solo un aviso): nadie debería pagar por una tarjeta más que su valor. Limita por arriba el margen y exige un descuento mínimo del Proveedor.
 5. Las tarjetas valen múltiplos de 100 puntos.
+7. **Beneficio mínimo del Cliente** (`client_benefit_pct`, por defecto 1 %): cada tramo de cada tabla de Cliente debe dar al menos ese % más de puntos por dólar que el punto de referencia (el del Canjeador). Es lo que hace que una tarjeta de 1 000 pts "cueste" unos 990 para quien recibe el bono de un Cliente.
 
 ### 5.4 Negociar por Cliente
 **Regla 6 (opcional, decisión del dueño):** Nosotros puede fijar un precio mínimo y/o máximo por punto para los clientes (Ajustes). Solo estrecha lo que permiten las reglas 2 y 3. El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño; el de uno estándar es un valor de referencia que se usa para convertir bono en puntos.

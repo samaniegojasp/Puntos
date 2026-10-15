@@ -186,6 +186,7 @@ export default function AdminClientesPage() {
     packs: PointsPack[],
     idx: number,
     forceCustom = false,
+    step = POINTS_STEP,
   ): { min: number; max: number } | null => {
     const own = packs[idx]
     if (!own || own.usdCents <= 0) return null
@@ -195,15 +196,15 @@ export default function AdminClientesPage() {
     // Así, un error que ya traen otros tramos no hace desaparecer el rango de este.
     const countLow = (pts: number) =>
       buildIssues(withPoints(pts), forceCustom).filter(
-        (i) => i.rule === 2 || (i.rule === 6 && i.limit === "max"),
+        (i) => i.rule === 2 || i.rule === 7 || (i.rule === 6 && i.limit === "max"),
       ).length
     const countHigh = (pts: number) =>
       buildIssues(withPoints(pts), forceCustom).filter(
         (i) => (i.rule === 3 && i.message.includes(tag)) || (i.rule === 6 && i.limit === "min"),
       ).length
-    const maxK = Math.floor(POINTS_CAP / POINTS_STEP)
-    const baseLow = countLow(maxK * POINTS_STEP)
-    const baseHigh = countHigh(POINTS_STEP)
+    const maxK = Math.floor(POINTS_CAP / step)
+    const baseLow = countLow(maxK * step)
+    const baseHigh = countHigh(step)
     const lowOk = (pts: number) => countLow(pts) <= baseLow
     const highOk = (pts: number) => countHigh(pts) <= baseHigh
 
@@ -212,19 +213,19 @@ export default function AdminClientesPage() {
     let b = maxK
     while (a < b) {
       const m = Math.floor((a + b) / 2)
-      if (lowOk(m * POINTS_STEP)) b = m
+      if (lowOk(m * step)) b = m
       else a = m + 1
     }
-    const min = a * POINTS_STEP
+    const min = a * step
     // Mayor valor que cumple la regla 3 (válido de ahí hacia abajo)
     a = 1
     b = maxK
     while (a < b) {
       const m = Math.ceil((a + b) / 2)
-      if (highOk(m * POINTS_STEP)) a = m
+      if (highOk(m * step)) a = m
       else b = m - 1
     }
-    const max = a * POINTS_STEP
+    const max = a * step
     return min <= max ? { min, max } : null
   }
   const pointsBounds = (idx: number) => boundsFor(customPacks, idx)
@@ -236,7 +237,16 @@ export default function AdminClientesPage() {
     const b =
       baseIdx !== null && basePack
         ? pointsBounds(baseIdx)
-        : boundsFor([{ id: "ref", usdCents: REF_USD_CENTS, points: 1250 }], 0, true)
+        : // Cliente estándar: su precio es el del tramo de $10 de la tabla estándar; los demás tramos quedan como están
+          boundsFor(
+            [
+              { id: "ref", usdCents: REF_USD_CENTS, points: 1020 },
+              ...MOCK_STANDARD_PACKS.filter((p) => p.usdCents > REF_USD_CENTS).map((p) => ({ ...p })),
+            ],
+            0,
+            true,
+            1,
+          )
     if (!b) return null
     const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
     return { min: usd / b.max, max: usd / b.min, pointsMin: b.min, pointsMax: b.max, usd }

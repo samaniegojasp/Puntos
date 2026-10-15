@@ -169,7 +169,7 @@ export default function AdminProveedoresPage() {
     ? products.filter((prod) => prod.providerId === editingProvider.id)
     : []
 
-  const refCents = referenceCentsPerPoint(MOCK_STANDARD_PACKS)
+  const refCents = referenceCentsPerPoint(MOCK_PUBLIC_PACKS)
   const std10Pack =
     MOCK_STANDARD_PACKS.find((p) => p.usdCents === 1000) ?? MOCK_STANDARD_PACKS[0]
 

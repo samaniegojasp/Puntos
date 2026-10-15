@@ -94,7 +94,7 @@ export default function AdminPreciosPage() {
   }, [])
 
   // Referencia común para cálculos de puntos
-  const refCents = referenceCentsPerPoint(standardPacks)
+  const refCents = referenceCentsPerPoint(publicPacks)
   const providerOf = (id: string): Provider =>
     providers.find((x) => x.id === id) ?? {
       id,
@@ -117,9 +117,9 @@ export default function AdminPreciosPage() {
   // Manejo del botón "Probar un caso con error"
   const handleToggleErrorCase = () => {
     if (!isErrorCaseActive) {
-      // Subir puntos del primer paquete público a 2.500 para romper regla 2
+      // Subir puntos del primer paquete público a 1.300 (más puntos por dólar que el Cliente) para romper la regla 2
       setPublicPacks((prev) => [
-        { ...prev[0], points: 2500 },
+        { ...prev[0], points: 1300 },
         ...prev.slice(1),
       ])
       setIsErrorCaseActive(true)
