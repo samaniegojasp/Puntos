@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { AlertCircle, AlertTriangle, Check, Edit2, Info, Store } from "lucide-react"
 import { toast } from "sonner"
 
@@ -110,51 +110,43 @@ export default function AdminProveedoresPage() {
     clients: clients,
   })
 
-  // Rango del descuento válido para este proveedor, calculado con las mismas reglas (sin fórmulas propias).
-  // Abajo: el precio no puede superar el valor facial (regla 4) y el paquete debe alcanzar (regla 1).
-  // Arriba: el margen mínimo por tramo (regla 3).
+  // Descuentos válidos para este proveedor, calculados con las mismas reglas (sin fórmulas propias).
+  // Se prueba cada valor (de 0,1 en 0,1 %) porque el redondeo de los puntos a múltiplos de 100 hace que el margen
+  // no suba o baje de forma pareja: pueden existir valores sueltos inválidos dentro del rango. La barra solo recorre los válidos.
   const DISCOUNT_UNIT = 1000 // décimas de punto porcentual (0,1 %)
   const DISCOUNT_CAP_UNITS = 500 // tope de la demo: ningún descuento por encima de 50 %
-  const discountBounds = (() => {
-    if (!editingProvider) return null
-    const tags = products.filter((p) => p.providerId === editingProvider.id).map(
-      (p) => `${p.storeName} $${(p.faceCents / 100).toFixed(2)}`,
-    )
-    if (!tags.length) return null
-    const mine = (msg: string) => tags.some((t) => msg.includes(t))
-    const at = (units: number) =>
-      validatePricing({
+  const providerId = editingProvider?.id
+  const validDiscounts = useMemo(() => {
+    if (!providerId) return null
+    const mineProducts = products.filter((p) => p.providerId === providerId)
+    if (!mineProducts.length) return null
+    const tags = mineProducts.map((p) => `${p.storeName} $${(p.faceCents / 100).toFixed(2)}`)
+    // Los productos del proveedor se validan como activos aunque hoy estén ocultos
+    const asActive = products.map((p) => (p.providerId === providerId ? { ...p, active: true } : p))
+    const list: number[] = []
+    for (let u = 0; u <= DISCOUNT_CAP_UNITS; u++) {
+      const errs = validatePricing({
         settings,
-        providers: providers.map((p) =>
-          p.id === editingProvider.id ? { ...p, discountPct: units / DISCOUNT_UNIT } : p,
-        ),
-        products: validationProducts,
+        providers: providers.map((p) => (p.id === providerId ? { ...p, discountPct: u / DISCOUNT_UNIT } : p)),
+        products: asActive,
         standardPacks: MOCK_STANDARD_PACKS,
         publicPacks: MOCK_PUBLIC_PACKS,
-        clients: clients,
-      })
-    const countLow = (u: number) => at(u).filter((i) => (i.rule === 1 || i.rule === 4) && mine(i.message)).length
-    const countHigh = (u: number) => at(u).filter((i) => i.rule === 3 && mine(i.message)).length
-    const baseLow = countLow(DISCOUNT_CAP_UNITS)
-    const baseHigh = countHigh(0)
-    let a = 0
-    let b = DISCOUNT_CAP_UNITS
-    while (a < b) {
-      const m = Math.floor((a + b) / 2)
-      if (countLow(m) <= baseLow) b = m
-      else a = m + 1
+        clients,
+      }).filter((i) => i.severity === "error" && tags.some((t) => i.message.includes(t)))
+      if (errs.length === 0) list.push(u)
     }
-    const min = a
-    a = 0
-    b = DISCOUNT_CAP_UNITS
-    while (a < b) {
-      const m = Math.ceil((a + b) / 2)
-      if (countHigh(m) <= baseHigh) a = m
-      else b = m - 1
-    }
-    const max = a
-    return min <= max ? { min, max } : null
-  })()
+    return list.length ? list : null
+  }, [providerId, products, providers, clients, settings])
+
+  // Posición de la barra: índice del valor válido más cercano al actual
+  const discountUnit = Math.round(parsedDiscountPct * DISCOUNT_UNIT)
+  const discountIndex = validDiscounts
+    ? validDiscounts.reduce((best, u, i) => (Math.abs(u - discountUnit) < Math.abs(validDiscounts[best] - discountUnit) ? i : best), 0)
+    : 0
+  const discountIsValid = validDiscounts ? validDiscounts.includes(discountUnit) : false
+  const discountHasGaps = validDiscounts
+    ? validDiscounts[validDiscounts.length - 1] - validDiscounts[0] + 1 !== validDiscounts.length
+    : false
 
   const errorIssues = issues.filter((i) => i.severity === "error")
   const warningIssues = issues.filter((i) => i.severity === "warning")
@@ -299,30 +291,29 @@ export default function AdminProveedoresPage() {
                     onCommit={(v) => setDiscountPctInput(String(Math.round(v * 100) / 100))}
                   />
                 </div>
-                {discountBounds ? (
+                {validDiscounts ? (
                   <>
                     <Slider
                       id="discountPct"
-                      min={discountBounds.min}
-                      max={discountBounds.max}
+                      min={0}
+                      max={Math.max(validDiscounts.length - 1, 0)}
                       step={1}
-                      value={[
-                        Math.min(
-                          Math.max(Math.round(parsedDiscountPct * DISCOUNT_UNIT), discountBounds.min),
-                          discountBounds.max,
-                        ),
-                      ]}
-                      onValueChange={(v) => setDiscountPctInput(String(v[0] / 10))}
+                      value={[discountIndex]}
+                      onValueChange={(v) => setDiscountPctInput(String(validDiscounts[v[0]] / 10))}
                       aria-label="Descuento sobre valor facial"
                     />
                     <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Mínimo {new Intl.NumberFormat("es-EC").format(discountBounds.min / 10)} %</span>
-                      <span>Máximo {new Intl.NumberFormat("es-EC").format(discountBounds.max / 10)} %</span>
+                      <span>Mínimo {new Intl.NumberFormat("es-EC").format(validDiscounts[0] / 10)} %</span>
+                      <span>Máximo {new Intl.NumberFormat("es-EC").format(validDiscounts[validDiscounts.length - 1] / 10)} %</span>
                     </div>
-                    {(parsedDiscountPct * DISCOUNT_UNIT < discountBounds.min - 1e-9 ||
-                      parsedDiscountPct * DISCOUNT_UNIT > discountBounds.max + 1e-9) && (
+                    {!discountIsValid && (
                       <p className="text-[11px] text-destructive">
-                        El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                        El valor actual no cumple las reglas. Mueve la barra para elegir uno válido.
+                      </p>
+                    )}
+                    {discountHasGaps && (
+                      <p className="text-[11px] text-muted-foreground">
+                        La barra salta algunos valores del medio que, por el redondeo de puntos, dejarían a un producto bajo el margen mínimo.
                       </p>
                     )}
                   </>

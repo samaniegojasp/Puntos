@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import {
   AlertCircle,
   AlertTriangle,
@@ -177,56 +177,42 @@ export default function AdminPreciosPage() {
   const dialogWarnings = dialogIssues.filter((i) => i.severity === "warning")
   const canSaveProduct = dialogErrors.length === 0 && parsedMarginPct >= 0
 
-  // Rango de margen válido para este producto, calculado con las mismas reglas (sin fórmulas propias).
-  // Regla 3 (margen mínimo en cada tramo): exige un margen mínimo.
-  // Regla 1 (el paquete debe alcanzar para la tarjeta): exige un margen máximo.
-  const MARGIN_UNIT = 1000 // el slider trabaja en décimas de punto porcentual (0,1 %)
+  // Márgenes válidos para este producto, calculados con las mismas reglas (sin fórmulas propias).
+  // Se prueba cada valor (de 0,1 en 0,1 %) porque el redondeo de los puntos a múltiplos de 100 hace que el resultado
+  // no sea parejo: puede haber valores sueltos inválidos dentro del rango. La barra solo recorre los válidos.
+  const MARGIN_UNIT = 1000 // décimas de punto porcentual (0,1 %)
   const MARGIN_CAP_UNITS = 2000 // hasta 200 %
-  const marginBounds = (() => {
+  const editingId = editingProduct?.id
+  const validMargins = useMemo(() => {
     if (!editingProduct) return null
     const face = `$${(editingProduct.faceCents / 100).toFixed(2)}`
-    const lowTag = `${editingProduct.storeName} ${face} con`
-    const highTag = `para ${editingProduct.storeName} ${face} (`
-    const priceTag = `${editingProduct.storeName} ${face}: el precio`
-    const at = (units: number) =>
-      validatePricing({
+    const tag = `${editingProduct.storeName} ${face}`
+    const list: number[] = []
+    for (let u = 0; u <= MARGIN_CAP_UNITS; u++) {
+      const errs = validatePricing({
         settings,
         providers,
         products: products.map((p) =>
           p.id === editingProduct.id
-            ? { ...editingProduct, marginPct: units / MARGIN_UNIT, costCentsOverride: parsedCostOverride, active: true }
+            ? { ...editingProduct, marginPct: u / MARGIN_UNIT, costCentsOverride: parsedCostOverride, active: true }
             : p,
         ),
         standardPacks,
         publicPacks,
         clients,
-      })
-    // Se comparan con el mejor caso para que errores ajenos a este producto no oculten el rango
-    const countLow = (u: number) => at(u).filter((i) => i.rule === 3 && i.message.includes(lowTag)).length
-    const countHigh = (u: number) =>
-      at(u).filter(
-        (i) => (i.rule === 1 && i.message.includes(highTag)) || (i.rule === 4 && i.message.includes(priceTag)),
-      ).length
-    const baseLow = countLow(MARGIN_CAP_UNITS)
-    const baseHigh = countHigh(0)
-    let a = 0
-    let b = MARGIN_CAP_UNITS
-    while (a < b) {
-      const m = Math.floor((a + b) / 2)
-      if (countLow(m) <= baseLow) b = m
-      else a = m + 1
+      }).filter((i) => i.severity === "error" && i.message.includes(tag))
+      if (errs.length === 0) list.push(u)
     }
-    const min = a
-    a = 0
-    b = MARGIN_CAP_UNITS
-    while (a < b) {
-      const m = Math.ceil((a + b) / 2)
-      if (countHigh(m) <= baseHigh) a = m
-      else b = m - 1
-    }
-    const max = a
-    return min <= max ? { min, max } : null
-  })()
+    return list.length ? list : null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingId, products, providers, clients, settings, standardPacks, publicPacks, parsedCostOverride])
+
+  const marginUnit = Math.round(parsedMarginPct * MARGIN_UNIT)
+  const marginIndex = validMargins
+    ? validMargins.reduce((best, u, i) => (Math.abs(u - marginUnit) < Math.abs(validMargins[best] - marginUnit) ? i : best), 0)
+    : 0
+  const marginIsValid = validMargins ? validMargins.includes(marginUnit) : false
+  const marginHasGaps = validMargins ? validMargins[validMargins.length - 1] - validMargins[0] + 1 !== validMargins.length : false
 
   // Vista previa de lo que produce el margen que se está editando (y lo que hay guardado hoy)
   const preview = editingProduct
@@ -600,27 +586,29 @@ export default function AdminPreciosPage() {
                   onCommit={(v) => setMarginPctInput(String(Math.round(v * 100) / 100))}
                 />
               </div>
-              {marginBounds ? (
+              {validMargins ? (
                 <>
                   <Slider
                     id="marginPct"
-                    min={marginBounds.min}
-                    max={marginBounds.max}
+                    min={0}
+                    max={Math.max(validMargins.length - 1, 0)}
                     step={1}
-                    value={[
-                      Math.min(Math.max(Math.round(parsedMarginPct * MARGIN_UNIT), marginBounds.min), marginBounds.max),
-                    ]}
-                    onValueChange={(v) => setMarginPctInput(String(v[0] / 10))}
+                    value={[marginIndex]}
+                    onValueChange={(v) => setMarginPctInput(String(validMargins[v[0]] / 10))}
                     aria-label="Margen comercial"
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Mínimo {new Intl.NumberFormat("es-EC").format(marginBounds.min / 10)} %</span>
-                    <span>Máximo {new Intl.NumberFormat("es-EC").format(marginBounds.max / 10)} %</span>
+                    <span>Mínimo {new Intl.NumberFormat("es-EC").format(validMargins[0] / 10)} %</span>
+                    <span>Máximo {new Intl.NumberFormat("es-EC").format(validMargins[validMargins.length - 1] / 10)} %</span>
                   </div>
-                  {(parsedMarginPct * MARGIN_UNIT < marginBounds.min - 1e-9 ||
-                    parsedMarginPct * MARGIN_UNIT > marginBounds.max + 1e-9) && (
+                  {!marginIsValid && (
                     <p className="text-[11px] text-destructive">
-                      El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                      El valor actual no cumple las reglas. Mueve la barra para elegir uno válido.
+                    </p>
+                  )}
+                  {marginHasGaps && (
+                    <p className="text-[11px] text-muted-foreground">
+                      La barra salta algunos valores del medio que, por el redondeo de puntos, romperían una regla.
                     </p>
                   )}
                 </>
