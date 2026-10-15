@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Copy, ImagePlus, Lock, LogOut, Minus, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
+import { Copy, ImagePlus, Lock, LogOut, Minus, Palette, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { GiftCardFace } from "@/components/gift-card"
@@ -30,6 +31,7 @@ type Draft = {
   active: boolean
   image: string | null
   logo: string | null
+  colors: { from: string; to: string } | null
 }
 
 const EMPTY: Draft = {
@@ -43,6 +45,7 @@ const EMPTY: Draft = {
   active: true,
   image: null,
   logo: null,
+  colors: null,
 }
 
 const THEME_LABELS: Record<ThemeKey, string> = {
@@ -216,6 +219,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
   const max = settings.cardDenomMaxUsd ?? 500
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
+  const [singleColor, setSingleColor] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
 
   const categories = Array.from(new Set(allStores.map((s) => s.category)))
@@ -255,7 +259,9 @@ function Panel({ onLogout }: { onLogout: () => void }) {
       active: isActive(s),
       image: s.image ?? null,
       logo: s.logo ?? null,
+      colors: s.colors ? { ...s.colors } : null,
     })
+    setSingleColor(Boolean(s.colors && s.colors.from.toLowerCase() === s.colors.to.toLowerCase()))
   }
 
   function submit(e: React.FormEvent) {
@@ -294,16 +300,21 @@ function Panel({ onLogout }: { onLogout: () => void }) {
       active: draft.active,
       ...(draft.image ? { image: draft.image } : {}),
       ...(draft.logo ? { logo: draft.logo } : {}),
+      ...(draft.colors ? { colors: draft.colors } : {}),
     })
     if (!saved) toast.error("No se pudo guardar en este navegador (almacenamiento lleno o modo privado). Prueba con una imagen más liviana.")
     else toast.success(draft.id ? "Tienda actualizada" : "Tienda añadida")
     setDraft(EMPTY)
+    setSingleColor(false)
   }
 
   function remove(s: Store) {
     if (!window.confirm(`¿Eliminar "${s.name}"? Para ocultarla sin borrarla, desactívala.`)) return
     removeStore(s.id)
-    if (draft.id === s.id) setDraft(EMPTY)
+    if (draft.id === s.id) {
+      setDraft(EMPTY)
+      setSingleColor(false)
+    }
     toast.success("Tienda eliminada")
   }
 
@@ -317,6 +328,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     description: draft.description,
     ...(draft.image ? { image: draft.image } : {}),
     ...(draft.logo ? { logo: draft.logo } : {}),
+    ...(draft.colors ? { colors: draft.colors } : {}),
   }
 
   return (
@@ -344,6 +356,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
               if (window.confirm("¿Restaurar el catálogo original? Se pierden tus cambios en este navegador.")) {
                 resetCatalog()
                 setDraft(EMPTY)
+                setSingleColor(false)
                 toast.success("Catálogo restaurado")
               }
             }}
@@ -393,7 +406,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{draft.id ? "Editar tienda" : "Nueva tienda"}</h2>
                 {draft.id && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { setErrors({}); setDraft(EMPTY) }}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setErrors({}); setDraft(EMPTY); setSingleColor(false) }}>
                     <Plus className="mr-1 h-4 w-4" /> Nueva
                   </Button>
                 )}
@@ -563,14 +576,112 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                       key={t}
                       type="button"
                       role="radio"
-                      aria-checked={draft.theme === t}
+                      aria-checked={draft.colors === null && draft.theme === t}
                       aria-label={THEME_LABELS[t]}
                       title={THEME_LABELS[t]}
-                      onClick={() => set("theme", t)}
-                      className={cn("h-8 w-8 rounded-full bg-gradient-to-br ring-offset-2 ring-offset-background", THEMES[t], draft.theme === t && "ring-2 ring-primary")}
+                      onClick={() => {
+                        setDraft((d) => ({ ...d, theme: t, colors: null }))
+                        setSingleColor(false)
+                      }}
+                      className={cn(
+                        "h-8 w-8 rounded-full bg-gradient-to-br ring-offset-2 ring-offset-background",
+                        THEMES[t],
+                        draft.colors === null && draft.theme === t && "ring-2 ring-primary",
+                      )}
                     />
                   ))}
+                  <button
+                    type="button"
+                    role="radio"
+                    aria-checked={draft.colors !== null}
+                    aria-label="Personalizado"
+                    title="Personalizado"
+                    onClick={() => {
+                      if (!draft.colors) {
+                        setDraft((d) => ({ ...d, colors: { from: "#7c3aed", to: "#ec4899" } }))
+                        setSingleColor(false)
+                      }
+                    }}
+                    style={{ background: "conic-gradient(red, yellow, lime, cyan, blue, magenta, red)" }}
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-background",
+                      draft.colors !== null && "ring-2 ring-primary",
+                    )}
+                  >
+                    <Palette className="h-4 w-4 drop-shadow" />
+                  </button>
                 </div>
+                {draft.colors && (
+                  <div className="space-y-3 rounded-lg border bg-muted/40 p-3">
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="singleColor"
+                        checked={singleColor}
+                        onCheckedChange={(checked) => {
+                          const isSingle = Boolean(checked)
+                          setSingleColor(isSingle)
+                          if (isSingle && draft.colors) {
+                            setDraft((d) => (d.colors ? { ...d, colors: { from: d.colors.from, to: d.colors.from } } : d))
+                          }
+                        }}
+                      />
+                      <Label htmlFor="singleColor" className="cursor-pointer text-sm font-normal">
+                        Un solo color
+                      </Label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="colorFrom" className="text-xs text-muted-foreground">
+                          Color 1
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="colorFrom"
+                            type="color"
+                            value={draft.colors.from}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setDraft((d) => {
+                                if (!d.colors) return d
+                                return {
+                                  ...d,
+                                  colors: {
+                                    from: val,
+                                    to: singleColor ? val : d.colors.to,
+                                  },
+                                }
+                              })
+                            }}
+                            className="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0"
+                          />
+                          <span className="font-mono text-xs uppercase">{draft.colors.from}</span>
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="colorTo" className="text-xs text-muted-foreground">
+                          Color 2
+                        </Label>
+                        <div className="flex items-center gap-2">
+                          <input
+                            id="colorTo"
+                            type="color"
+                            value={draft.colors.to}
+                            disabled={singleColor}
+                            onChange={(e) => {
+                              const val = e.target.value
+                              setDraft((d) => (d.colors ? { ...d, colors: { from: d.colors.from, to: val } } : d))
+                            }}
+                            className={cn(
+                              "h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0",
+                              singleColor && "cursor-not-allowed opacity-50",
+                            )}
+                          />
+                          <span className="font-mono text-xs uppercase">{draft.colors.to}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between">
                 <Label htmlFor="active">Visible en la tienda</Label>

@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
-import { THEMES, formatPoints, type Store } from "@/lib/catalog"
+import { THEMES, formatPoints, isLightColor, type Store } from "@/lib/catalog"
 import { usePoints } from "@/lib/points-store"
 import { useCardPoints } from "@/lib/mock/admin-settings"
 
@@ -47,14 +47,20 @@ export function GiftCardFace({
     )
   }
 
+  const hasCustomColors = Boolean(store.colors)
+  const isLight = Boolean(store.colors && isLightColor(store.colors.from) && isLightColor(store.colors.to))
+
   return (
     <div
       className={cn(
-        "relative aspect-[1.586] overflow-hidden bg-gradient-to-br text-white",
+        "relative aspect-[1.586] overflow-hidden",
+        isLight ? "text-slate-900" : "text-white",
+        !hasCustomColors && "bg-gradient-to-br",
+        !hasCustomColors && THEMES[store.theme],
         compact ? "rounded-lg p-2 shadow-md" : "rounded-xl p-4 shadow-lg",
-        THEMES[store.theme],
         className,
       )}
+      style={store.colors ? { backgroundImage: `linear-gradient(135deg, ${store.colors.from}, ${store.colors.to})` } : undefined}
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent" />
       <div className="flex items-start justify-between">

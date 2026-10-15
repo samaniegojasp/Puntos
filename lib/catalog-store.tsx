@@ -3,7 +3,7 @@
 // Catálogo vigente de gift cards. Parte de DEFAULT_STORES y se puede editar desde /admin.
 // DEMO: se guarda en localStorage, así que solo lo ve el navegador donde se editó.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { DEFAULT_STORES, THEMES, type Store } from "@/lib/catalog"
+import { DEFAULT_STORES, THEMES, isHexColor, type Store } from "@/lib/catalog"
 
 const STORAGE_KEY = "gc_catalog_v1"
 export const isActive = (s: Store) => s.active !== false
@@ -41,6 +41,7 @@ function sanitize(raw: unknown): Store[] | null {
       active: s.active !== false,
       ...(isValidImage(s.image) ? { image: s.image } : {}),
       ...(isValidImage(s.logo) ? { logo: s.logo } : {}),
+      ...(s.colors && typeof s.colors === "object" && isHexColor((s.colors as any).from) && isHexColor((s.colors as any).to) ? { colors: { from: (s.colors as any).from, to: (s.colors as any).to } } : {}),
     })
   }
   return out

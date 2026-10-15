@@ -30,6 +30,8 @@ export type Store = {
   image?: string
   /** Logo (data URL png/jpeg/webp) que se pinta sobre el degradado. Se ignora si hay imagen completa. */
   logo?: string
+  /** Colores propios (hex #rrggbb). Si existen, reemplazan al tema. */
+  colors?: { from: string; to: string }
 }
 
 /** Catálogo inicial (semilla). El catálogo vigente se lee con `useCatalog()` de lib/catalog-store.tsx. */
@@ -51,3 +53,15 @@ export const pointsFor = (usd: number) => usd * POINTS_PER_USD
 export const usdForPoints = (missingPoints: number, custom = { minUsd: 1, maxUsd: 500, pointsPerUsd: 100 }) =>
   Math.min(custom.maxUsd, Math.max(custom.minUsd, Math.ceil(missingPoints / custom.pointsPerUsd)))
 export const formatPoints = (n: number) => new Intl.NumberFormat("es-EC").format(n)
+
+export const isHexColor = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)
+
+export function isLightColor(hex: string): boolean {
+  if (!isHexColor(hex)) return false
+  const r = parseInt(hex.slice(1, 3), 16) / 255
+  const g = parseInt(hex.slice(3, 5), 16) / 255
+  const b = parseInt(hex.slice(5, 7), 16) / 255
+  const toLinear = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4))
+  const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b)
+  return luminance > 0.6
+}
