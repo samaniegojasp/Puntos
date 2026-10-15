@@ -8,13 +8,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
 import { formatPts, formatUsd } from "@/lib/domain/format"
-import { useAdminSettings } from "@/lib/mock/admin-settings"
+import { useAdminSettings, useCurrentClient } from "@/lib/mock/admin-settings"
+import { PurchaseDialog } from "@/components/panel/purchase-dialog"
+import type { PointsPack } from "@/lib/domain/types"
 
 export default function ClienteComprarPage() {
   const [loading, setLoading] = useState(true)
-  const { standardPacks, clients } = useAdminSettings()
+  const { standardPacks } = useAdminSettings()
+  const { client, bag, addToBag } = useCurrentClient()
+  const [selectedPack, setSelectedPack] = useState<PointsPack | null>(null)
+  const [dialogOpen, setDialogOpen] = useState(false)
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -37,7 +41,6 @@ export default function ClienteComprarPage() {
     )
   }
 
-  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
   const packs = client.packMode === "custom" ? client.customPacks : standardPacks
   const maxPoints = Math.max(...packs.map((p) => p.points))
 
@@ -48,6 +51,9 @@ export default function ClienteComprarPage() {
         <h2 className="text-xl font-semibold tracking-tight">Comprar puntos</h2>
         <p className="text-sm text-muted-foreground">
           Recarga tu bolsa corporativa para seguir repartiendo puntos a tus clientes
+        </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Tu bolsa actual: <strong className="text-foreground">{formatPts(bag)} pts</strong>
         </p>
       </div>
 
@@ -93,7 +99,10 @@ export default function ClienteComprarPage() {
               <CardFooter className="pt-2">
                 <Button
                   className="w-full"
-                  onClick={() => toast("Prototipo: aquí se abre el pago seguro de la pasarela")}
+                  onClick={() => {
+                    setSelectedPack(pack)
+                    setDialogOpen(true)
+                  }}
                 >
                   <CreditCard className="mr-2 h-4 w-4" /> Pagar con la pasarela
                 </Button>
@@ -102,6 +111,19 @@ export default function ClienteComprarPage() {
           )
         })}
       </div>
+
+      {selectedPack && (
+        <PurchaseDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          usd={selectedPack.usdCents / 100}
+          points={selectedPack.points}
+          onApproved={() => {
+            addToBag(selectedPack.points)
+            toast.success(`+${formatPts(selectedPack.points)} puntos en tu bolsa`)
+          }}
+        />
+      )}
     </div>
   )
 }

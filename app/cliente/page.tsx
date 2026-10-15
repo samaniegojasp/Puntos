@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_CLIENT, MOCK_GRANTED } from "@/lib/mock/data"
+import { useAdminSettings, useCurrentClient } from "@/lib/mock/admin-settings"
 import { formatPct, formatPts } from "@/lib/domain/format"
 
 export default function ClienteResumenPage() {
   const [loading, setLoading] = useState(true)
+  const { client, bag } = useCurrentClient()
+  const { grantedItems } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -41,8 +43,8 @@ export default function ClienteResumenPage() {
     )
   }
 
-  const totalGranted = MOCK_GRANTED.reduce((sum, g) => sum + g.points, 0)
-  const totalUsed = MOCK_GRANTED.reduce((sum, g) => sum + g.pointsUsed, 0)
+  const totalGranted = grantedItems.reduce((sum, g) => sum + g.points, 0)
+  const totalUsed = grantedItems.reduce((sum, g) => sum + g.pointsUsed, 0)
   const totalUnused = totalGranted - totalUsed
 
   return (
@@ -52,7 +54,7 @@ export default function ClienteResumenPage() {
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Resumen de tu cuenta</h2>
           <p className="text-sm text-muted-foreground">
-            {MOCK_CLIENT.name} · Estado de tu bolsa y entregas de puntos
+            {client.name} · Estado de tu bolsa y entregas de puntos
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
@@ -73,13 +75,13 @@ export default function ClienteResumenPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <KpiCard
           label="Puntos en tu bolsa"
-          value={formatPts(MOCK_CLIENT.bagPoints)}
+          value={formatPts(bag)}
           hint="Disponibles para repartir"
         />
         <KpiCard
           label="Puntos repartidos"
           value={formatPts(totalGranted)}
-          hint={`Total histórico (${MOCK_GRANTED.length} entregas)`}
+          hint={`Total histórico (${grantedItems.length} entregas)`}
         />
         <KpiCard
           label="Puntos usados"
@@ -93,7 +95,7 @@ export default function ClienteResumenPage() {
         />
         <KpiCard
           label="Tu bono"
-          value={formatPct(MOCK_CLIENT.bonusPct)}
+          value={formatPct(client.bonusPct)}
           hint="Porcentaje actual sobre ventas"
         />
       </div>
@@ -113,7 +115,7 @@ export default function ClienteResumenPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Tu porcentaje de bono actual es de{" "}
-              <strong className="text-foreground">{formatPct(MOCK_CLIENT.bonusPct)}</strong>. Puedes modificarlo cuando
+              <strong className="text-foreground">{formatPct(client.bonusPct)}</strong>. Puedes modificarlo cuando
               quieras según tu estrategia comercial.
             </p>
             <Button variant="outline" asChild size="sm">
@@ -137,7 +139,7 @@ export default function ClienteResumenPage() {
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Tienes registradas{" "}
-              <strong className="text-foreground">{MOCK_GRANTED.length} entregas</strong> con un total de{" "}
+              <strong className="text-foreground">{grantedItems.length} entregas</strong> con un total de{" "}
               <strong className="text-foreground">{formatPts(totalGranted)} puntos</strong> repartidos.
             </p>
             <Button variant="outline" asChild size="sm">

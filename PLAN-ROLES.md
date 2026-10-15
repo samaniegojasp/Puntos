@@ -91,7 +91,7 @@ Los puntos son acumulables, pero cada punto nació a un precio distinto (lo que 
 
 ## 3b. Reparto masivo por Excel (`/cliente/repartir`)
 
-1. **Descargar plantilla** (`plantilla-reparto.xlsx`, generada por el servidor). Hoja "Reparto" con columnas `tipo_documento` (lista desplegable: Cédula / RUC / Pasaporte), `numero_documento`, `puntos`, `monto_venta` (opcional) y `referencia` (opcional, ej. "Factura 001-123"). Hoja "Instrucciones". Si `puntos` está vacío y hay `monto_venta`, se calcula `monto_venta × bonus_pct ÷ usd_per_point`, redondeado hacia abajo.
+1. **Descargar plantilla** (`plantilla-reparto.xlsx`, generada por el servidor). Hoja "Reparto" con columnas Tipo de documento (lista desplegable), Número de documento, Correo electrónico, Valor de comisión ($), Referencia. Hoja "Instrucciones". El servidor calcula `puntos = floor(valor_comision ÷ precio del punto del Cliente)`.
 2. **Subir y revisar** (no cambia nada): el servidor lee el archivo y crea un `grant_batches` en `draft`. La pantalla muestra filas, total de puntos, saldo de la bolsa antes y después, y los errores por fila (número de fila y motivo).
    - Validaciones: `.xlsx` o `.csv` (nunca `.xlsm`), máximo 5 MB y 1 000 filas [propuesta, ajustable al límite de las funciones de Vercel]; tipo de documento válido; cédula con dígito verificador; `puntos` entero > 0; documento repetido en el archivo = error; saldo de la bolsa suficiente.
    - **Todo o nada:** con cualquier error o con saldo insuficiente, **Enviar** queda deshabilitado.

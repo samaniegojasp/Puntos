@@ -17,14 +17,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { MOCK_GRANTED } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatDate, formatPts } from "@/lib/domain/format"
+import { maskEmail } from "@/lib/domain/documento"
 import { DOC_TYPE_LABEL } from "@/lib/domain/types"
 import { downloadCsv } from "@/lib/domain/csv"
 
 export default function ClienteRepartidoPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
+  const { grantedItems } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -46,7 +48,7 @@ export default function ClienteRepartidoPage() {
 
   // Filtrado por documento (número o tipo)
   const query = search.trim().toLowerCase()
-  const filteredItems = MOCK_GRANTED.filter((item) => {
+  const filteredItems = grantedItems.filter((item) => {
     if (!query) return true
     return (
       item.docNumber.toLowerCase().includes(query) ||
@@ -63,6 +65,7 @@ export default function ClienteRepartidoPage() {
     const headers = [
       "Tipo de documento",
       "Número de documento",
+      "Correo",
       "Referencia",
       "Puntos",
       "Puntos usados",
@@ -73,6 +76,7 @@ export default function ClienteRepartidoPage() {
     const rows = filteredItems.map((item) => [
       DOC_TYPE_LABEL[item.docType],
       item.docNumber,
+      item.email ? maskEmail(item.email) : "—",
       item.reference ?? "—",
       item.points,
       item.pointsUsed,
@@ -149,10 +153,11 @@ export default function ClienteRepartidoPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table className="min-w-[680px]">
+              <Table className="min-w-[760px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Documento</TableHead>
+                    <TableHead>Correo</TableHead>
                     <TableHead>Referencia</TableHead>
                     <TableHead className="text-right">Puntos</TableHead>
                     <TableHead className="text-right">Usados</TableHead>
@@ -168,6 +173,9 @@ export default function ClienteRepartidoPage() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {DOC_TYPE_LABEL[item.docType]} {item.docNumber}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {item.email ? maskEmail(item.email) : "—"}
                         </TableCell>
                         <TableCell className="text-muted-foreground">
                           {item.reference ? item.reference : "—"}
@@ -203,6 +211,7 @@ export default function ClienteRepartidoPage() {
                     <TableCell className="text-muted-foreground text-xs font-normal">
                       {filteredItems.length} {filteredItems.length === 1 ? "entrega" : "entregas"}
                     </TableCell>
+                    <TableCell>—</TableCell>
                     <TableCell className="text-right font-bold">
                       {formatPts(totalPoints)}
                     </TableCell>

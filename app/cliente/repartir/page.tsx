@@ -5,11 +5,9 @@ import Link from "next/link"
 import {
   AlertCircle,
   AlertTriangle,
-  ArrowRight,
   CheckCircle2,
   Download,
   FileSpreadsheet,
-  Gem,
   History,
   RotateCcw,
   Send,
@@ -42,17 +40,20 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
-import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { formatDate, formatPct, formatPts } from "@/lib/domain/format"
-import { toast } from "sonner"
-import { DOC_TYPE_LABEL, type GrantBatch } from "@/lib/domain/types"
+import { PurchaseDialog } from "@/components/panel/purchase-dialog"
+import { useAdminSettings, useCurrentClient } from "@/lib/mock/admin-settings"
+import { formatDate, formatPts, formatUsd } from "@/lib/domain/format"
+import { normalizeDocument } from "@/lib/domain/documento"
+import { readGrantFile } from "@/lib/domain/grant-file"
+import { buildGrantBatch, purchaseForMissing } from "@/lib/domain/grants"
+import { DOC_TYPE_LABEL, type GrantBatch, type GrantedItem } from "@/lib/domain/types"
 import { downloadCsv } from "@/lib/domain/csv"
 import { downloadGrantTemplate } from "@/lib/domain/xlsx-template"
+import { toast } from "sonner"
 
 export default function ClienteRepartirPage() {
-  const { clients } = useAdminSettings()
-  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
+  const { base, bag, addToBag } = useCurrentClient()
+  const { setGrantedItems, sentBatches, setSentBatches } = useAdminSettings()
 
   // Estado para la generación de plantilla Excel
   const [rowCountInput, setRowCountInput] = useState("100")
@@ -61,8 +62,9 @@ export default function ClienteRepartirPage() {
   const rowCountNum = Number(rowCountInput.trim())
   const isRowCountValid = Number.isInteger(rowCountNum) && rowCountNum >= 1 && rowCountNum <= 1000
 
-  // Estado de subida
+  // Estado de subida y lectura
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [reviewing, setReviewing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Estado del lote en revisión
@@ -72,11 +74,15 @@ export default function ClienteRepartirPage() {
   const [authChecked, setAuthChecked] = useState(false)
   const [duplicateChecked, setDuplicateChecked] = useState(false)
 
-  // Estado de diálogo y envío
+  // Estado de diálogo de compra de faltante
+  const [purchaseOpen, setPurchaseOpen] = useState(false)
+
+  // Estado de diálogo de envío
   const [dialogOpen, setDialogOpen] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const isSendingRef = useRef(false)
   const [isSent, setIsSent] = useState(false)
+  const [bagAfterSent, setBagAfterSent] = useState<number | null>(null)
 
   // Paso 1: Descargar plantilla Excel (.xlsx) o CSV
   const handleDownloadExcel = async () => {
@@ -93,29 +99,75 @@ export default function ClienteRepartirPage() {
   }
 
   const handleDownloadTemplate = () => {
-    const headers = ["tipo_documento", "numero_documento", "puntos", "monto_venta", "referencia"]
-    const rows = [
-      ["cedula", "1712345675", 2000, "", "Factura 001-0451"],
-      ["cedula", "0908765431", "", 250, "Factura 001-0452"],
+    const headers = [
+      "Tipo de documento",
+      "Número de documento",
+      "Correo electrónico",
+      "Valor de comisión ($)",
+      "Referencia",
     ]
-    downloadCsv("plantilla-reparto-puntos.csv", headers, rows)
+    downloadCsv("plantilla-reparto-puntos.csv", headers, [])
   }
 
-  // Paso 2: Revisar archivo (simulado)
-  const handleReviewFile = (e: React.FormEvent) => {
+  // Paso 2: Revisar archivo
+  const handleReviewFile = async (e: React.FormEvent) => {
     e.preventDefault()
-    toast.info("En construcción: se conecta en la Parte P")
+    if (!selectedFile || reviewing) return
+    setReviewing(true)
+    try {
+      const { rows, fileHash } = await readGrantFile(selectedFile)
+      const batch = buildGrantBatch(rows, base, selectedFile.name, fileHash)
+      const prior = sentBatches.find((b) => b.hash === fileHash)
+      if (prior) {
+        batch.alreadySentAt = prior.sentAt
+      }
+      setReviewedBatch(batch)
+      setAuthChecked(false)
+      setDuplicateChecked(false)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al leer el archivo"
+      toast.error(msg)
+      setReviewedBatch(null)
+    } finally {
+      setReviewing(false)
+    }
   }
 
   // Paso 4: Confirmación y envío del reparto
   const handleConfirmSend = () => {
-    // Protección contra doble clic
-    if (isSendingRef.current || isSending) return
+    if (isSendingRef.current || isSending || !reviewedBatch) return
+    if (bag < reviewedBatch.totalPoints) {
+      toast.error("Saldo insuficiente en tu bolsa.")
+      return
+    }
+
     isSendingRef.current = true
     setIsSending(true)
 
     // Regla 7: Simular 800 ms de procesamiento
     setTimeout(() => {
+      const total = reviewedBatch.totalPoints
+      addToBag(-total)
+
+      const sentAt = new Date().toISOString()
+      const newItems: GrantedItem[] = reviewedBatch.rows
+        .filter((r) => !r.error && r.points != null)
+        .map((r) => ({
+          id: `g-${Date.now()}-${r.rowNo}`,
+          batchId: reviewedBatch.id,
+          docType: r.docType ?? "cedula",
+          docNumber: normalizeDocument(r.docNumber),
+          email: r.email,
+          reference: r.reference,
+          points: r.points ?? 0,
+          pointsUsed: 0,
+          sentAt,
+        }))
+
+      setGrantedItems((prev) => [...newItems, ...prev])
+      setSentBatches((prev) => [...prev, { hash: reviewedBatch.fileHash, sentAt }])
+      setBagAfterSent(bag - total)
+
       setIsSending(false)
       isSendingRef.current = false
       setDialogOpen(false)
@@ -130,6 +182,8 @@ export default function ClienteRepartirPage() {
     setSelectedFile(null)
     setAuthChecked(false)
     setDuplicateChecked(false)
+    setReviewing(false)
+    setBagAfterSent(null)
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -142,6 +196,8 @@ export default function ClienteRepartirPage() {
       "Fila",
       "Tipo de documento",
       "Número de documento",
+      "Correo electrónico",
+      "Valor de comisión ($)",
       "Puntos",
       "Referencia",
       "Estado",
@@ -150,6 +206,8 @@ export default function ClienteRepartirPage() {
       r.rowNo,
       r.docType ? DOC_TYPE_LABEL[r.docType] : "Cédula",
       r.docNumber,
+      r.email || "",
+      r.commissionCents != null ? (r.commissionCents / 100).toFixed(2) : "—",
       r.points ?? 0,
       r.reference ?? "—",
       "Enviado",
@@ -159,7 +217,7 @@ export default function ClienteRepartirPage() {
 
   // Si ya fue enviado, mostrar la pantalla de éxito "Reparto enviado"
   if (isSent && reviewedBatch) {
-    const newBagBalance = (reviewedBatch.bagBefore ?? 0) - reviewedBatch.totalPoints
+    const finalBagBalance = bagAfterSent ?? (bag - reviewedBatch.totalPoints)
 
     return (
       <div className="space-y-8">
@@ -206,7 +264,7 @@ export default function ClienteRepartirPage() {
                   Nueva bolsa
                 </span>
                 <p className="mt-1 text-2xl font-bold text-foreground">
-                  {formatPts(newBagBalance)} pts
+                  {formatPts(finalBagBalance)} pts
                 </p>
               </div>
             </div>
@@ -231,18 +289,19 @@ export default function ClienteRepartirPage() {
     )
   }
 
-  // Cálculos de validación sobre el lote revisado
+  // Cálculos de validación sobre el lote revisado (la bolsa se lee viva de useCurrentClient)
+  const total = reviewedBatch ? reviewedBatch.totalPoints : 0
+  const missing = Math.max(0, total - bag)
+  const after = bag - total
   const hasErrors = reviewedBatch ? reviewedBatch.rows.some((r) => !!r.error) : false
-  const bagBefore = reviewedBatch?.bagBefore ?? 0
-  const isInsufficient = reviewedBatch ? reviewedBatch.totalPoints > bagBefore : false
-  const missingPoints = reviewedBatch && isInsufficient ? reviewedBatch.totalPoints - bagBefore : 0
   const isDuplicate = !!reviewedBatch?.alreadySentAt
+  const buy = purchaseForMissing(missing, base)
 
   // Condiciones para habilitar el botón "Enviar reparto"
   const canSend =
     reviewedBatch !== null &&
     !hasErrors &&
-    !isInsufficient &&
+    missing === 0 &&
     authChecked &&
     (!isDuplicate || duplicateChecked) &&
     !isSending
@@ -270,10 +329,7 @@ export default function ClienteRepartirPage() {
         <CardContent className="space-y-4">
           <div className="rounded-lg bg-muted/40 p-4 text-sm text-muted-foreground space-y-2">
             <p>
-              <strong>Tipos de documento válidos:</strong> Cédula, RUC o Pasaporte (elige de la lista).
-            </p>
-            <p>
-              Los campos <code className="text-foreground">monto_venta</code> y <code className="text-foreground">referencia</code> son opcionales. Si dejas <code className="text-foreground">puntos</code> vacío y pones <code className="text-foreground">monto_venta</code>, calculamos los puntos con tu bono ({formatPct(client.bonusPct)}).
+              <strong>Tipo de documento:</strong> elige de la lista. <strong>Valor de comisión ($):</strong> los dólares que quieres entregar a cada persona; nosotros los convertimos a puntos. Referencia es opcional.
             </p>
           </div>
 
@@ -354,7 +410,8 @@ export default function ClienteRepartirPage() {
               <p className="text-xs text-muted-foreground">
                 Revisar el archivo no realiza ningún cambio ni descuenta puntos de tu bolsa.
               </p>
-              <Button type="submit" disabled={!selectedFile}>
+              <Button type="submit" disabled={!selectedFile || reviewing}>
+                {reviewing && <Spinner className="mr-2 h-4 w-4" />}
                 Revisar archivo
               </Button>
             </div>
@@ -386,27 +443,32 @@ export default function ClienteRepartirPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Tarjetas de resumen del archivo */}
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {/* 5 Tarjetas de resumen del archivo */}
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
                 <KpiCard
-                  label="Cantidad de filas"
+                  label="Filas"
                   value={String(reviewedBatch.rows.length)}
                   hint="Beneficiarios en el archivo"
                 />
                 <KpiCard
-                  label="Total de puntos"
-                  value={formatPts(reviewedBatch.totalPoints)}
+                  label="Puntos necesarios"
+                  value={formatPts(total)}
                   hint="A descontar de tu bolsa"
                 />
                 <KpiCard
-                  label="Bolsa antes"
-                  value={formatPts(bagBefore)}
+                  label="Tu saldo actual"
+                  value={formatPts(bag)}
                   hint="Saldo actual disponible"
                 />
                 <KpiCard
-                  label="Bolsa después"
-                  value={isInsufficient ? "—" : formatPts(bagBefore - reviewedBatch.totalPoints)}
-                  hint={isInsufficient ? "Saldo insuficiente" : "Saldo restante estimado"}
+                  label="Faltante"
+                  value={formatPts(missing)}
+                  hint={missing === 0 ? "Sin faltante" : "Faltan puntos"}
+                />
+                <KpiCard
+                  label="Saldo después"
+                  value={missing > 0 ? "—" : formatPts(after)}
+                  hint={missing > 0 ? "Saldo insuficiente" : "Saldo restante estimado"}
                 />
               </div>
 
@@ -421,27 +483,31 @@ export default function ClienteRepartirPage() {
                 </Alert>
               )}
 
-              {isInsufficient && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Saldo insuficiente en tu bolsa</AlertTitle>
-                  <AlertDescription className="space-y-3">
-                    <p>
-                      Tu bolsa tiene {formatPts(bagBefore)} puntos y este reparto necesita{" "}
-                      {formatPts(reviewedBatch.totalPoints)}. Faltan {formatPts(missingPoints)}.
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="border-destructive/30 bg-background text-destructive hover:bg-destructive/10"
-                      asChild
-                    >
-                      <Link href="/cliente/comprar">
-                        <Gem className="mr-2 h-4 w-4" /> Comprar puntos
-                      </Link>
-                    </Button>
-                  </AlertDescription>
-                </Alert>
+              {/* Si missing > 0: tarjeta destacada */}
+              {missing > 0 && (
+                <Card className="border-destructive/30 bg-destructive/5">
+                  <CardContent className="p-6 space-y-4">
+                    <div>
+                      <h3 className="text-lg font-bold text-destructive">
+                        Te faltan {formatPts(missing)} puntos
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Tu bolsa tiene {formatPts(bag)} y este reparto necesita {formatPts(total)}.
+                        {hasErrors && " (Calculado con las filas correctas)"}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <Button onClick={() => setPurchaseOpen(true)}>
+                        Comprar ${buy.usd} ({formatPts(buy.points)} pts)
+                      </Button>
+                      <Button variant="outline" asChild>
+                        <Link href="/cliente/comprar">
+                          Ver paquetes de puntos
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
               {isDuplicate && (
@@ -456,11 +522,13 @@ export default function ClienteRepartirPage() {
 
               {/* Tabla de filas del archivo */}
               <div className="overflow-x-auto rounded-lg border">
-                <Table className="min-w-[620px]">
+                <Table className="min-w-[860px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="w-16">Fila</TableHead>
                       <TableHead>Documento</TableHead>
+                      <TableHead>Correo</TableHead>
+                      <TableHead className="text-right">Comisión ($)</TableHead>
                       <TableHead className="text-right">Puntos</TableHead>
                       <TableHead>Referencia</TableHead>
                       <TableHead>Estado</TableHead>
@@ -477,6 +545,12 @@ export default function ClienteRepartirPage() {
                         </TableCell>
                         <TableCell className="font-medium">
                           {row.docType ? DOC_TYPE_LABEL[row.docType] : "Cédula"} {row.docNumber}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {row.email || "—"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {row.commissionCents != null ? formatUsd(row.commissionCents) : "—"}
                         </TableCell>
                         <TableCell className="text-right font-semibold">
                           {row.points != null ? formatPts(row.points) : "—"}
@@ -584,6 +658,20 @@ export default function ClienteRepartirPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Diálogo de compra de puntos faltantes */}
+      {missing > 0 && (
+        <PurchaseDialog
+          open={purchaseOpen}
+          onOpenChange={setPurchaseOpen}
+          usd={buy.usd}
+          points={buy.points}
+          onApproved={() => {
+            addToBag(buy.points)
+            toast.success(`+${formatPts(buy.points)} puntos en tu bolsa`)
+          }}
+        />
+      )}
     </div>
   )
 }

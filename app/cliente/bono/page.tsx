@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import Link from "next/link"
 import { AlertCircle, Calculator, Check, Percent } from "lucide-react"
 import { toast } from "sonner"
 
@@ -188,6 +189,13 @@ export default function ClienteBonoPage() {
                 </div>
               </div>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Usa el resultado como <strong>Valor de comisión ($)</strong> en tu planilla de reparto.{" "}
+              <Link href="/cliente/repartir" className="text-primary underline hover:text-primary/80 font-medium">
+                Ir a Repartir
+              </Link>
+            </p>
           </CardContent>
         </Card>
       </div>
