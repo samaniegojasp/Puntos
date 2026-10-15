@@ -7,7 +7,7 @@ import { AlertTriangle, CheckCircle2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_PUBLIC_PACKS, MOCK_SETTLEMENTS, MOCK_STANDARD_PACKS, MOCK_USERS } from "@/lib/mock/data"
+import { MOCK_PUBLIC_PACKS, MOCK_SETTLEMENTS, MOCK_USERS } from "@/lib/mock/data"
 import { MOCK_ADMIN_MONTHS, MOCK_ADMIN_SUMMARY, type MonthPoint } from "@/lib/mock/admin-kpis"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatPct, formatPts, formatUsd } from "@/lib/domain/format"
@@ -204,7 +204,7 @@ const signed = (v: number) => `${v >= 0 ? "+" : "−"}${formatPct(Math.abs(v))}`
 
 export default function AdminResumenPage() {
   const [loading, setLoading] = useState(true)
-  const { settings, providers, products, clients, publicPacks } = useAdminSettings()
+  const { settings, providers, products, clients, publicPacks, standardPacks } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -241,7 +241,7 @@ export default function AdminResumenPage() {
     settings,
     providers,
     products,
-    standardPacks: MOCK_STANDARD_PACKS,
+    standardPacks,
     publicPacks,
     clients,
   }).filter((i) => i.severity === "error")

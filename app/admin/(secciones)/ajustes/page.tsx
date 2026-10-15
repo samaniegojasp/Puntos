@@ -18,7 +18,6 @@ import {
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
-  MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
@@ -27,7 +26,7 @@ import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
   const [loading, setLoading] = useState(true)
-  const { settings: current, setSettings, providers, products, clients, publicPacks } = useAdminSettings()
+  const { settings: current, setSettings, providers, products, clients, publicPacks, standardPacks } = useAdminSettings()
 
   // Estado del formulario de ajustes
   const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
@@ -161,7 +160,7 @@ export default function AdminAjustesPage() {
     settings: candidateSettings,
     providers,
     products,
-    standardPacks: MOCK_STANDARD_PACKS,
+    standardPacks,
     publicPacks,
     clients,
   })

@@ -49,7 +49,6 @@ import {
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
-  MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import {
@@ -62,7 +61,7 @@ import {
   validatePricing,
 } from "@/lib/domain/pricing"
 import EditableNumber from "@/components/panel/editable-number"
-import PublicPacksEditor from "@/components/panel/public-packs-editor"
+import PacksEditor from "@/components/panel/packs-editor"
 import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
@@ -71,12 +70,12 @@ export default function AdminPreciosPage() {
   const [loading, setLoading] = useState(true)
 
   // Estado local para productos y paquetes
-  const [standardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
-  const { settings, providers, products, setProducts, clients, publicPacks, setPublicPacks } = useAdminSettings()
+  const { settings, providers, products, setProducts, clients, publicPacks, setPublicPacks, standardPacks, setStandardPacks } = useAdminSettings()
 
   // Selector de tabla de paquetes
   const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")
   const [packsDialogOpen, setPacksDialogOpen] = useState(false)
+  const [standardDialogOpen, setStandardDialogOpen] = useState(false)
 
   // Estado del caso con error
   const [isErrorCaseActive, setIsErrorCaseActive] = useState(false)
@@ -251,6 +250,15 @@ export default function AdminPreciosPage() {
         (i) => i.severity === "error",
       ),
     [settings, providers, products, standardPacks, clients],
+  )
+
+  // Errores de reglas con un conjunto de paquetes estándar dado (para el editor de paquetes estándar)
+  const validateStandardPacks = useCallback(
+    (packs: PointsPack[]) =>
+      validatePricing({ settings, providers, products, standardPacks: packs, publicPacks, clients }).filter(
+        (i) => i.severity === "error",
+      ),
+    [settings, providers, products, publicPacks, clients],
   )
 
   // Obtener lista de paquetes según el selector
@@ -520,6 +528,11 @@ export default function AdminPreciosPage() {
                     ))}
                 </SelectContent>
               </Select>
+              {selectedPackTable === "standard" && (
+                <Button type="button" size="sm" variant="outline" onClick={() => setStandardDialogOpen(true)}>
+                  <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar paquetes estándar
+                </Button>
+              )}
               {selectedPackTable === "public" && (
                 <Button type="button" size="sm" variant="outline" onClick={() => setPacksDialogOpen(true)}>
                   <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar paquetes del Canjeador
@@ -577,7 +590,7 @@ export default function AdminPreciosPage() {
         </CardContent>
       </Card>
 
-      <PublicPacksEditor
+      <PacksEditor
         open={packsDialogOpen}
         onOpenChange={setPacksDialogOpen}
         packs={publicPacks}
@@ -586,6 +599,19 @@ export default function AdminPreciosPage() {
           setPublicPacks(next)
           setIsErrorCaseActive(false)
           toast.success("Paquetes del Canjeador actualizados")
+        }}
+      />
+
+      <PacksEditor
+        open={standardDialogOpen}
+        onOpenChange={setStandardDialogOpen}
+        title="Paquetes estándar (Clientes)"
+        description="Lo que paga un Cliente sin tabla propia (USD → puntos). Cada barra solo permite valores que cumplen las reglas: el Canjeador debe pagar más por punto, el margen mínimo y el beneficio mínimo del Cliente."
+        packs={standardPacks}
+        validate={validateStandardPacks}
+        onSave={(next) => {
+          setStandardPacks(next)
+          toast.success("Paquetes estándar actualizados")
         }}
       />
 

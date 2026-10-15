@@ -11,6 +11,7 @@ import {
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
+  MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import type { AdminSettings, ClientAdminRow, PointsPack, Product, Provider } from "@/lib/domain/types"
 
@@ -25,6 +26,8 @@ type Ctx = {
   setClients: React.Dispatch<React.SetStateAction<ClientAdminRow[]>>
   publicPacks: PointsPack[]
   setPublicPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
+  standardPacks: PointsPack[]
+  setStandardPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
 }
 
 const AdminSettingsContext = createContext<Ctx | null>(null)
@@ -35,6 +38,7 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
   const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
   const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
+  const [standardPacks, setStandardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
   return (
     <AdminSettingsContext.Provider
       value={{
@@ -48,6 +52,8 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
         setClients,
         publicPacks,
         setPublicPacks,
+        standardPacks,
+        setStandardPacks,
       }}
     >
       {children}

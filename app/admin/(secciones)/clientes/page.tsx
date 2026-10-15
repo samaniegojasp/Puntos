@@ -41,7 +41,6 @@ import {
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
-  MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import EditableNumber from "@/components/panel/editable-number"
@@ -54,7 +53,7 @@ const ptsPerUsd = (usdPerPoint: number) =>
   usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
 
 export default function AdminClientesPage() {
-  const { settings, clients, setClients, providers, products, publicPacks } = useAdminSettings()
+  const { settings, clients, setClients, providers, products, publicPacks, standardPacks } = useAdminSettings()
   const [loading, setLoading] = useState(true)
 
   // Estado del modal de cliente (creación / edición)
@@ -169,7 +168,7 @@ export default function AdminClientesPage() {
       settings,
       providers,
       products,
-      standardPacks: MOCK_STANDARD_PACKS,
+      standardPacks,
       publicPacks,
       clients: simulated,
     })
@@ -241,7 +240,7 @@ export default function AdminClientesPage() {
           boundsFor(
             [
               { id: "ref", usdCents: REF_USD_CENTS, points: 1020 },
-              ...MOCK_STANDARD_PACKS.filter((p) => p.usdCents > REF_USD_CENTS).map((p) => ({ ...p })),
+              ...standardPacks.filter((p) => p.usdCents > REF_USD_CENTS).map((p) => ({ ...p })),
             ],
             0,
             true,

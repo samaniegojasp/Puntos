@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/table"
 import {
   MOCK_PUBLIC_PACKS,
-  MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { formatDate, formatPct, formatPts, formatUsd } from "@/lib/domain/format"
 import {
@@ -47,7 +46,7 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
-  const { settings, providers, setProviders, products, clients, publicPacks } = useAdminSettings()
+  const { settings, providers, setProviders, products, clients, publicPacks, standardPacks } = useAdminSettings()
   const [loading, setLoading] = useState(true)
 
   // Diálogo de edición
@@ -105,7 +104,7 @@ export default function AdminProveedoresPage() {
     settings,
     providers: simulatedProviders,
     products: validationProducts,
-    standardPacks: MOCK_STANDARD_PACKS,
+    standardPacks,
     publicPacks,
     clients: clients,
   })
@@ -129,14 +128,14 @@ export default function AdminProveedoresPage() {
         settings,
         providers: providers.map((p) => (p.id === providerId ? { ...p, discountPct: u / DISCOUNT_UNIT } : p)),
         products: asActive,
-        standardPacks: MOCK_STANDARD_PACKS,
+        standardPacks,
         publicPacks,
         clients,
       }).filter((i) => i.severity === "error" && tags.some((t) => i.message.includes(t)))
       if (errs.length === 0) list.push(u)
     }
     return list.length ? list : null
-  }, [providerId, products, providers, clients, settings, publicPacks])
+  }, [providerId, products, providers, clients, settings, publicPacks, standardPacks])
 
   // Posición de la barra: índice del valor válido más cercano al actual
   const discountUnit = Math.round(parsedDiscountPct * DISCOUNT_UNIT)
@@ -163,7 +162,7 @@ export default function AdminProveedoresPage() {
 
   const refCents = referenceCentsPerPoint(publicPacks)
   const std10Pack =
-    MOCK_STANDARD_PACKS.find((p) => p.usdCents === 1000) ?? MOCK_STANDARD_PACKS[0]
+    standardPacks.find((p) => p.usdCents === 1000) ?? standardPacks[0]
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()

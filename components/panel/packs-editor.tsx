@@ -23,16 +23,19 @@ const LOW = 0.6 // se prueban entre 60 % y 140 % de 100 pts por dólar
 const HIGH = 1.4
 
 /**
- * Editor de los paquetes que el Canjeador compra por su cuenta.
+ * Editor de paquetes de puntos (USD → puntos).
  * La barra de cada paquete solo recorre los valores de puntos que cumplen TODAS las reglas del sistema
  * (se prueba cada valor con `validate`, sin fórmulas propias).
  */
-export default function PublicPacksEditor({
+export default function PacksEditor({
   open,
   onOpenChange,
   packs,
   validate,
   onSave,
+  title = "Paquetes del Canjeador",
+  description = "Lo que el Canjeador compra por su cuenta (USD → puntos). Cambiar un paquete mueve el punto de referencia y el precio en puntos de todas las tarjetas, por eso cada barra solo permite valores que cumplen las reglas.",
+  saveLabel = "Guardar paquetes",
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -40,6 +43,9 @@ export default function PublicPacksEditor({
   /** Devuelve los errores de reglas con estos paquetes aplicados */
   validate: (packs: PointsPack[]) => PricingIssue[]
   onSave: (packs: PointsPack[]) => void
+  title?: string
+  description?: string
+  saveLabel?: string
 }) {
   const [draft, setDraft] = useState<PointsPack[]>(packs)
 
@@ -86,7 +92,7 @@ export default function PublicPacksEditor({
     const last = [...draft].sort((a, b) => b.usdCents - a.usdCents)[0]
     const usd = last ? (last.usdCents / 100) * 2 : 10
     const ppd = last ? last.points / (last.usdCents / 100) : 100
-    setDraft((prev) => [...prev, { id: `pub-new-${Date.now()}`, usdCents: usd * 100, points: Math.round((usd * ppd) / STEP) * STEP }])
+    setDraft((prev) => [...prev, { id: `pack-new-${Date.now()}`, usdCents: usd * 100, points: Math.round((usd * ppd) / STEP) * STEP }])
   }
 
   return (
@@ -98,10 +104,8 @@ export default function PublicPacksEditor({
         }}
       >
         <DialogHeader>
-          <DialogTitle>Paquetes del Canjeador</DialogTitle>
-          <DialogDescription>
-            Lo que el Canjeador compra por su cuenta (USD → puntos). Cambiar un paquete mueve el punto de referencia y el precio en puntos de todas las tarjetas, por eso cada barra solo permite valores que cumplen las reglas.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
@@ -213,7 +217,7 @@ export default function PublicPacksEditor({
               onOpenChange(false)
             }}
           >
-            Guardar paquetes
+            {saveLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

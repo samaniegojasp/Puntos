@@ -8,11 +8,13 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MOCK_CLIENT, MOCK_CLIENT_PACKS, MOCK_STANDARD_PACKS } from "@/lib/mock/data"
+import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
 import { formatPts, formatUsd } from "@/lib/domain/format"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 
 export default function ClienteComprarPage() {
   const [loading, setLoading] = useState(true)
+  const { standardPacks } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -35,7 +37,7 @@ export default function ClienteComprarPage() {
     )
   }
 
-  const packs = MOCK_CLIENT.packMode === "custom" ? MOCK_CLIENT_PACKS : MOCK_STANDARD_PACKS
+  const packs = MOCK_CLIENT.packMode === "custom" ? MOCK_CLIENT_PACKS : standardPacks
   const maxPoints = Math.max(...packs.map((p) => p.points))
 
   return (
