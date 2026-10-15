@@ -250,7 +250,7 @@ export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
 ]
 
 export const MOCK_SETTINGS: AdminSettings = {
-  minMarginPct: 0.02, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 100, pointsFactor: 1, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100,
+  minMarginPct: 0.02, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 100, pointsFactor: 1, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100, cardDenomMinUsd: 5, cardDenomMaxUsd: 500,
 }
 
 export const MOCK_USERS: UserRow[] = [

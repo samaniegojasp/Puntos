@@ -40,6 +40,7 @@ function sanitize(raw: unknown): Store[] | null {
       featured: s.featured === true,
       active: s.active !== false,
       ...(isValidImage(s.image) ? { image: s.image } : {}),
+      ...(isValidImage(s.logo) ? { logo: s.logo } : {}),
     })
   }
   return out

@@ -58,7 +58,16 @@ export function GiftCardFace({
     >
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent" />
       <div className="flex items-start justify-between">
-        <span className={cn("font-extrabold leading-tight", compact ? "text-[10px]" : "text-lg")}>{store.name}</span>
+        {store.logo ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            src={store.logo}
+            alt={store.name}
+            className={compact ? "h-4 max-w-[60%] object-contain" : "h-10 max-w-[55%] object-contain"}
+          />
+        ) : (
+          <span className={cn("font-extrabold leading-tight", compact ? "text-[10px]" : "text-lg")}>{store.name}</span>
+        )}
         {!compact && <Gift className="h-5 w-5 opacity-80" aria-hidden />}
       </div>
       <div

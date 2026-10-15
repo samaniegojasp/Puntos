@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Copy, ImagePlus, Lock, LogOut, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
+import { Copy, ImagePlus, Lock, LogOut, Minus, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -16,21 +17,34 @@ import { cn } from "@/lib/utils"
 import { THEMES, formatPoints, pointsFor, type Store, type ThemeKey } from "@/lib/catalog"
 import { isActive, isValidImage, useCatalog } from "@/lib/catalog-store"
 import { adminConfigured, endAdminSession, hasAdminSession, verifyAdmin } from "@/lib/admin-auth"
-import { usePointsFactor } from "@/lib/mock/admin-settings"
+import { useAdminSettings, usePointsFactor } from "@/lib/mock/admin-settings"
 
 type Draft = {
   id: string | null // null = tienda nueva
   name: string
   category: string
   theme: ThemeKey
-  denoms: string
+  denoms: number[]
   description: string
   featured: boolean
   active: boolean
   image: string | null
+  logo: string | null
 }
 
-const EMPTY: Draft = { id: null, name: "", category: "", theme: "super", denoms: "10, 25, 50", description: "", featured: false, active: true, image: null }
+const EMPTY: Draft = {
+  id: null,
+  name: "",
+  category: "",
+  theme: "super",
+  denoms: [10, 25, 50],
+  description: "",
+  featured: false,
+  active: true,
+  image: null,
+  logo: null,
+}
+
 const THEME_LABELS: Record<ThemeKey, string> = {
   super: "Violeta–rosa",
   salud: "Celeste",
@@ -77,13 +91,47 @@ function prepareCardImage(file: File): Promise<string> {
   })
 }
 
-function parseDenoms(text: string): number[] | string {
-  const parts = text.split(/[\s,;]+/).filter(Boolean)
-  if (!parts.length) return "Ingresa al menos un valor."
-  const nums = parts.map(Number)
-  if (nums.some((n) => !Number.isInteger(n) || n < 1 || n > 500)) return "Los valores deben ser enteros entre 1 y 500."
-  const uniq = [...new Set(nums)].sort((a, b) => a - b)
-  return uniq.length > 6 ? "Máximo 6 valores por tarjeta." : uniq
+/** Lee la imagen, la encaja dentro de 256×256 manteniendo la proporción y la exporta como PNG (conserva transparencia). */
+function prepareLogoImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!IMAGE_TYPES.includes(file.type)) return reject(new Error("Usa una imagen PNG, JPG o WebP."))
+    if (file.size > MAX_IMAGE_BYTES) return reject(new Error("La imagen pesa más de 5 MB."))
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const scale = Math.min(256 / img.width, 256 / img.height, 1)
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement("canvas")
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext("2d")
+      if (!ctx) return reject(new Error("No se pudo procesar la imagen."))
+      ctx.drawImage(img, 0, 0, w, h)
+      const out = canvas.toDataURL("image/png")
+      isValidImage(out) ? resolve(out) : reject(new Error("El logo es demasiado grande; prueba con una imagen más simple."))
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error("No se pudo leer la imagen."))
+    }
+    img.src = url
+  })
+}
+
+function getNextDenom(current: number[], min: number, max: number): number | null {
+  if (current.length >= 6) return null
+  const maxVal = current.length > 0 ? Math.max(...current) : min - 5
+  const startAbove = Math.floor((maxVal + 5) / 5) * 5
+  for (let v = startAbove; v <= max; v += 5) {
+    if (!current.includes(v)) return v
+  }
+  const startMin = Math.ceil(min / 5) * 5
+  for (let v = startMin; v <= max; v += 5) {
+    if (!current.includes(v)) return v
+  }
+  return null
 }
 
 export default function AdminPage() {
@@ -93,7 +141,7 @@ export default function AdminPage() {
     setState(hasAdminSession() ? "open" : "locked")
   }, [])
 
-  if (state === "checking") return <div className="container px-4 py-12 text-center text-muted-foreground">Cargando…</div>
+  if (state === "checking") return <div className="px-4 py-12 text-center text-muted-foreground">Cargando…</div>
   if (!adminConfigured) return <SetupNotice />
   if (state === "locked") return <LoginForm onSuccess={() => setState("open")} />
   return (
@@ -108,7 +156,7 @@ export default function AdminPage() {
 
 function SetupNotice() {
   return (
-    <div className="container max-w-2xl space-y-4 px-4 py-12">
+    <div className="max-w-2xl space-y-4 px-4 py-12">
       <h1 className="text-2xl font-bold">Panel de administración sin configurar</h1>
       <p className="text-muted-foreground">
         Define tu clave de administrador. En PowerShell, dentro de la carpeta del proyecto (cambia el texto de ejemplo por una frase larga y propia):
@@ -142,7 +190,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
   }
 
   return (
-    <div className="container max-w-sm px-4 py-16">
+    <div className="max-w-sm px-4 py-16">
       <form onSubmit={submit} className="space-y-4">
         <div className="flex items-center gap-2 text-xl font-bold">
           <Lock className="h-5 w-5" /> Administración
@@ -162,12 +210,37 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 function Panel({ onLogout }: { onLogout: () => void }) {
   const { allStores, customized, saveStore, removeStore, resetCatalog } = useCatalog()
+  const { settings } = useAdminSettings()
   const factor = usePointsFactor()
+  const min = settings.cardDenomMinUsd ?? 5
+  const max = settings.cardDenomMaxUsd ?? 500
+
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
 
   const categories = Array.from(new Set(allStores.map((s) => s.category)))
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }))
+
+  function updateDenom(idx: number, val: number) {
+    setDraft((d) => {
+      const next = [...d.denoms]
+      next[idx] = val
+      return { ...d, denoms: next }
+    })
+  }
+
+  function removeDenom(idx: number) {
+    if (draft.denoms.length <= 1) return
+    setDraft((d) => ({ ...d, denoms: d.denoms.filter((_, i) => i !== idx) }))
+  }
+
+  function addDenom() {
+    if (draft.denoms.length >= 6) return
+    const nextVal = getNextDenom(draft.denoms, min, max)
+    if (nextVal !== null) {
+      setDraft((d) => ({ ...d, denoms: [...d.denoms, nextVal] }))
+    }
+  }
 
   function edit(s: Store) {
     setErrors({})
@@ -176,11 +249,12 @@ function Panel({ onLogout }: { onLogout: () => void }) {
       name: s.name,
       category: s.category,
       theme: s.theme,
-      denoms: s.denoms.join(", "),
+      denoms: [...s.denoms],
       description: s.description,
       featured: s.featured === true,
       active: isActive(s),
       image: s.image ?? null,
+      logo: s.logo ?? null,
     })
   }
 
@@ -192,8 +266,13 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     if (name.length < 2 || name.length > 40) errs.name = "Entre 2 y 40 caracteres."
     if (category.length < 2 || category.length > 30) errs.category = "Entre 2 y 30 caracteres."
     if (draft.description.length > 120) errs.description = "Máximo 120 caracteres."
-    const denoms = parseDenoms(draft.denoms)
-    if (typeof denoms === "string") errs.denoms = denoms
+    if (draft.denoms.length < 1 || draft.denoms.length > 6) {
+      errs.denoms = "Ingresa entre 1 y 6 valores."
+    } else if (new Set(draft.denoms).size !== draft.denoms.length) {
+      errs.denoms = "Hay valores repetidos."
+    } else if (draft.denoms.some((d) => d < min || d > max || d % 5 !== 0)) {
+      errs.denoms = `Todos los valores deben ser múltiplos de 5 entre $${min} y $${max}.`
+    }
     let id = draft.id
     if (!id) {
       const base = slugify(name)
@@ -202,8 +281,20 @@ function Panel({ onLogout }: { onLogout: () => void }) {
       for (let n = 2; allStores.some((s) => s.id === id); n++) id = `${base}-${n}`
     }
     setErrors(errs)
-    if (Object.keys(errs).length || !id || typeof denoms === "string") return
-    const saved = saveStore({ id, name, category, theme: draft.theme, denoms, description: draft.description.trim(), featured: draft.featured, active: draft.active, ...(draft.image ? { image: draft.image } : {}) })
+    if (Object.keys(errs).length || !id) return
+    const sortedDenoms = [...draft.denoms].sort((a, b) => a - b)
+    const saved = saveStore({
+      id,
+      name,
+      category,
+      theme: draft.theme,
+      denoms: sortedDenoms,
+      description: draft.description.trim(),
+      featured: draft.featured,
+      active: draft.active,
+      ...(draft.image ? { image: draft.image } : {}),
+      ...(draft.logo ? { logo: draft.logo } : {}),
+    })
     if (!saved) toast.error("No se pudo guardar en este navegador (almacenamiento lleno o modo privado). Prueba con una imagen más liviana.")
     else toast.success(draft.id ? "Tienda actualizada" : "Tienda añadida")
     setDraft(EMPTY)
@@ -216,19 +307,23 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     toast.success("Tienda eliminada")
   }
 
-  const preview = typeof parseDenoms(draft.denoms) !== "string" ? (parseDenoms(draft.denoms) as number[]) : []
-  const previewStore: Store = { id: "x", name: draft.name.trim() || "Nombre de la tienda", category: draft.category, theme: draft.theme, denoms: preview, description: draft.description, ...(draft.image ? { image: draft.image } : {}) }
+  const preview = [...draft.denoms].sort((a, b) => a - b)
+  const previewStore: Store = {
+    id: "x",
+    name: draft.name.trim() || "Nombre de la tienda",
+    category: draft.category,
+    theme: draft.theme,
+    denoms: preview,
+    description: draft.description,
+    ...(draft.image ? { image: draft.image } : {}),
+    ...(draft.logo ? { logo: draft.logo } : {}),
+  }
 
   return (
-    <div className="container px-4 py-8 md:px-6 md:py-12">
+    <div>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Catálogo de gift cards</h1>
-            <Link href="/admin/resumen" className="text-sm font-medium text-primary hover:underline">
-              Más secciones →
-            </Link>
-          </div>
+          <h2 className="text-xl font-semibold tracking-tight">Catálogo de gift cards</h2>
           <p className="text-sm text-muted-foreground">
             {allStores.length} tiendas · {allStores.filter(isActive).length} visibles{customized ? " · catálogo personalizado" : " · catálogo original"}
           </p>
@@ -334,6 +429,36 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                   PNG, JPG o WebP, hasta 5 MB. Se recorta al centro con proporción de tarjeta (1,586:1) y reemplaza el degradado; el valor en dólares se superpone abajo a la derecha. Demo: se guarda solo en este navegador.
                 </p>
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="cardLogo">Logo (opcional)</Label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    id="cardLogo"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    className="max-w-xs"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0]
+                      e.target.value = ""
+                      if (!file) return
+                      try {
+                        set("logo", await prepareLogoImage(file))
+                      } catch (err) {
+                        toast.error(err instanceof Error ? err.message : "No se pudo cargar el logo.")
+                      }
+                    }}
+                  />
+                  {draft.logo && (
+                    <Button type="button" variant="ghost" size="sm" onClick={() => set("logo", null)}>
+                      <Trash2 className="mr-1 h-4 w-4" /> Quitar logo
+                    </Button>
+                  )}
+                </div>
+                <p className="flex items-start gap-1 text-xs text-muted-foreground">
+                  <ImagePlus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  Se muestra arriba a la izquierda sobre el color de la tarjeta. Si subes una imagen completa, esa imagen manda.
+                </p>
+              </div>
               <Field id="name" label="Nombre" error={errors.name}>
                 <Input id="name" value={draft.name} maxLength={40} onChange={(e) => set("name", e.target.value)} />
               </Field>
@@ -341,10 +466,92 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                 <Input id="category" list="categorias" value={draft.category} maxLength={30} onChange={(e) => set("category", e.target.value)} />
                 <datalist id="categorias">{categories.map((c) => <option key={c} value={c} />)}</datalist>
               </Field>
-              <Field id="denoms" label="Valores en USD (separados por coma, máx. 6)" error={errors.denoms}>
-                <Input id="denoms" value={draft.denoms} onChange={(e) => set("denoms", e.target.value)} />
-                {preview.length > 0 && <p className="text-xs text-muted-foreground">{preview.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}</p>}
-              </Field>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Valores en USD (máx. 6)</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {draft.denoms.length}/6 valores
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {draft.denoms.map((denom, idx) => {
+                    const rowError =
+                      denom < min || denom > max
+                        ? `Fuera de los límites de Ajustes ($${min}–$${max})`
+                        : denom % 5 !== 0
+                          ? "Debe ser múltiplo de 5"
+                          : null
+
+                    return (
+                      <div key={idx} className="space-y-2 rounded-lg border p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xl font-bold">${denom}</span>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateDenom(idx, Math.min(max, Math.max(min, denom - 5)))}
+                              disabled={denom <= min}
+                              aria-label="Restar 5"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-8 w-8"
+                              onClick={() => updateDenom(idx, Math.min(max, Math.max(min, denom + 5)))}
+                              disabled={denom >= max}
+                              aria-label="Sumar 5"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => removeDenom(idx)}
+                              disabled={draft.denoms.length <= 1}
+                              aria-label="Eliminar valor"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        <Slider
+                          min={min}
+                          max={max}
+                          step={5}
+                          value={[Math.min(Math.max(denom, min), max)]}
+                          onValueChange={([val]) => updateDenom(idx, val)}
+                          aria-label={`Valor ${idx + 1}`}
+                        />
+                        {rowError && <p className="text-xs text-destructive">{rowError}</p>}
+                      </div>
+                    )
+                  })}
+                </div>
+                {errors.denoms && <p className="text-sm text-destructive">{errors.denoms}</p>}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={addDenom}
+                  disabled={draft.denoms.length >= 6}
+                >
+                  <Plus className="mr-1 h-4 w-4" /> Agregar valor
+                </Button>
+                {preview.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {preview.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}
+                  </p>
+                )}
+              </div>
               <Field id="description" label="Descripción" error={errors.description}>
                 <Input id="description" value={draft.description} maxLength={120} onChange={(e) => set("description", e.target.value)} />
               </Field>

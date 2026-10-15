@@ -28,6 +28,8 @@ export type Store = {
   active?: boolean
   /** Imagen completa de la tarjeta (data URL png/jpeg/webp ya reducida). Si existe, reemplaza el degradado. */
   image?: string
+  /** Logo (data URL png/jpeg/webp) que se pinta sobre el degradado. Se ignora si hay imagen completa. */
+  logo?: string
 }
 
 /** Catálogo inicial (semilla). El catálogo vigente se lee con `useCatalog()` de lib/catalog-store.tsx. */

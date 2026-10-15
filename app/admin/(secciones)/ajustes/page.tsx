@@ -88,6 +88,8 @@ export default function AdminAjustesPage() {
   const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
   const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
   const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
+  const [cardDenomMinInput, setCardDenomMinInput] = useState(String(current.cardDenomMinUsd ?? 5))
+  const [cardDenomMaxInput, setCardDenomMaxInput] = useState(String(current.cardDenomMaxUsd ?? 500))
   // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
   type LimitUnit = "ppd" | "price"
   const fmtPrice = (n: number | undefined) => (n === undefined ? "" : n.toFixed(5))
@@ -138,6 +140,22 @@ export default function AdminAjustesPage() {
 
   if (isNaN(rawGrantDays) || rawGrantDays < 1) {
     errors.push("Los días para repartos pendientes deben ser al menos 1.")
+  }
+
+  const rawDenomMin = parseInt(cardDenomMinInput, 10)
+  const rawDenomMax = parseInt(cardDenomMaxInput, 10)
+  const isDenomMinInt = String(rawDenomMin) === cardDenomMinInput.trim()
+  const isDenomMaxInt = String(rawDenomMax) === cardDenomMaxInput.trim()
+  if (
+    !isDenomMinInt ||
+    !isDenomMaxInt ||
+    rawDenomMin % 5 !== 0 ||
+    rawDenomMax % 5 !== 0 ||
+    rawDenomMin < 5 ||
+    rawDenomMin >= rawDenomMax ||
+    rawDenomMax > 500
+  ) {
+    errors.push("Los valores de las tarjetas deben ser enteros múltiplos de 5 con 5 ≤ mín < máx ≤ 500.")
   }
 
   // Límites opcionales del precio por punto (vacío = sin límite adicional)
@@ -204,6 +222,8 @@ export default function AdminAjustesPage() {
     clientBenefitPct: !isNaN(rawBenefit) ? Math.round(rawBenefit * 1000) / 100000 : 0.01,
     pricePerPointMin: priceMin,
     pricePerPointMax: priceMax,
+    cardDenomMinUsd: isDenomMinInt && rawDenomMin % 5 === 0 ? rawDenomMin : 5,
+    cardDenomMaxUsd: isDenomMaxInt && rawDenomMax % 5 === 0 ? rawDenomMax : 500,
   }
 
   // Validación con validatePricing usando los ajustes candidatos
@@ -247,10 +267,18 @@ export default function AdminAjustesPage() {
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
     setCustomPpd((MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente)
+    setCardDenomMinInput(String(MOCK_SETTINGS.cardDenomMinUsd ?? 5))
+    setCardDenomMaxInput(String(MOCK_SETTINGS.cardDenomMaxUsd ?? 500))
     setLimitUnit("ppd")
     setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
     setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
-    setSettings({ ...MOCK_SETTINGS, customPointsPerUsd: (MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente, pointsFactor: factorVigente })
+    setSettings({
+      ...MOCK_SETTINGS,
+      customPointsPerUsd: (MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente,
+      pointsFactor: factorVigente,
+      cardDenomMinUsd: MOCK_SETTINGS.cardDenomMinUsd ?? 5,
+      cardDenomMaxUsd: MOCK_SETTINGS.cardDenomMaxUsd ?? 500,
+    })
     typedRef.current = null
     toast.info("Ajustes restablecidos a sus valores originales")
   }
@@ -658,6 +686,42 @@ export default function AdminAjustesPage() {
                   <div className="flex justify-between text-[10px] text-muted-foreground">
                     <span>Mínimo {50 * f} pts/$</span>
                     <span>Máximo {new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(smallestPublicPpd)} pts/$ (el del paquete más pequeño)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Valores de las tarjetas del catálogo */}
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
+                <div>
+                  <h4 className="text-sm font-semibold">Valores de las tarjetas del catálogo</h4>
+                  <p className="text-xs text-muted-foreground">
+                    La barra de cada valor en Catálogo va de 5 en 5 entre estos límites.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardDenomMin">Valor mínimo (USD)</Label>
+                    <Input
+                      id="cardDenomMin"
+                      type="number"
+                      min={5}
+                      max={500}
+                      step={5}
+                      value={cardDenomMinInput}
+                      onChange={(e) => setCardDenomMinInput(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cardDenomMax">Valor máximo (USD)</Label>
+                    <Input
+                      id="cardDenomMax"
+                      type="number"
+                      min={5}
+                      max={500}
+                      step={5}
+                      value={cardDenomMaxInput}
+                      onChange={(e) => setCardDenomMaxInput(e.target.value)}
+                    />
                   </div>
                 </div>
               </div>

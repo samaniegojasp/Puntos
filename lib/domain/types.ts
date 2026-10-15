@@ -260,6 +260,9 @@ export type AdminSettings = {
   customMinUsd?: number
   customMaxUsd?: number
   customPointsPerUsd?: number
+  /** Valores de las tarjetas del catálogo (USD y múltiplos de 5). Por defecto 5 y 500. */
+  cardDenomMinUsd?: number
+  cardDenomMaxUsd?: number
 }
 
 export type UserRow = {
