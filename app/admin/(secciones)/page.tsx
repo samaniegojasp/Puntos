@@ -19,6 +19,7 @@ import { THEMES, formatPoints, type Store, type ThemeKey } from "@/lib/catalog"
 import { isActive, isValidImage, useCatalog } from "@/lib/catalog-store"
 import { adminConfigured, endAdminSession, hasAdminSession, verifyAdmin } from "@/lib/admin-auth"
 import { useAdminSettings, useCardPoints } from "@/lib/mock/admin-settings"
+import { removeFlatBackground } from "@/lib/image/remove-background"
 
 type Draft = {
   id: string | null // null = tienda nueva
@@ -220,7 +221,41 @@ function Panel({ onLogout }: { onLogout: () => void }) {
 
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [singleColor, setSingleColor] = useState(false)
+  const [logoOriginal, setLogoOriginal] = useState<string | null>(null)
+  const [removeBg, setRemoveBg] = useState(false)
+  const [tolerance, setTolerance] = useState(30)
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
+
+  function resetLogoState() {
+    setLogoOriginal(null)
+    setRemoveBg(false)
+    setTolerance(30)
+  }
+
+  useEffect(() => {
+    if (!logoOriginal) return
+    if (!removeBg) {
+      setDraft((d) => (d.logo !== logoOriginal ? { ...d, logo: logoOriginal } : d))
+      return
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const cleaned = await removeFlatBackground(logoOriginal, tolerance)
+        if (!cancelled) {
+          setDraft((d) => ({ ...d, logo: cleaned }))
+        }
+      } catch (err) {
+        if (!cancelled) {
+          toast.error(err instanceof Error ? err.message : "No se pudo quitar el fondo.")
+        }
+      }
+    }, 250)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [removeBg, tolerance, logoOriginal])
 
   const categories = Array.from(new Set(allStores.map((s) => s.category)))
   const set = <K extends keyof Draft>(k: K, v: Draft[K]) => setDraft((d) => ({ ...d, [k]: v }))
@@ -248,6 +283,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
 
   function edit(s: Store) {
     setErrors({})
+    resetLogoState()
     setDraft({
       id: s.id,
       name: s.name,
@@ -306,6 +342,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     else toast.success(draft.id ? "Tienda actualizada" : "Tienda añadida")
     setDraft(EMPTY)
     setSingleColor(false)
+    resetLogoState()
   }
 
   function remove(s: Store) {
@@ -314,6 +351,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
     if (draft.id === s.id) {
       setDraft(EMPTY)
       setSingleColor(false)
+      resetLogoState()
     }
     toast.success("Tienda eliminada")
   }
@@ -357,6 +395,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                 resetCatalog()
                 setDraft(EMPTY)
                 setSingleColor(false)
+                resetLogoState()
                 toast.success("Catálogo restaurado")
               }
             }}
@@ -406,7 +445,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">{draft.id ? "Editar tienda" : "Nueva tienda"}</h2>
                 {draft.id && (
-                  <Button type="button" variant="ghost" size="sm" onClick={() => { setErrors({}); setDraft(EMPTY); setSingleColor(false) }}>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => { setErrors({}); setDraft(EMPTY); setSingleColor(false); resetLogoState() }}>
                     <Plus className="mr-1 h-4 w-4" /> Nueva
                   </Button>
                 )}
@@ -455,22 +494,96 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                       e.target.value = ""
                       if (!file) return
                       try {
-                        set("logo", await prepareLogoImage(file))
+                        const processed = await prepareLogoImage(file)
+                        setLogoOriginal(processed)
+                        setRemoveBg(false)
+                        setTolerance(30)
+                        set("logo", processed)
                       } catch (err) {
                         toast.error(err instanceof Error ? err.message : "No se pudo cargar el logo.")
                       }
                     }}
                   />
                   {draft.logo && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => set("logo", null)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        set("logo", null)
+                        resetLogoState()
+                      }}
+                    >
                       <Trash2 className="mr-1 h-4 w-4" /> Quitar logo
                     </Button>
                   )}
                 </div>
                 <p className="flex items-start gap-1 text-xs text-muted-foreground">
                   <ImagePlus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                  Se muestra arriba a la izquierda sobre el color de la tarjeta. Si subes una imagen completa, esa imagen manda.
+                  Se muestra al centro de la tarjeta, sobre el color. Si subes una imagen completa, esa imagen manda.
                 </p>
+                {draft.logo && (
+                  <div className="mt-2 space-y-3 rounded-lg border bg-muted/40 p-3">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border bg-white p-1"
+                        style={{
+                          backgroundImage: "conic-gradient(#ddd 25%, #fff 0 50%, #ddd 0 75%, #fff 0)",
+                          backgroundSize: "12px 12px",
+                        }}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={draft.logo} alt="Miniatura del logo" className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id="removeBg"
+                            checked={removeBg}
+                            disabled={!logoOriginal}
+                            onCheckedChange={(checked) => setRemoveBg(Boolean(checked))}
+                          />
+                          <Label
+                            htmlFor="removeBg"
+                            className={cn(
+                              "text-sm font-normal",
+                              logoOriginal ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground",
+                            )}
+                          >
+                            Quitar fondo (fondos lisos)
+                          </Label>
+                        </div>
+                        {!logoOriginal && (
+                          <p className="text-xs text-muted-foreground">
+                            Vuelve a subir el logo para quitar el fondo.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {removeBg && logoOriginal && (
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <Label htmlFor="tolerance">Tolerancia</Label>
+                          <span className="font-mono text-muted-foreground">{tolerance}</span>
+                        </div>
+                        <Slider
+                          id="tolerance"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={[tolerance]}
+                          onValueChange={([val]) => setTolerance(val)}
+                          aria-label="Tolerancia para quitar el fondo"
+                        />
+                      </div>
+                    )}
+
+                    <p className="text-xs text-muted-foreground">
+                      Funciona con fondos de un solo color (blanco, negro u otro). Para fotos con fondos complejos, sube un PNG ya transparente.
+                    </p>
+                  </div>
+                )}
               </div>
               <Field id="name" label="Nombre" error={errors.name}>
                 <Input id="name" value={draft.name} maxLength={40} onChange={(e) => set("name", e.target.value)} />
