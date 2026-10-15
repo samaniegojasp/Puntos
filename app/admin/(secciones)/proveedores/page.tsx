@@ -47,7 +47,7 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
-  const { settings, providers, setProviders, products, clients } = useAdminSettings()
+  const { settings, providers, setProviders, products, clients, publicPacks } = useAdminSettings()
   const [loading, setLoading] = useState(true)
 
   // Diálogo de edición
@@ -106,7 +106,7 @@ export default function AdminProveedoresPage() {
     providers: simulatedProviders,
     products: validationProducts,
     standardPacks: MOCK_STANDARD_PACKS,
-    publicPacks: MOCK_PUBLIC_PACKS,
+    publicPacks,
     clients: clients,
   })
 
@@ -130,13 +130,13 @@ export default function AdminProveedoresPage() {
         providers: providers.map((p) => (p.id === providerId ? { ...p, discountPct: u / DISCOUNT_UNIT } : p)),
         products: asActive,
         standardPacks: MOCK_STANDARD_PACKS,
-        publicPacks: MOCK_PUBLIC_PACKS,
+        publicPacks,
         clients,
       }).filter((i) => i.severity === "error" && tags.some((t) => i.message.includes(t)))
       if (errs.length === 0) list.push(u)
     }
     return list.length ? list : null
-  }, [providerId, products, providers, clients, settings])
+  }, [providerId, products, providers, clients, settings, publicPacks])
 
   // Posición de la barra: índice del valor válido más cercano al actual
   const discountUnit = Math.round(parsedDiscountPct * DISCOUNT_UNIT)
@@ -161,7 +161,7 @@ export default function AdminProveedoresPage() {
     ? products.filter((prod) => prod.providerId === editingProvider.id)
     : []
 
-  const refCents = referenceCentsPerPoint(MOCK_PUBLIC_PACKS)
+  const refCents = referenceCentsPerPoint(publicPacks)
   const std10Pack =
     MOCK_STANDARD_PACKS.find((p) => p.usdCents === 1000) ?? MOCK_STANDARD_PACKS[0]
 
@@ -307,9 +307,19 @@ export default function AdminProveedoresPage() {
                       <span>Máximo {new Intl.NumberFormat("es-EC").format(validDiscounts[validDiscounts.length - 1] / 10)} %</span>
                     </div>
                     {!discountIsValid && (
-                      <p className="text-[11px] text-destructive">
-                        El valor actual no cumple las reglas. Mueve la barra para elegir uno válido.
-                      </p>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="text-[11px] text-destructive">
+                          El valor actual no cumple las reglas. Mueve la barra o usa el válido más cercano.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setDiscountPctInput(String(validDiscounts[discountIndex] / 10))}
+                        >
+                          Usar {new Intl.NumberFormat("es-EC").format(validDiscounts[discountIndex] / 10)} %
+                        </Button>
+                      </div>
                     )}
                     {discountHasGaps && (
                       <p className="text-[11px] text-muted-foreground">

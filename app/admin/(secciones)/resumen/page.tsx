@@ -204,7 +204,7 @@ const signed = (v: number) => `${v >= 0 ? "+" : "−"}${formatPct(Math.abs(v))}`
 
 export default function AdminResumenPage() {
   const [loading, setLoading] = useState(true)
-  const { settings, providers, products, clients } = useAdminSettings()
+  const { settings, providers, products, clients, publicPacks } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -242,7 +242,7 @@ export default function AdminResumenPage() {
     providers,
     products,
     standardPacks: MOCK_STANDARD_PACKS,
-    publicPacks: MOCK_PUBLIC_PACKS,
+    publicPacks,
     clients,
   }).filter((i) => i.severity === "error")
   const clientsEmpty = clients.filter((c) => c.active && c.bagPoints === 0)

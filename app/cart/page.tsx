@@ -8,11 +8,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GiftCardFace } from "@/components/gift-card"
 import { formatPoints, pointsFor, usdForPoints } from "@/lib/catalog"
+import { usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
   const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
+  const { custom } = usePublicOffer()
   const { findStore } = useCatalog()
 
   if (!ready) {
@@ -159,7 +161,7 @@ export default function CartPage() {
                   </div>
                   <Button className="w-full" asChild>
                     <Link href={`/recargar?faltan=${cartTotal - balance}`}>
-                      Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance)})
+                      Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance, custom)})
                     </Link>
                   </Button>
                   <Button variant="outline" className="w-full" asChild>

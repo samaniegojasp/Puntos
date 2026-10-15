@@ -254,6 +254,10 @@ export type AdminSettings = {
   pricePerPointMax?: number
   /** Beneficio mínimo del Cliente sobre el punto de referencia (0.01 = 1 %). Por defecto 1 %. */
   clientBenefitPct?: number
+  /** Compra a tu medida del Canjeador (dólares enteros). Por defecto $1 a $500 y 100 pts por $1. */
+  customMinUsd?: number
+  customMaxUsd?: number
+  customPointsPerUsd?: number
 }
 
 export type UserRow = {
@@ -267,7 +271,7 @@ export type UserRow = {
 }
 
 export type PricingIssue = {
-  rule: 1 | 2 | 3 | 4 | 5 | 6 | 7
+  rule: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
   /** Regla 6: qué límite se rompe (precio por debajo del mínimo o por encima del máximo) */
   limit?: "min" | "max"
   severity: "error" | "warning"

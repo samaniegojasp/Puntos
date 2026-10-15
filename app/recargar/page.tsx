@@ -10,21 +10,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import {
-  CUSTOM_MAX_USD,
-  CUSTOM_MIN_USD,
-  CUSTOM_POINTS_PER_USD,
-  PACKS,
-  formatPoints,
-  usdForPoints,
-  type PointsPack,
-} from "@/lib/catalog"
+import { formatPoints, usdForPoints, type PointsPack } from "@/lib/catalog"
+import { usePublicOffer } from "@/lib/mock/admin-settings"
 import { usePoints } from "@/lib/points-store"
 import { formatCardNumber, formatExp, validateCard, type CardErrors, type CardInput } from "@/lib/payment"
 
 // ÚNICA página del sitio con pago en dinero real (simulado).
 export default function RecargarPage() {
   const { balance, ready, topUp, topUpCustom } = usePoints()
+  const { packs: PACKS, custom } = usePublicOffer()
+  const CUSTOM_MIN_USD = custom.minUsd
+  const CUSTOM_MAX_USD = custom.maxUsd
+  const CUSTOM_POINTS_PER_USD = custom.pointsPerUsd
   const [pack, setPack] = useState<PointsPack | null>(null)
   // "A tu medida": dólares enteros al precio del paquete más pequeño (100 pts por $1)
   const [customUsd, setCustomUsd] = useState("")
@@ -37,18 +34,19 @@ export default function RecargarPage() {
   useEffect(() => {
     const n = Number(new URLSearchParams(window.location.search).get("faltan"))
     if (Number.isInteger(n) && n > 0) {
-      const usd = usdForPoints(n)
+      const usd = usdForPoints(n, custom)
       setMissing(n)
       setCustomUsd(String(usd))
-      setPack({ id: "custom", points: usd * CUSTOM_POINTS_PER_USD, usd })
+      setPack({ id: "custom", points: Math.floor(usd * custom.pointsPerUsd), usd })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const chooseCustom = (value: string) => {
     setCustomUsd(value)
     const n = Number(value)
     if (Number.isInteger(n) && n >= CUSTOM_MIN_USD && n <= CUSTOM_MAX_USD) {
-      setPack({ id: "custom", points: n * CUSTOM_POINTS_PER_USD, usd: n })
+      setPack({ id: "custom", points: Math.floor(n * CUSTOM_POINTS_PER_USD), usd: n })
     } else {
       setPack(null)
     }
@@ -133,7 +131,7 @@ export default function RecargarPage() {
           </span>
           <Gem className="h-10 w-10 text-primary" />
           <span className="text-2xl font-extrabold tabular-nums">
-            {customValid ? formatPoints(customN * CUSTOM_POINTS_PER_USD) : "—"}
+            {customValid ? formatPoints(Math.floor(customN * CUSTOM_POINTS_PER_USD)) : "—"}
           </span>
           <span className="text-sm text-muted-foreground">Puntos</span>
           <div className="mt-2 flex items-center gap-1 text-lg font-semibold">

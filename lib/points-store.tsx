@@ -2,7 +2,8 @@
 
 // Estado global: saldo de Puntos, carrito, órdenes y recargas. Persistido en localStorage (DEMO: manipulable por el usuario).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
-import { CUSTOM_MAX_USD, CUSTOM_MIN_USD, CUSTOM_POINTS_PER_USD, PACKS, WELCOME_POINTS, pointsFor } from "@/lib/catalog"
+import { WELCOME_POINTS, pointsFor } from "@/lib/catalog"
+import { usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 
 export type CartItem = { storeId: string; usd: number; qty: number }
@@ -63,6 +64,10 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<State>(initialState)
   const [ready, setReady] = useState(false)
   const { isAvailable } = useCatalog()
+  // Paquetes y compra a tu medida tal como los dejó el administrador (siempre la versión más reciente dentro de callbacks estables)
+  const offer = usePublicOffer()
+  const offerRef = useRef(offer)
+  offerRef.current = offer
   // Siempre el criterio de disponibilidad más reciente, para usarlo dentro de callbacks estables.
   const availRef = useRef(isAvailable)
   availRef.current = isAvailable
@@ -130,7 +135,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
   // Llamar SOLO después de que la pasarela confirme el pago.
   const topUp = useCallback(
     (packId: string, last4: string) => {
-      const pack = PACKS.find((p) => p.id === packId)
+      const pack = offerRef.current.packs.find((p) => p.id === packId)
       if (!pack) return false
       const s = ref.current
       const t: TopUp = { id: `TOP-${Date.now()}`, date: new Date().toISOString(), packId, points: pack.points, usd: pack.usd, last4 }
@@ -143,9 +148,10 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
   // Llamar SOLO después de que la pasarela confirme el pago.
   const topUpCustom = useCallback(
     (usd: number, last4: string) => {
-      if (!Number.isInteger(usd) || usd < CUSTOM_MIN_USD || usd > CUSTOM_MAX_USD) return false
+      const { minUsd, maxUsd, pointsPerUsd } = offerRef.current.custom
+      if (!Number.isInteger(usd) || usd < minUsd || usd > maxUsd) return false
       const s = ref.current
-      const points = usd * CUSTOM_POINTS_PER_USD
+      const points = Math.floor(usd * pointsPerUsd)
       const t: TopUp = { id: `TOP-${Date.now()}`, date: new Date().toISOString(), packId: "custom", points, usd, last4 }
       commit({ ...s, balance: s.balance + points, topups: [t, ...s.topups] })
       return true

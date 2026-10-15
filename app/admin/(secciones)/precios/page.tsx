@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import {
   AlertCircle,
   AlertTriangle,
@@ -62,6 +62,7 @@ import {
   validatePricing,
 } from "@/lib/domain/pricing"
 import EditableNumber from "@/components/panel/editable-number"
+import PublicPacksEditor from "@/components/panel/public-packs-editor"
 import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
@@ -71,11 +72,11 @@ export default function AdminPreciosPage() {
 
   // Estado local para productos y paquetes
   const [standardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
-  const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
-  const { settings, providers, products, setProducts, clients } = useAdminSettings()
+  const { settings, providers, products, setProducts, clients, publicPacks, setPublicPacks } = useAdminSettings()
 
   // Selector de tabla de paquetes
   const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")
+  const [packsDialogOpen, setPacksDialogOpen] = useState(false)
 
   // Estado del caso con error
   const [isErrorCaseActive, setIsErrorCaseActive] = useState(false)
@@ -242,6 +243,15 @@ export default function AdminPreciosPage() {
     toast.success(`Parámetros de ${editingProduct.storeName} actualizados`)
     setDialogOpen(false)
   }
+
+  // Errores de reglas con un conjunto de paquetes del Canjeador dado (para el editor de paquetes)
+  const validatePublicPacks = useCallback(
+    (packs: PointsPack[]) =>
+      validatePricing({ settings, providers, products, standardPacks, publicPacks: packs, clients }).filter(
+        (i) => i.severity === "error",
+      ),
+    [settings, providers, products, standardPacks, clients],
+  )
 
   // Obtener lista de paquetes según el selector
   let activeDisplayPacks: PointsPack[] = standardPacks
@@ -490,7 +500,7 @@ export default function AdminPreciosPage() {
             </div>
 
             {/* Selector de tabla */}
-            <div className="w-full sm:w-72">
+            <div className="flex w-full flex-col gap-2 sm:w-72">
               <Select
                 value={selectedPackTable}
                 onValueChange={setSelectedPackTable}
@@ -510,6 +520,11 @@ export default function AdminPreciosPage() {
                     ))}
                 </SelectContent>
               </Select>
+              {selectedPackTable === "public" && (
+                <Button type="button" size="sm" variant="outline" onClick={() => setPacksDialogOpen(true)}>
+                  <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar paquetes del Canjeador
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -562,6 +577,18 @@ export default function AdminPreciosPage() {
         </CardContent>
       </Card>
 
+      <PublicPacksEditor
+        open={packsDialogOpen}
+        onOpenChange={setPacksDialogOpen}
+        packs={publicPacks}
+        validate={validatePublicPacks}
+        onSave={(next) => {
+          setPublicPacks(next)
+          setIsErrorCaseActive(false)
+          toast.success("Paquetes del Canjeador actualizados")
+        }}
+      />
+
       {/* Dialog para Editar Producto */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
@@ -602,9 +629,19 @@ export default function AdminPreciosPage() {
                     <span>Máximo {new Intl.NumberFormat("es-EC").format(validMargins[validMargins.length - 1] / 10)} %</span>
                   </div>
                   {!marginIsValid && (
-                    <p className="text-[11px] text-destructive">
-                      El valor actual no cumple las reglas. Mueve la barra para elegir uno válido.
-                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-[11px] text-destructive">
+                        El valor actual no cumple las reglas. Mueve la barra o usa el válido más cercano.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setMarginPctInput(String(validMargins[marginIndex] / 10))}
+                      >
+                        Usar {new Intl.NumberFormat("es-EC").format(validMargins[marginIndex] / 10)} %
+                      </Button>
+                    </div>
                   )}
                   {marginHasGaps && (
                     <p className="text-[11px] text-muted-foreground">

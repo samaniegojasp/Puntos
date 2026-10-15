@@ -1,11 +1,18 @@
 "use client"
 
-// Datos de administración compartidos entre sus pantallas (solo prototipo): ajustes, proveedores, productos y clientes.
-// Así, cambiar el descuento de un Proveedor se refleja en Precios, y un margen o un cliente editados se ven en las demás.
+// Datos de administración compartidos entre las pantallas del panel y la tienda pública (solo prototipo):
+// ajustes, proveedores, productos, clientes y paquetes del Canjeador.
+// Así, cambiar el descuento de un Proveedor se refleja en Precios, y un paquete editado se ve en /recargar.
 // El valor vive en memoria mientras no se recargue la página; al recargar vuelve a los datos de ejemplo.
 import { createContext, useContext, useState } from "react"
-import { MOCK_CLIENTS_ADMIN, MOCK_PRODUCTS, MOCK_PROVIDERS, MOCK_SETTINGS } from "@/lib/mock/data"
-import type { AdminSettings, ClientAdminRow, Product, Provider } from "@/lib/domain/types"
+import {
+  MOCK_CLIENTS_ADMIN,
+  MOCK_PRODUCTS,
+  MOCK_PROVIDERS,
+  MOCK_PUBLIC_PACKS,
+  MOCK_SETTINGS,
+} from "@/lib/mock/data"
+import type { AdminSettings, ClientAdminRow, PointsPack, Product, Provider } from "@/lib/domain/types"
 
 type Ctx = {
   settings: AdminSettings
@@ -16,6 +23,8 @@ type Ctx = {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>
   clients: ClientAdminRow[]
   setClients: React.Dispatch<React.SetStateAction<ClientAdminRow[]>>
+  publicPacks: PointsPack[]
+  setPublicPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
 }
 
 const AdminSettingsContext = createContext<Ctx | null>(null)
@@ -25,9 +34,21 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
   const [providers, setProviders] = useState<Provider[]>(MOCK_PROVIDERS)
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
   const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
+  const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
   return (
     <AdminSettingsContext.Provider
-      value={{ settings, setSettings, providers, setProviders, products, setProducts, clients, setClients }}
+      value={{
+        settings,
+        setSettings,
+        providers,
+        setProviders,
+        products,
+        setProducts,
+        clients,
+        setClients,
+        publicPacks,
+        setPublicPacks,
+      }}
     >
       {children}
     </AdminSettingsContext.Provider>
@@ -38,4 +59,20 @@ export function useAdminSettings() {
   const ctx = useContext(AdminSettingsContext)
   if (!ctx) throw new Error("useAdminSettings debe usarse dentro de AdminSettingsProvider")
   return ctx
+}
+
+/** Oferta del Canjeador para la tienda: paquetes (USD → puntos) y compra a tu medida, tal como los dejó el administrador. */
+export function usePublicOffer() {
+  const { publicPacks, settings } = useAdminSettings()
+  const packs = [...publicPacks]
+    .sort((a, b) => a.usdCents - b.usdCents)
+    .map((p) => ({ id: p.id, points: p.points, usd: p.usdCents / 100, badge: p.badge }))
+  return {
+    packs,
+    custom: {
+      minUsd: settings.customMinUsd ?? 1,
+      maxUsd: settings.customMaxUsd ?? 500,
+      pointsPerUsd: settings.customPointsPerUsd ?? 100,
+    },
+  }
 }

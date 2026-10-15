@@ -2,7 +2,6 @@
 
 import RoleGate from "@/components/panel/role-gate"
 import PanelShell, { type PanelTab } from "@/components/panel/panel-shell"
-import { AdminSettingsProvider } from "@/lib/mock/admin-settings"
 import type { Role } from "@/lib/domain/types"
 
 const ALLOW: Role[] = []
@@ -21,15 +20,13 @@ const TABS: PanelTab[] = [
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   return (
     <RoleGate allow={ALLOW}>
-      <AdminSettingsProvider>
-        <PanelShell
-          title="Administración"
-          subtitle="Gestión global de Regala, tarifas y márgenes"
-          tabs={TABS}
-        >
-          {children}
-        </PanelShell>
-      </AdminSettingsProvider>
+      <PanelShell
+        title="Administración"
+        subtitle="Gestión global de Regala, tarifas y márgenes"
+        tabs={TABS}
+      >
+        {children}
+      </PanelShell>
     </RoleGate>
   )
 }

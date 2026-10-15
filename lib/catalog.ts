@@ -43,21 +43,9 @@ export const DEFAULT_STORES: Store[] = [
 
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }
 
-export const PACKS: PointsPack[] = [
-  // Paquetes del Canjeador (mismos del modelo de precios). Los ids se conservan por compatibilidad con datos guardados.
-  { id: "p1000", points: 1000, usd: 10 },
-  { id: "p2500", points: 2500, usd: 25, badge: "Popular" },
-  { id: "p5000", points: 5200, usd: 50, badge: "Mejor valor" },
-]
-
 export const pointsFor = (usd: number) => usd * POINTS_PER_USD
 
-// "Compra lo que te falta": monto a tu medida al precio del paquete más pequeño del Canjeador (100 pts por $1).
-// Nunca es más barato que un paquete, así que no rompe la regla de que el Canjeador paga más que el Cliente.
-export const CUSTOM_POINTS_PER_USD = 100
-export const CUSTOM_MIN_USD = 1
-export const CUSTOM_MAX_USD = 500
-/** Dólares enteros necesarios para cubrir `missingPoints` (se redondea hacia arriba). */
-export const usdForPoints = (missingPoints: number) =>
-  Math.min(CUSTOM_MAX_USD, Math.max(CUSTOM_MIN_USD, Math.ceil(missingPoints / CUSTOM_POINTS_PER_USD)))
+/** Dólares enteros necesarios para cubrir `missingPoints` con la compra a tu medida (se redondea hacia arriba y se acota al rango permitido). */
+export const usdForPoints = (missingPoints: number, custom = { minUsd: 1, maxUsd: 500, pointsPerUsd: 100 }) =>
+  Math.min(custom.maxUsd, Math.max(custom.minUsd, Math.ceil(missingPoints / custom.pointsPerUsd)))
 export const formatPoints = (n: number) => new Intl.NumberFormat("es-EC").format(n)

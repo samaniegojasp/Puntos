@@ -142,6 +142,19 @@ export function validatePricing({ settings, providers, products, standardPacks, 
     }
   }
 
+  // Regla 8: la compra a tu medida del Canjeador nunca puede ser más barata que su paquete más pequeño
+  // (no debe saltarse el precio de los paquetes) y su rango debe ser coherente.
+  const customPpd = settings.customPointsPerUsd ?? 100
+  const smallestPublic = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
+  if (smallestPublic && customPpd > smallestPublic.points / (smallestPublic.usdCents / 100) + 1e-9) {
+    issues.push({ rule: 8, severity: "error", message: `La compra a tu medida (${customPpd} pts por $1) es más barata que el paquete de ${money(smallestPublic.usdCents)} (${(smallestPublic.points / (smallestPublic.usdCents / 100)).toFixed(1)} pts por $1).` })
+  }
+  const cMin = settings.customMinUsd ?? 1
+  const cMax = settings.customMaxUsd ?? 500
+  if (cMin > cMax) {
+    issues.push({ rule: 8, severity: "error", message: `El monto mínimo de la compra a tu medida ($${cMin}) no puede superar el máximo ($${cMax}).` })
+  }
+
   // Regla 6: límites opcionales del precio por punto de cada cliente (USD por punto).
   const { pricePerPointMin: pMin, pricePerPointMax: pMax } = settings
   if (pMin !== undefined || pMax !== undefined) {

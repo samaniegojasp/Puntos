@@ -8,6 +8,7 @@ import { Toaster } from "@/components/ui/sonner"
 import { PointsProvider } from "@/lib/points-store"
 import { CatalogProvider } from "@/lib/catalog-store"
 import { MockSessionProvider } from "@/lib/mock/session"
+import { AdminSettingsProvider } from "@/lib/mock/admin-settings"
 import DevRoleBar from "@/components/panel/dev-role-bar"
 
 const inter = Inter({ subsets: ["latin"] })
@@ -26,6 +27,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={inter.className}>
+        <AdminSettingsProvider>
         <CatalogProvider>
         <PointsProvider>
         <MockSessionProvider>
@@ -39,6 +41,7 @@ export default function RootLayout({
         </MockSessionProvider>
         </PointsProvider>
         </CatalogProvider>
+        </AdminSettingsProvider>
       </body>
     </html>
   )

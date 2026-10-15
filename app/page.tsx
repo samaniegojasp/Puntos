@@ -24,7 +24,8 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion"
 import { GiftCardFace, GiftCardTile } from "@/components/gift-card"
-import { PACKS, formatPoints } from "@/lib/catalog"
+import { formatPoints } from "@/lib/catalog"
+import { usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 
 const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -38,6 +39,7 @@ const CATEGORY_ICONS: Record<string, React.ComponentType<{ className?: string }>
 
 export default function HomePage() {
   const { stores, categories } = useCatalog()
+  const publicOffer = usePublicOffer()
   // Hero: 3 tiendas destacadas; si hay menos de 3, completa con las primeras del catálogo.
   const featuredStores = stores.filter((s) => s.featured)
   const heroStores = (featuredStores.length >= 3 ? featuredStores : stores).slice(0, 3)
@@ -184,7 +186,7 @@ export default function HomePage() {
             </p>
           </div>
           <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-            {PACKS.map((pack) => (
+            {publicOffer.packs.map((pack) => (
               <Card
                 key={pack.id}
                 className="relative flex flex-col justify-between overflow-hidden transition-all hover:shadow-xl"

@@ -146,6 +146,8 @@ Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de
 
 **Decisión de modelo (dueño, octubre 2026): el punto de referencia es el del Canjeador.** Las tarjetas se expresan en puntos con el precio del paquete más pequeño que compra el Canjeador ($10 → 1 000 pts, 0,01 por punto). Así, **lo que cuesta una tarjeta nunca supera lo que el Canjeador compra con el paquete del mismo valor**: con $10 compra 1 000 pts y la tarjeta de $10 cuesta 1 000 pts. Los Clientes compran más barato (más puntos por dólar) y quien recibe su bono ve que le rinde más que el bono.
 
+**Edición (administrador):** los paquetes del Canjeador se editan en Precios → "Público" y la compra a tu medida (monto mínimo, máximo y puntos por dólar) en Ajustes. Cada valor solo puede tomar los que cumplen todas las reglas; la regla 8 impide que la compra a tu medida sea más barata que el paquete más pequeño. La tienda lee la misma tabla `packs` (una sola fuente).
+
 **Compra a tu medida (Canjeador):** además de los paquetes, el Canjeador puede comprar un monto en dólares enteros (mínimo $1, máximo $500) al precio del paquete más pequeño (100 pts por $1). Desde el carrito, "Comprar los N pts que faltan" propone exactamente el monto que cubre lo que falta. Nunca es más barato que un paquete, así que no rompe la regla 2. El servidor calcula el precio; la pantalla solo lo muestra.
 
 Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Proveedor), para una tarjeta de $10 que cuesta $8,50 y vale 1 000 puntos:

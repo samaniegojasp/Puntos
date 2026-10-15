@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Slider } from "@/components/ui/slider"
+import EditableNumber from "@/components/panel/editable-number"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   MOCK_CLIENTS_ADMIN,
@@ -25,7 +27,7 @@ import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
   const [loading, setLoading] = useState(true)
-  const { settings: current, setSettings, providers, products, clients } = useAdminSettings()
+  const { settings: current, setSettings, providers, products, clients, publicPacks } = useAdminSettings()
 
   // Estado del formulario de ajustes
   const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
@@ -33,6 +35,9 @@ export default function AdminAjustesPage() {
   const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
   const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
   const [multiple, setMultiple] = useState<number>(current.pointsMultiple)
+  const [customMinInput, setCustomMinInput] = useState(String(current.customMinUsd ?? 1))
+  const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
+  const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
   const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
   // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
   type LimitUnit = "ppd" | "price"
@@ -56,6 +61,8 @@ export default function AdminAjustesPage() {
   const rawWindowDays = parseInt(exchangeWindowDaysInput, 10)
   const rawGrantDays = parseInt(pendingGrantDaysInput, 10)
   const rawBenefit = parseFloat(benefitInput.replace(",", "."))
+  const rawCustomMin = parseInt(customMinInput, 10)
+  const rawCustomMax = parseInt(customMaxInput, 10)
 
   // Validaciones individuales
   const errors: string[] = []
@@ -70,6 +77,10 @@ export default function AdminAjustesPage() {
 
   if (isNaN(rawWindowDays) || rawWindowDays < 0) {
     errors.push("El plazo para cambiar tarjetas vencidas debe ser un número entero mayor o igual a 0.")
+  }
+
+  if (isNaN(rawCustomMin) || rawCustomMin < 1 || isNaN(rawCustomMax) || rawCustomMax < 1) {
+    errors.push("Los montos de la compra a tu medida deben ser dólares enteros de al menos $1.")
   }
 
   if (isNaN(rawBenefit) || rawBenefit < 0 || rawBenefit > 50) {
@@ -137,6 +148,9 @@ export default function AdminAjustesPage() {
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     pointsMultiple: multiple,
+    customMinUsd: !isNaN(rawCustomMin) ? rawCustomMin : 1,
+    customMaxUsd: !isNaN(rawCustomMax) ? rawCustomMax : 500,
+    customPointsPerUsd: customPpd,
     clientBenefitPct: !isNaN(rawBenefit) ? Math.round(rawBenefit * 1000) / 100000 : 0.01,
     pricePerPointMin: priceMin,
     pricePerPointMax: priceMax,
@@ -148,9 +162,14 @@ export default function AdminAjustesPage() {
     providers,
     products,
     standardPacks: MOCK_STANDARD_PACKS,
-    publicPacks: MOCK_PUBLIC_PACKS,
+    publicPacks,
     clients,
   })
+
+  const smallestPublicPpd = (() => {
+    const sp = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
+    return sp ? sp.points / (sp.usdCents / 100) : 100
+  })()
 
   const pricingErrors = pricingIssues.filter((i) => i.severity === "error")
   const pricingWarnings = pricingIssues.filter((i) => i.severity === "warning")
@@ -172,6 +191,9 @@ export default function AdminAjustesPage() {
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
     setBenefitInput(((MOCK_SETTINGS.clientBenefitPct ?? 0.01) * 100).toString())
     setMultiple(MOCK_SETTINGS.pointsMultiple)
+    setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
+    setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
+    setCustomPpd(MOCK_SETTINGS.customPointsPerUsd ?? 100)
     setLimitUnit("ppd")
     setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
     setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
@@ -393,6 +415,52 @@ export default function AdminAjustesPage() {
                 </div>
               </div>
 
+              {/* Compra a tu medida del Canjeador */}
+              <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
+                <div>
+                  <h4 className="text-sm font-semibold">Compra a tu medida del Canjeador</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Además de los paquetes, el Canjeador puede comprar el monto en dólares enteros que elija (por ejemplo, para completar lo que le falta). Su precio nunca puede ser más barato que el del paquete más pequeño del Canjeador.
+                  </p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="customMin">Monto mínimo (USD)</Label>
+                    <Input id="customMin" type="number" min="1" step="1" value={customMinInput} onChange={(e) => setCustomMinInput(e.target.value)} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customMax">Monto máximo (USD)</Label>
+                    <Input id="customMax" type="number" min="1" step="1" value={customMaxInput} onChange={(e) => setCustomMaxInput(e.target.value)} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between">
+                    <Label htmlFor="customPpd">Puntos por cada dólar</Label>
+                    <EditableNumber
+                      label="Puntos por cada dólar de la compra a tu medida"
+                      display={new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(customPpd)}
+                      initial={String(customPpd)}
+                      suffix="pts/$"
+                      decimals
+                      onCommit={(v) => setCustomPpd(Math.round(v * 10) / 10)}
+                    />
+                  </div>
+                  <Slider
+                    id="customPpd"
+                    min={50}
+                    max={Math.max(51, Math.floor(smallestPublicPpd))}
+                    step={1}
+                    value={[Math.min(Math.max(Math.round(customPpd), 50), Math.max(51, Math.floor(smallestPublicPpd)))]}
+                    onValueChange={(v) => setCustomPpd(v[0])}
+                    aria-label="Puntos por cada dólar de la compra a tu medida"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground">
+                    <span>Mínimo 50 pts/$</span>
+                    <span>Máximo {new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(smallestPublicPpd)} pts/$ (el del paquete más pequeño)</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Múltiplo de puntos de las tarjetas */}
               <div className="space-y-2 sm:col-span-2">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -424,7 +492,7 @@ export default function AdminAjustesPage() {
                     .map((p) => {
                       const prov = providers.find((x) => x.id === p.providerId)
                       const pts = prov
-                        ? pointsPrice(productPriceCents(p, prov), referenceCentsPerPoint(MOCK_PUBLIC_PACKS), multiple)
+                        ? pointsPrice(productPriceCents(p, prov), referenceCentsPerPoint(publicPacks), multiple)
                         : 0
                       return `${p.storeName} $${p.faceCents / 100} → ${new Intl.NumberFormat("es-EC").format(pts)} pts`
                     })
