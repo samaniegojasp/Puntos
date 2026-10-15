@@ -602,6 +602,7 @@ export default function AdminPreciosPage() {
         onOpenChange={setPacksDialogOpen}
         packs={publicPacks}
         validate={validatePublicPacks}
+        pointsPerUsdBase={100 * (settings.pointsFactor ?? 1)}
         onSave={(next) => {
           setPublicPacks(next)
           setIsErrorCaseActive(false)
@@ -616,6 +617,7 @@ export default function AdminPreciosPage() {
         description="Lo que paga un Cliente sin tabla propia (USD → puntos). Cada barra solo permite valores que cumplen las reglas: el Canjeador debe pagar más por punto, el margen mínimo y el beneficio mínimo del Cliente."
         packs={standardPacks}
         validate={validateStandardPacks}
+        pointsPerUsdBase={100 * (settings.pointsFactor ?? 1)}
         onSave={(next) => {
           setStandardPacks(next)
           toast.success("Paquetes estándar actualizados")

@@ -54,6 +54,7 @@ const ptsPerUsd = (usdPerPoint: number) =>
 
 export default function AdminClientesPage() {
   const { settings, clients, setClients, providers, products, publicPacks, standardPacks } = useAdminSettings()
+  const f = settings.pointsFactor ?? 1
   const [loading, setLoading] = useState(true)
 
   // Estado del modal de cliente (creación / edición)
@@ -62,7 +63,7 @@ export default function AdminClientesPage() {
 
   // Campos del formulario
   const [name, setName] = useState("")
-  const [usdPerPoint, setUsdPerPoint] = useState("0.00800")
+  const [usdPerPoint, setUsdPerPoint] = useState(String(0.008 / f))
   const [packMode, setPackMode] = useState<"standard" | "custom">("standard")
   const [customPacks, setCustomPacks] = useState<PointsPack[]>([])
   const [active, setActive] = useState(true)
@@ -75,11 +76,11 @@ export default function AdminClientesPage() {
   const handleOpenCreate = () => {
     setEditingClient(null)
     setName("")
-    setUsdPerPoint("0.00800")
+    setUsdPerPoint(String(0.008 / f))
     setPackMode("standard")
     setCustomPacks([
-      { id: `pack-new-1`, usdCents: 10000, points: 12500 },
-      { id: `pack-new-2`, usdCents: 20000, points: 26000 },
+      { id: `pack-new-1`, usdCents: 10000, points: 12500 * f },
+      { id: `pack-new-2`, usdCents: 20000, points: 26000 * f },
     ])
     setActive(true)
     setDialogOpen(true)
@@ -88,7 +89,7 @@ export default function AdminClientesPage() {
   const handleOpenEdit = (client: ClientAdminRow) => {
     setEditingClient(client)
     setName(client.name)
-    setUsdPerPoint(client.usdPerPoint.toFixed(5))
+    setUsdPerPoint(String(Number(client.usdPerPoint.toPrecision(6))))
     setPackMode(client.packMode)
     setCustomPacks(client.customPacks.map((p) => ({ ...p })))
     setActive(client.active)
@@ -98,7 +99,7 @@ export default function AdminClientesPage() {
   // Manejo de tramos propios
   // Tramo nuevo: se crea con los puntos en la mitad del rango permitido para que nazca válido
   const handleAddPack = () => {
-    const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 12000 }
+    const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 12000 * f }
     const next = [...customPacks, fresh]
     const b = boundsFor(next, next.length - 1)
     if (b) fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
@@ -179,8 +180,8 @@ export default function AdminClientesPage() {
   // Rango de puntos válido para un tramo, calculado con las mismas reglas (sin fórmulas propias).
   // Regla 2 (el Canjeador paga más por punto): exige un mínimo de puntos.
   // Regla 3 (margen mínimo): exige un máximo de puntos.
-  const POINTS_STEP = 50
-  const POINTS_CAP = 5_000_000
+  const POINTS_STEP = 50 * f
+  const POINTS_CAP = 5_000_000 * f
   const boundsFor = (
     packs: PointsPack[],
     idx: number,
@@ -239,12 +240,12 @@ export default function AdminClientesPage() {
         : // Cliente estándar: su precio es el del tramo de $10 de la tabla estándar; los demás tramos quedan como están
           boundsFor(
             [
-              { id: "ref", usdCents: REF_USD_CENTS, points: 1020 },
+              { id: "ref", usdCents: REF_USD_CENTS, points: 1020 * f },
               ...standardPacks.filter((p) => p.usdCents > REF_USD_CENTS).map((p) => ({ ...p })),
             ],
             0,
             true,
-            1,
+            f,
           )
     if (!b) return null
     const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
@@ -437,7 +438,7 @@ export default function AdminClientesPage() {
                           // Puntos del tramo más pequeño = puntos por dólar × dólares del tramo
                           handlePackChange(baseIdx, "points", Math.max(1, Math.round(v * (basePack.usdCents / 100))))
                         } else {
-                          setUsdPerPoint((1 / v).toFixed(5))
+                          setUsdPerPoint(String(Number((1 / v).toPrecision(6))))
                         }
                       }}
                     />

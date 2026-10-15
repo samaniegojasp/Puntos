@@ -18,8 +18,7 @@ import EditableNumber from "@/components/panel/editable-number"
 import { formatPts } from "@/lib/domain/format"
 import type { PointsPack, PricingIssue } from "@/lib/domain/types"
 
-const STEP = 10 // los puntos de un paquete se mueven de 10 en 10
-const LOW = 0.6 // se prueban entre 60 % y 140 % de 100 pts por dólar
+const LOW = 0.6 // se prueban entre 60 % y 140 % de puntos por dólar base
 const HIGH = 1.4
 
 /**
@@ -36,6 +35,7 @@ export default function PacksEditor({
   title = "Paquetes del Canjeador",
   description = "Lo que el Canjeador compra por su cuenta (USD → puntos). Cambiar un paquete mueve el punto de referencia y el precio en puntos de todas las tarjetas, por eso cada barra solo permite valores que cumplen las reglas.",
   saveLabel = "Guardar paquetes",
+  pointsPerUsdBase = 100,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -46,8 +46,11 @@ export default function PacksEditor({
   title?: string
   description?: string
   saveLabel?: string
+  pointsPerUsdBase?: number
 }) {
   const [draft, setDraft] = useState<PointsPack[]>(packs)
+  const scale = Math.max(1, Math.round(pointsPerUsdBase / 100))
+  const STEP = 10 * scale
 
   useEffect(() => {
     if (open) setDraft(packs.map((p) => ({ ...p })))
@@ -63,8 +66,8 @@ export default function PacksEditor({
       const usd = pack.usdCents / 100
       if (usd <= 0) return null
       const list: number[] = []
-      const from = Math.ceil((usd * 100 * LOW) / STEP) * STEP
-      const to = Math.floor((usd * 100 * HIGH) / STEP) * STEP
+      const from = Math.ceil((usd * pointsPerUsdBase * LOW) / STEP) * STEP
+      const to = Math.floor((usd * pointsPerUsdBase * HIGH) / STEP) * STEP
       for (let pts = from; pts <= to; pts += STEP) {
         const test = draft.map((p, i) => (i === idx ? { ...p, points: pts } : p))
         if (validate(test).length === 0) list.push(pts)
@@ -72,7 +75,7 @@ export default function PacksEditor({
       return list.length ? list : null
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, key, validate])
+  }, [open, key, validate, pointsPerUsdBase, STEP])
 
   const issues = validate(draft)
   const usdSet = new Set(draft.map((p) => p.usdCents))
@@ -91,7 +94,7 @@ export default function PacksEditor({
   const addPack = () => {
     const last = [...draft].sort((a, b) => b.usdCents - a.usdCents)[0]
     const usd = last ? (last.usdCents / 100) * 2 : 10
-    const ppd = last ? last.points / (last.usdCents / 100) : 100
+    const ppd = last ? last.points / (last.usdCents / 100) : pointsPerUsdBase
     setDraft((prev) => [...prev, { id: `pack-new-${Date.now()}`, usdCents: usd * 100, points: Math.round((usd * ppd) / STEP) * STEP }])
   }
 
