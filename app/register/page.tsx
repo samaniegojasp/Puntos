@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card"
 import { isAdult, maskDocument, validateDocument } from "@/lib/domain/documento"
 import { DOC_TYPE_LABEL, type DocType } from "@/lib/domain/types"
+import { WELCOME_POINTS, formatPoints } from "@/lib/catalog"
 
 export default function RegisterPage() {
   const [firstName, setFirstName] = useState("")
@@ -196,7 +197,7 @@ export default function RegisterPage() {
               Demostración: el registro aún no crea cuentas.
             </div>
             <div className="rounded-xl bg-primary/10 p-3 text-center text-sm font-medium text-primary">
-              En esta demo, todos parten con 500 Puntos de bienvenida
+              En esta demo, todos parten con {formatPoints(WELCOME_POINTS)} Puntos de bienvenida
             </div>
 
             <div className="grid grid-cols-2 gap-4">

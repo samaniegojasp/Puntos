@@ -2,7 +2,8 @@
 
 /** Solo referencia histórica; los puntos de una tarjeta salen de useCardPoints() */
 export const POINTS_PER_USD = 100
-export const WELCOME_POINTS = 500
+/** Debe alcanzar para la tarjeta más barata del catálogo (hoy 1.030 pts con 3 % de recargo). */
+export const WELCOME_POINTS = 1100
 
 export type ThemeKey = "super" | "salud" | "deporte" | "hogar" | "juguete" | "moda"
 

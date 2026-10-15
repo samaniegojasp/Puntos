@@ -10,7 +10,8 @@ export default function PointsBalance() {
   return (
     <Link
       href="/recargar"
-      aria-label={ready ? `Saldo: ${formatPoints(balance)} puntos. Recargar` : "Recargar puntos"}
+      title="Saldo demo de la tienda: se guarda solo en este navegador"
+      aria-label={ready ? `Saldo demo de la tienda: ${formatPoints(balance)} puntos. Recargar` : "Recargar puntos"}
       className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 py-1 pl-3 pr-1 text-sm font-semibold tabular-nums transition-colors hover:bg-primary/20"
     >
       <Gem className="h-4 w-4 text-primary" aria-hidden />

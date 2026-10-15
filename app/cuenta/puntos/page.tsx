@@ -62,6 +62,10 @@ export default function CuentaPuntosPage() {
 
   return (
     <div className="space-y-8">
+      <p className="text-xs text-muted-foreground">
+        Saldo de ejemplo de tu cuenta. El monedero de la tienda (arriba) es otro saldo demo guardado en este navegador; en la versión real serán uno solo.
+      </p>
+
       {/* Total grande */}
       <Card className="overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-background to-primary/10">
         <CardContent className="flex flex-col gap-6 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-8">

@@ -83,6 +83,9 @@ export default function CuentaResumenPage() {
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Resumen general</h2>
           <p className="text-sm text-muted-foreground">Estado actual de tus puntos y tarjetas disponibles</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Saldo de ejemplo de tu cuenta. El monedero de la tienda (arriba) es otro saldo demo guardado en este navegador; en la versión real serán uno solo.
+          </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <Button asChild>
