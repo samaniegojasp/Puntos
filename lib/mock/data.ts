@@ -123,26 +123,26 @@ export const MOCK_CARDS: GiftCard[] = [
 // ---------- Cliente ----------
 
 export const MOCK_CLIENT: ClientAccount = {
-  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00913978, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
+  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00971429, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
 }
 
 /** Paquetes estándar (precio por volumen). Ilustrativos. */
 export const MOCK_STANDARD_PACKS: PointsPack[] = [
   { id: "std-10", usdCents: c(10), points: 1020 },
-  { id: "std-50", usdCents: c(50), points: 5400, badge: "Popular" },
-  { id: "std-100", usdCents: c(100), points: 10800, badge: "Mejor valor" },
+  { id: "std-50", usdCents: c(50), points: 5150, badge: "Popular" },
+  { id: "std-100", usdCents: c(100), points: 10300, badge: "Mejor valor" },
 ]
 
 /** Paquetes que ve un Canjeador (cada punto cuesta más que al Cliente). */
 export const MOCK_PUBLIC_PACKS: PointsPack[] = [
   { id: "pub-10", usdCents: c(10), points: 1000 },
   { id: "pub-25", usdCents: c(25), points: 2500, badge: "Popular" },
-  { id: "pub-50", usdCents: c(50), points: 5200, badge: "Mejor valor" },
+  { id: "pub-50", usdCents: c(50), points: 5100, badge: "Mejor valor" },
 ]
 
 export const MOCK_CLIENT_PACKS: PointsPack[] = [
-  { id: "cp-1", usdCents: c(170), points: 18600 },
-  { id: "cp-2", usdCents: c(400), points: 43800, badge: "Acuerdo" },
+  { id: "cp-1", usdCents: c(170), points: 17500 },
+  { id: "cp-2", usdCents: c(400), points: 41200, badge: "Acuerdo" },
 ]
 
 const row = (rowNo: number, docNumber: string, points: number | null, extra: Partial<GrantBatch["rows"][number]> = {}) => ({
@@ -192,7 +192,7 @@ export const MOCK_GRANTED: GrantedItem[] = [
 // ---------- Proveedor (Fybeca) ----------
 
 export const MOCK_PROVIDER_TERMS: ProviderTerms = {
-  discountPct: 0.17, cardValidDays: 180, effectiveFrom: "2026-05-22T00:00:00-05:00",
+  discountPct: 0.12, cardValidDays: 180, effectiveFrom: "2026-05-22T00:00:00-05:00",
   settlementNote: "Se te paga por cada consumo registrado en caja, liquidado cada mes.",
 }
 
@@ -220,12 +220,12 @@ export const MOCK_SETTLEMENTS: Settlement[] = [
 // ---------- Administración ----------
 
 export const MOCK_PROVIDERS: Provider[] = [
-  { id: "p-supermaxi", name: "Supermaxi / Megamaxi", discountPct: 0.15, cardValidDays: 180, active: true },
-  { id: "p-fybeca", name: "Fybeca", discountPct: 0.17, cardValidDays: 180, active: true },
-  { id: "p-marathon", name: "Marathon Sports", discountPct: 0.14, cardValidDays: 365, active: true },
-  { id: "p-kywi", name: "Kywi", discountPct: 0.16, cardValidDays: 180, active: true },
-  { id: "p-jugueton", name: "Juguetón", discountPct: 0.15, cardValidDays: 180, active: true },
-  { id: "p-deprati", name: "De Prati", discountPct: 0.14, cardValidDays: 240, active: false },
+  { id: "p-supermaxi", name: "Supermaxi / Megamaxi", discountPct: 0.08, cardValidDays: 180, active: true },
+  { id: "p-fybeca", name: "Fybeca", discountPct: 0.12, cardValidDays: 180, active: true },
+  { id: "p-marathon", name: "Marathon Sports", discountPct: 0.10, cardValidDays: 365, active: true },
+  { id: "p-kywi", name: "Kywi", discountPct: 0.09, cardValidDays: 180, active: true },
+  { id: "p-jugueton", name: "Juguetón", discountPct: 0.05, cardValidDays: 180, active: true },
+  { id: "p-deprati", name: "De Prati", discountPct: 0.07, cardValidDays: 240, active: false },
 ]
 
 const prod = (id: string, storeId: string, storeName: string, providerId: string, face: number, margin = 0.15, active = true): Product => ({
@@ -233,14 +233,14 @@ const prod = (id: string, storeId: string, storeName: string, providerId: string
 })
 
 export const MOCK_PRODUCTS: Product[] = [
-  prod("pr-1", "supermaxi", "Supermaxi", "p-supermaxi", 10),
-  prod("pr-2", "supermaxi", "Supermaxi", "p-supermaxi", 25),
-  prod("pr-3", "fybeca", "Fybeca", "p-fybeca", 10),
-  prod("pr-4", "fybeca", "Fybeca", "p-fybeca", 30),
-  prod("pr-5", "marathon", "Marathon Sports", "p-marathon", 50),
-  prod("pr-6", "kywi", "Kywi", "p-kywi", 20),
-  prod("pr-7", "jugueton", "Juguetón", "p-jugueton", 15),
-  prod("pr-8", "deprati", "De Prati", "p-deprati", 25, 0.15, false),
+  prod("pr-1", "supermaxi", "Supermaxi", "p-supermaxi", 10, 0.08),
+  prod("pr-2", "supermaxi", "Supermaxi", "p-supermaxi", 25, 0.08),
+  prod("pr-3", "fybeca", "Fybeca", "p-fybeca", 10, 0.12),
+  prod("pr-4", "fybeca", "Fybeca", "p-fybeca", 30, 0.12),
+  prod("pr-5", "marathon", "Marathon Sports", "p-marathon", 50, 0.10),
+  prod("pr-6", "kywi", "Kywi", "p-kywi", 20, 0.09),
+  prod("pr-7", "jugueton", "Juguetón", "p-jugueton", 15, 0.05),
+  prod("pr-8", "deprati", "De Prati", "p-deprati", 25, 0.07, false),
 ]
 
 export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
@@ -250,7 +250,7 @@ export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
 ]
 
 export const MOCK_SETTINGS: AdminSettings = {
-  minMarginPct: 0.05, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 100, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100,
+  minMarginPct: 0.02, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 100, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100,
 }
 
 export const MOCK_USERS: UserRow[] = [
