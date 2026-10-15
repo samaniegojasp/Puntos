@@ -55,7 +55,7 @@ type Ctx = State & {
   clearCart: () => void
   redeem: (opts?: { recipientEmail?: string; message?: string }) => RedeemResult
   topUp: (packId: string, last4: string) => boolean
-  /** Compra de un monto en dólares enteros a tu medida (100 pts por $1). */
+  /** Compra de un monto en dólares enteros a tu medida (a los puntos por dólar que fija el administrador). */
   topUpCustom: (usd: number, last4: string) => boolean
 }
 

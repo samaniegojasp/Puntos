@@ -23,7 +23,7 @@ export default function RecargarPage() {
   const CUSTOM_MAX_USD = custom.maxUsd
   const CUSTOM_POINTS_PER_USD = custom.pointsPerUsd
   const [pack, setPack] = useState<PointsPack | null>(null)
-  // "A tu medida": dólares enteros al precio del paquete más pequeño (100 pts por $1)
+  // "A tu medida": dólares enteros a los puntos por dólar que fija el administrador
   const [customUsd, setCustomUsd] = useState("")
   const [missing, setMissing] = useState(0)
   const customN = Number(customUsd)

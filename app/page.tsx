@@ -239,6 +239,12 @@ export default function HomePage() {
                 En esta demo, no. Tus Puntos permanecerán guardados en tu saldo para cuando decidas utilizarlos.
               </AccordionContent>
             </AccordionItem>
+            <AccordionItem value="item-gift-cards-expire">
+              <AccordionTrigger>¿Las gift cards caducan?</AccordionTrigger>
+              <AccordionContent>
+                Sí. Cada tarjeta tiene una fecha de vencimiento que ves en Mi cuenta → Mis tarjetas. Si vence con saldo, puedes cambiar ese saldo por Puntos dentro del plazo indicado, con un recargo.
+              </AccordionContent>
+            </AccordionItem>
             <AccordionItem value="item-3">
               <AccordionTrigger>¿Cómo recibo mi gift card?</AccordionTrigger>
               <AccordionContent>

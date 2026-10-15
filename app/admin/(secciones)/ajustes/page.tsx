@@ -605,7 +605,7 @@ export default function AdminAjustesPage() {
                   <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Cada tramo de un Cliente debe dar al menos este % más de puntos por dólar que el Canjeador. Así quien recibe un bono ve que le rinde más (con 1 %, una tarjeta que cuesta 1.000 pts equivale a unos 990 pts del Cliente).
+                  Cada tramo de un Cliente debe dar al menos este % más de puntos por dólar que el Canjeador. Así quien recibe un bono ve que le rinde más (con 1 %, cada dólar del Cliente rinde al menos 1 % más puntos que el del Canjeador).
                 </p>
               </div>
 

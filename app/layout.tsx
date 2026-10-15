@@ -13,10 +13,20 @@ import DevRoleBar from "@/components/panel/dev-role-bar"
 
 const inter = Inter({ subsets: ["latin"] })
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://puntos-three.vercel.app"
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "Regala — Gift cards de Ecuador con Puntos",
   description:
     "Canjea tus Puntos por gift cards de Supermaxi, Fybeca, Marathon Sports y más. Entrega digital inmediata.",
+  openGraph: {
+    title: "Regala — Gift cards de Ecuador con Puntos",
+    description:
+      "Canjea tus Puntos por gift cards de Supermaxi, Fybeca, Marathon Sports y más. Entrega digital inmediata.",
+    locale: "es_EC",
+    type: "website",
+  },
 }
 
 export default function RootLayout({
