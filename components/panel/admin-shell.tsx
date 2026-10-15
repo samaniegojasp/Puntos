@@ -8,6 +8,7 @@ import type { Role } from "@/lib/domain/types"
 const ALLOW: Role[] = []
 
 const TABS: PanelTab[] = [
+  { href: "/admin/resumen", label: "Resumen" },
   { href: "/admin", label: "Catálogo" },
   { href: "/admin/clientes", label: "Clientes" },
   { href: "/admin/proveedores", label: "Proveedores" },

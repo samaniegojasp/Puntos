@@ -223,7 +223,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-3xl font-bold tracking-tight">Catálogo de gift cards</h1>
-            <Link href="/admin/clientes" className="text-sm font-medium text-primary hover:underline">
+            <Link href="/admin/resumen" className="text-sm font-medium text-primary hover:underline">
               Más secciones →
             </Link>
           </div>

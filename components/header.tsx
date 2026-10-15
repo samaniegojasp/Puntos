@@ -146,7 +146,7 @@ export default function Header() {
               )}
               {role === "admin" && (
                 <DropdownMenuItem asChild>
-                  <Link href="/admin/clientes" className="w-full cursor-pointer">
+                  <Link href="/admin/resumen" className="w-full cursor-pointer">
                     Administración
                   </Link>
                 </DropdownMenuItem>
@@ -286,7 +286,7 @@ export default function Header() {
                 )}
                 {role === "admin" && (
                   <Link
-                    href="/admin/clientes"
+                    href="/admin/resumen"
                     className="text-sm font-medium transition-colors hover:text-primary"
                     onClick={() => setMobileMenuOpen(false)}
                   >
