@@ -13,20 +13,70 @@ import { Slider } from "@/components/ui/slider"
 import EditableNumber from "@/components/panel/editable-number"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   MOCK_CLIENTS_ADMIN,
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
 } from "@/lib/mock/data"
-import { formatPct } from "@/lib/domain/format"
+import { formatPct, formatPts } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { pointsPrice, productPriceCents, referenceCentsPerPoint, validatePricing } from "@/lib/domain/pricing"
+import { rescaleForFactor } from "@/lib/domain/points-factor"
+import { adminConfigured, verifyAdmin } from "@/lib/admin-auth"
 import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
   const [loading, setLoading] = useState(true)
-  const { settings: current, setSettings, providers, products, clients, publicPacks, standardPacks } = useAdminSettings()
+  const {
+    settings: current,
+    setSettings,
+    providers,
+    products,
+    clients,
+    setClients,
+    publicPacks,
+    setPublicPacks,
+    standardPacks,
+    setStandardPacks,
+  } = useAdminSettings()
+
+  // Estado del factor de conversión
+  const currentFactor = current.pointsFactor ?? 1
+  const [factorInput, setFactorInput] = useState<string>(String(currentFactor))
+  const [factorDialogOpen, setFactorDialogOpen] = useState(false)
+  const [adminPass, setAdminPass] = useState("")
+  const [passError, setPassError] = useState("")
+  const [factorBusy, setFactorBusy] = useState(false)
+
+  useEffect(() => {
+    setFactorInput(String(current.pointsFactor ?? 1))
+  }, [current.pointsFactor])
+
+  const parsedFactor = parseInt(factorInput.trim(), 10)
+  const isFactorInteger = String(parsedFactor) === factorInput.trim()
+  const isFactorInRange = parsedFactor >= 1 && parsedFactor <= 1000
+  const isFactorValid = factorInput.trim() !== "" && isFactorInteger && isFactorInRange
+  const factorError = !factorInput.trim()
+    ? "Ingresa un número entero."
+    : !isFactorInteger
+    ? "El factor debe ser un número entero."
+    : !isFactorInRange
+    ? "El factor debe estar entre 1 y 1.000."
+    : null
+  const factorHasChanged = isFactorValid && parsedFactor !== currentFactor
+
+  const smallestPublic = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
+  const smallestPoints = smallestPublic ? smallestPublic.points : 1000 * currentFactor
+  const previewPoints = isFactorValid ? Math.round((smallestPoints * parsedFactor) / currentFactor) : null
 
   // Estado del formulario de ajustes
   const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
@@ -142,6 +192,7 @@ export default function AdminAjustesPage() {
   const parsedGrantDays = !isNaN(rawGrantDays) ? Math.max(1, rawGrantDays) : 90
 
   const candidateSettings: AdminSettings = {
+    ...current,
     minMarginPct: parsedMinMarginFraction,
     exchangeFeePct: parsedExchangeFeeFraction,
     exchangeWindowDays: parsedWindowDays,
@@ -165,9 +216,11 @@ export default function AdminAjustesPage() {
     clients,
   })
 
+  const f = current.pointsFactor ?? 1
+
   const smallestPublicPpd = (() => {
     const sp = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
-    return sp ? sp.points / (sp.usdCents / 100) : 100
+    return sp ? sp.points / (sp.usdCents / 100) : 100 * f
   })()
 
   const pricingErrors = pricingIssues.filter((i) => i.severity === "error")
@@ -184,6 +237,7 @@ export default function AdminAjustesPage() {
   }
 
   const handleReset = () => {
+    const factorVigente = current.pointsFactor ?? 1
     setMinMarginPctInput((MOCK_SETTINGS.minMarginPct * 100).toString())
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
@@ -192,12 +246,69 @@ export default function AdminAjustesPage() {
     setMultiple(MOCK_SETTINGS.pointsMultiple)
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
-    setCustomPpd(MOCK_SETTINGS.customPointsPerUsd ?? 100)
+    setCustomPpd((MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente)
     setLimitUnit("ppd")
     setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
     setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
-    setSettings(MOCK_SETTINGS)
+    setSettings({ ...MOCK_SETTINGS, customPointsPerUsd: (MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente, pointsFactor: factorVigente })
+    typedRef.current = null
     toast.info("Ajustes restablecidos a sus valores originales")
+  }
+
+  const handleConfirmFactor = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (factorBusy) return
+    setFactorBusy(true)
+    setPassError("")
+
+    const ok = await verifyAdmin(adminPass)
+    if (!ok) {
+      await new Promise((r) => setTimeout(r, 1000))
+      setPassError("Clave incorrecta.")
+      setFactorBusy(false)
+      return
+    }
+
+    const rescaled = rescaleForFactor(
+      {
+        settings: current,
+        publicPacks,
+        standardPacks,
+        clients,
+        providers,
+        products,
+      },
+      currentFactor,
+      parsedFactor,
+    )
+
+    const issues = validatePricing(rescaled)
+    const errs = issues.filter((i) => i.severity === "error")
+    if (errs.length > 0) {
+      setPassError(errs.map((i) => i.message).join("\n"))
+      setFactorBusy(false)
+      return
+    }
+
+    setSettings(rescaled.settings)
+    setPublicPacks(rescaled.publicPacks)
+    setStandardPacks(rescaled.standardPacks)
+    setClients(rescaled.clients)
+
+    const newCustomPpd = rescaled.settings.customPointsPerUsd ?? 100 * parsedFactor
+    setCustomPpd(newCustomPpd)
+    if (limitUnit === "price") {
+      setLimitLoInput(fmtPrice(rescaled.settings.pricePerPointMin))
+      setLimitHiInput(fmtPrice(rescaled.settings.pricePerPointMax))
+    } else {
+      setLimitLoInput(fmtPpd(rescaled.settings.pricePerPointMax))
+      setLimitHiInput(fmtPpd(rescaled.settings.pricePerPointMin))
+    }
+    typedRef.current = null
+
+    setFactorBusy(false)
+    setFactorDialogOpen(false)
+    toast.success("Factor de conversión actualizado")
   }
 
   if (loading) {
@@ -220,6 +331,97 @@ export default function AdminAjustesPage() {
           Parámetros globales de margen comercial, recargos y vigencias de la plataforma
         </p>
       </div>
+
+      {/* Factor de conversión */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Factor de conversión</CardTitle>
+          </div>
+          <CardDescription>
+            Multiplica la conversión de dólares a puntos en toda la plataforma manteniendo las reglas de precios.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="max-w-xs space-y-2">
+            <Label htmlFor="factorInput">Factor de conversión (1–1.000)</Label>
+            <Input
+              id="factorInput"
+              type="number"
+              min={1}
+              max={1000}
+              step={1}
+              value={factorInput}
+              onChange={(e) => setFactorInput(e.target.value)}
+            />
+            {factorError && <p className="text-xs text-destructive">{factorError}</p>}
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            Hoy: $10 = {formatPts(smallestPoints)} pts → con factor {isFactorValid ? parsedFactor : "N"}:{" "}
+            {previewPoints !== null ? formatPts(previewPoints) : "—"} pts
+          </p>
+
+          <p className="text-xs text-muted-foreground">
+            En producción, cambiar el factor exige convertir todos los saldos; lo hará el servidor. En este prototipo los saldos de ejemplo no cambian.
+          </p>
+
+          <div>
+            <Button
+              type="button"
+              disabled={!adminConfigured || !factorHasChanged || !isFactorValid}
+              onClick={() => {
+                setAdminPass("")
+                setPassError("")
+                setFactorDialogOpen(true)
+              }}
+            >
+              {!adminConfigured ? "Configura la clave de administrador en /admin" : "Guardar factor"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Dialog open={factorDialogOpen} onOpenChange={setFactorDialogOpen}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md w-full">
+          <DialogHeader>
+            <DialogTitle>Clave de administrador</DialogTitle>
+            <DialogDescription>
+              Introduce la clave de administrador para aplicar el factor {parsedFactor}.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleConfirmFactor} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="adminPass">Clave de administrador</Label>
+              <Input
+                id="adminPass"
+                type="password"
+                autoComplete="current-password"
+                placeholder="Clave de administrador"
+                value={adminPass}
+                onChange={(e) => setAdminPass(e.target.value)}
+                disabled={factorBusy}
+                autoFocus
+              />
+              {passError && <p className="text-xs text-destructive whitespace-pre-wrap">{passError}</p>}
+            </div>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setFactorDialogOpen(false)}
+                disabled={factorBusy}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={factorBusy || !adminPass.trim()}>
+                {factorBusy ? "Verificando…" : "Confirmar"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Card>
         <CardHeader>
@@ -446,15 +648,15 @@ export default function AdminAjustesPage() {
                   </div>
                   <Slider
                     id="customPpd"
-                    min={50}
-                    max={Math.max(51, Math.floor(smallestPublicPpd))}
+                    min={50 * f}
+                    max={Math.max(50 * f + 1, Math.floor(smallestPublicPpd))}
                     step={1}
-                    value={[Math.min(Math.max(Math.round(customPpd), 50), Math.max(51, Math.floor(smallestPublicPpd)))]}
+                    value={[Math.min(Math.max(Math.round(customPpd), 50 * f), Math.max(50 * f + 1, Math.floor(smallestPublicPpd)))]}
                     onValueChange={(v) => setCustomPpd(v[0])}
                     aria-label="Puntos por cada dólar de la compra a tu medida"
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Mínimo 50 pts/$</span>
+                    <span>Mínimo {50 * f} pts/$</span>
                     <span>Máximo {new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(smallestPublicPpd)} pts/$ (el del paquete más pequeño)</span>
                   </div>
                 </div>

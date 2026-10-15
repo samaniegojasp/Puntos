@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatPoints, pointsFor, usdForPoints } from "@/lib/catalog"
-import { usePublicOffer } from "@/lib/mock/admin-settings"
+import { usePointsFactor, usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
@@ -20,6 +20,7 @@ import { usePoints } from "@/lib/points-store"
 export default function CheckoutPage() {
   const router = useRouter()
   const { cart, cartTotal, balance, ready, redeem } = usePoints()
+  const factor = usePointsFactor()
   const { custom } = usePublicOffer()
   const { findStore } = useCatalog()
   const [email, setEmail] = useState("")
@@ -78,7 +79,7 @@ export default function CheckoutPage() {
                 <span>
                   {findStore(i.storeId)?.name} ${i.usd} × {i.qty}
                 </span>
-                <span className="tabular-nums">{formatPoints(pointsFor(i.usd) * i.qty)} pts</span>
+                <span className="tabular-nums">{formatPoints(pointsFor(i.usd, factor) * i.qty)} pts</span>
               </div>
             ))}
             <Separator />

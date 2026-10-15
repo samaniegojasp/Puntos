@@ -64,6 +64,7 @@ import EditableNumber from "@/components/panel/editable-number"
 import PacksEditor from "@/components/panel/packs-editor"
 import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
+import { rescaleForFactor } from "@/lib/domain/points-factor"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
 
 export default function AdminPreciosPage() {
@@ -116,16 +117,22 @@ export default function AdminPreciosPage() {
 
   // Manejo del botón "Probar un caso con error"
   const handleToggleErrorCase = () => {
+    const f = settings.pointsFactor ?? 1
     if (!isErrorCaseActive) {
-      // Subir puntos del primer paquete público a 1.300 (más puntos por dólar que el Cliente) para romper la regla 2
+      // Subir puntos del primer paquete público a 1.300 * f (más puntos por dólar que el Cliente) para romper la regla 2
       setPublicPacks((prev) => [
-        { ...prev[0], points: 1300 },
+        { ...prev[0], points: Math.round(1300 * f) },
         ...prev.slice(1),
       ])
       setIsErrorCaseActive(true)
       toast.info("Caso de error activado: Canjeador paga menos que Cliente a $10")
     } else {
-      setPublicPacks(MOCK_PUBLIC_PACKS)
+      const rescaled = rescaleForFactor(
+        { settings, publicPacks: MOCK_PUBLIC_PACKS, standardPacks, clients },
+        1,
+        f,
+      )
+      setPublicPacks(rescaled.publicPacks)
       setIsErrorCaseActive(false)
       toast.success("Catálogo de paquetes restaurado al estado original")
     }

@@ -3,7 +3,7 @@
 // Estado global: saldo de Puntos, carrito, órdenes y recargas. Persistido en localStorage (DEMO: manipulable por el usuario).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react"
 import { WELCOME_POINTS, pointsFor } from "@/lib/catalog"
-import { usePublicOffer } from "@/lib/mock/admin-settings"
+import { usePointsFactor, usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 
 export type CartItem = { storeId: string; usd: number; qty: number }
@@ -20,7 +20,7 @@ const initialState: State = { balance: WELCOME_POINTS, cart: [], orders: [], top
 // Validación estructural (no depende del catálogo): el catálogo se aplica al derivar el carrito.
 const isWellFormed = (i: CartItem) =>
   !!i && typeof i.storeId === "string" && Number.isInteger(i.usd) && i.usd > 0 && Number.isInteger(i.qty) && i.qty > 0
-const cartTotal = (cart: CartItem[]) => cart.reduce((sum, i) => sum + pointsFor(i.usd) * i.qty, 0)
+const cartTotal = (cart: CartItem[], factor = 1) => cart.reduce((sum, i) => sum + pointsFor(i.usd, factor) * i.qty, 0)
 
 function load(): State {
   try {
@@ -68,6 +68,9 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
   const offer = usePublicOffer()
   const offerRef = useRef(offer)
   offerRef.current = offer
+  const factor = usePointsFactor()
+  const factorRef = useRef(factor)
+  factorRef.current = factor
   // Siempre el criterio de disponibilidad más reciente, para usarlo dentro de callbacks estables.
   const availRef = useRef(isAvailable)
   availRef.current = isAvailable
@@ -122,7 +125,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
       // Solo se canjea lo que sigue disponible en el catálogo (una tienda pudo ocultarse o cambiar de valores).
       const items = s.cart.filter((i) => availRef.current(i.storeId, i.usd))
       if (!items.length) return { ok: false, reason: "empty", missing: 0 }
-      const total = cartTotal(items)
+      const total = cartTotal(items, factorRef.current)
       if (total > s.balance) return { ok: false, reason: "insufficient", missing: total - s.balance }
       const codes = items.flatMap((i) => Array.from({ length: i.qty }, () => ({ storeId: i.storeId, usd: i.usd, code: genCode(i.storeId) })))
       const order: Order = { id: `ORD-${Date.now()}`, date: new Date().toISOString(), points: total, codes, ...opts }
@@ -166,7 +169,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     ...state,
     cart,
     ready,
-    cartTotal: cartTotal(cart),
+    cartTotal: cartTotal(cart, factor),
     cartCount: cart.reduce((n, i) => n + i.qty, 0),
     addToCart,
     setQty,

@@ -249,6 +249,8 @@ export type AdminSettings = {
   pendingGrantDays: number
   /** Los puntos de tarjetas y paquetes son múltiplos de este valor */
   pointsMultiple: number
+  /** Multiplica la conversión USD → puntos (entero ≥ 1). Por defecto 1. */
+  pointsFactor?: number
   /** Límites opcionales del precio por punto (USD) de un cliente. Solo pueden estrechar lo que ya imponen las reglas 2 y 3. */
   pricePerPointMin?: number
   pricePerPointMax?: number

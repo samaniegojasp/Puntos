@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { THEMES, formatPoints, pointsFor, type Store, type ThemeKey } from "@/lib/catalog"
 import { isActive, isValidImage, useCatalog } from "@/lib/catalog-store"
 import { adminConfigured, endAdminSession, hasAdminSession, verifyAdmin } from "@/lib/admin-auth"
+import { usePointsFactor } from "@/lib/mock/admin-settings"
 
 type Draft = {
   id: string | null // null = tienda nueva
@@ -161,6 +162,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 
 function Panel({ onLogout }: { onLogout: () => void }) {
   const { allStores, customized, saveStore, removeStore, resetCatalog } = useCatalog()
+  const factor = usePointsFactor()
   const [draft, setDraft] = useState<Draft>(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<keyof Draft, string>>>({})
 
@@ -276,7 +278,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                   {!isActive(s) && <Badge variant="outline">Oculta</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{s.category}</p>
-                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(pointsFor(d))} pts`).join(" · ")}</p>
+                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}</p>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" onClick={() => edit(s)} aria-label={`Editar ${s.name}`}>
@@ -341,7 +343,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
               </Field>
               <Field id="denoms" label="Valores en USD (separados por coma, máx. 6)" error={errors.denoms}>
                 <Input id="denoms" value={draft.denoms} onChange={(e) => set("denoms", e.target.value)} />
-                {preview.length > 0 && <p className="text-xs text-muted-foreground">{preview.map((d) => `$${d} = ${formatPoints(pointsFor(d))} pts`).join(" · ")}</p>}
+                {preview.length > 0 && <p className="text-xs text-muted-foreground">{preview.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}</p>}
               </Field>
               <Field id="description" label="Descripción" error={errors.description}>
                 <Input id="description" value={draft.description} maxLength={120} onChange={(e) => set("description", e.target.value)} />

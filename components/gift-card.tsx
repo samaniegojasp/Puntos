@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 import { THEMES, formatPoints, pointsFor, type Store } from "@/lib/catalog"
 import { usePoints } from "@/lib/points-store"
+import { usePointsFactor } from "@/lib/mock/admin-settings"
 
 /** Cara visual de la tarjeta (proporción de tarjeta física). */
 export function GiftCardFace({
@@ -76,8 +77,9 @@ export function GiftCardTile({ store }: { store: Store }) {
   const [picked, setUsd] = useState(store.denoms[0])
   // Si el administrador cambió los valores de la tienda, vuelve al primero disponible.
   const usd = store.denoms.includes(picked) ? picked : store.denoms[0]
+  const factor = usePointsFactor()
   const { addToCart } = usePoints()
-  const points = pointsFor(usd)
+  const points = pointsFor(usd, factor)
 
   return (
     <div className="group flex flex-col gap-3 rounded-2xl border bg-card p-3 transition-all hover:-translate-y-1 hover:shadow-xl">

@@ -43,7 +43,7 @@ export const DEFAULT_STORES: Store[] = [
 
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }
 
-export const pointsFor = (usd: number) => usd * POINTS_PER_USD
+export const pointsFor = (usd: number, factor = 1) => usd * POINTS_PER_USD * factor
 
 /** Dólares enteros necesarios para cubrir `missingPoints` con la compra a tu medida (se redondea hacia arriba y se acota al rango permitido). */
 export const usdForPoints = (missingPoints: number, custom = { minUsd: 1, maxUsd: 500, pointsPerUsd: 100 }) =>

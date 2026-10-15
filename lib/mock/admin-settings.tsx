@@ -82,3 +82,10 @@ export function usePublicOffer() {
     },
   }
 }
+
+/** Factor de conversión de dólares a puntos (entero ≥ 1). Por defecto 1. */
+export function usePointsFactor() {
+  const { settings } = useAdminSettings()
+  return settings.pointsFactor ?? 1
+}
+
