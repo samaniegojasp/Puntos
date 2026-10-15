@@ -233,6 +233,8 @@ export type Product = {
   /** 0.15 = 15 % sobre el costo */
   marginPct: number
   active: boolean
+  /** Caducidad propia de esta tarjeta (días). Si no existe, se usa la del Proveedor. */
+  cardValidDays?: number
 }
 
 export type ClientAdminRow = ClientAccount & {

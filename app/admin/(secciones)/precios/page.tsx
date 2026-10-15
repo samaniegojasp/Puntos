@@ -70,11 +70,9 @@ export default function AdminPreciosPage() {
   const [loading, setLoading] = useState(true)
 
   // Estado local para productos y paquetes
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
   const [standardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
   const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
-  const [clients] = useState(MOCK_CLIENTS_ADMIN)
-  const { settings } = useAdminSettings()
+  const { settings, providers, products, setProducts, clients } = useAdminSettings()
 
   // Selector de tabla de paquetes
   const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")
@@ -87,6 +85,8 @@ export default function AdminPreciosPage() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [marginPctInput, setMarginPctInput] = useState("15")
   const [costOverrideInput, setCostOverrideInput] = useState("")
+  // Caducidad propia de la tarjeta (días); vacío = usa la del Proveedor
+  const [cardDaysInput, setCardDaysInput] = useState("")
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -96,7 +96,7 @@ export default function AdminPreciosPage() {
   // Referencia común para cálculos de puntos
   const refCents = referenceCentsPerPoint(standardPacks)
   const providerOf = (id: string): Provider =>
-    MOCK_PROVIDERS.find((x) => x.id === id) ?? {
+    providers.find((x) => x.id === id) ?? {
       id,
       name: "—",
       discountPct: 0,
@@ -107,7 +107,7 @@ export default function AdminPreciosPage() {
   // Evaluación global de reglas de precios
   const currentIssues = validatePricing({
     settings,
-    providers: MOCK_PROVIDERS,
+    providers,
     products,
     standardPacks,
     publicPacks,
@@ -138,6 +138,7 @@ export default function AdminPreciosPage() {
     setCostOverrideInput(
       prod.costCentsOverride != null ? (prod.costCentsOverride / 100).toString() : ""
     )
+    setCardDaysInput(prod.cardValidDays != null ? String(prod.cardValidDays) : "")
     setDialogOpen(true)
   }
 
@@ -146,15 +147,18 @@ export default function AdminPreciosPage() {
     ? Math.round((parseFloat(costOverrideInput.replace(",", ".")) || 0) * 100)
     : undefined
 
+  const parsedCardDays = cardDaysInput.trim() ? parseInt(cardDaysInput, 10) || undefined : undefined
+  const providerDays = editingProduct ? providerOf(editingProduct.providerId).cardValidDays : 180
   const candidateProduct: Product = editingProduct
     ? {
         ...editingProduct,
         marginPct: parsedMarginPct,
         costCentsOverride: parsedCostOverride,
+        cardValidDays: parsedCardDays,
         // Se valida como si estuviera activo: un producto oculto hoy podría activarse mañana con un margen absurdo
         active: true,
       }
-    : (products[0] ?? MOCK_PRODUCTS[0])
+    : products[0]
 
   const simulatedProducts = editingProduct
     ? products.map((p) => (p.id === editingProduct.id ? candidateProduct : p))
@@ -162,7 +166,7 @@ export default function AdminPreciosPage() {
 
   const dialogIssues = validatePricing({
     settings,
-    providers: MOCK_PROVIDERS,
+    providers,
     products: simulatedProducts,
     standardPacks,
     publicPacks,
@@ -187,7 +191,7 @@ export default function AdminPreciosPage() {
     const at = (units: number) =>
       validatePricing({
         settings,
-        providers: MOCK_PROVIDERS,
+        providers,
         products: products.map((p) =>
           p.id === editingProduct.id
             ? { ...editingProduct, marginPct: units / MARGIN_UNIT, costCentsOverride: parsedCostOverride, active: true }
@@ -405,6 +409,10 @@ export default function AdminPreciosPage() {
                     <TableRow key={prod.id}>
                       <TableCell className="font-semibold text-foreground">
                         {prod.storeName}
+                        <span className="block text-[10px] font-normal text-muted-foreground">
+                          Caduca en {prod.cardValidDays ?? provider.cardValidDays} días
+                          {prod.cardValidDays == null ? " (proveedor)" : ""}
+                        </span>
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground">
                         {provider.name || "—"}
@@ -657,6 +665,44 @@ export default function AdminPreciosPage() {
                   onChange={(e) => setCostOverrideInput(e.target.value)}
                   className="pl-7"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-baseline justify-between">
+                <Label htmlFor="cardDays">Caducidad de esta tarjeta</Label>
+                <EditableNumber
+                  label="Caducidad de esta tarjeta"
+                  display={String(parsedCardDays ?? providerDays)}
+                  initial={String(parsedCardDays ?? providerDays)}
+                  suffix="días"
+                  onCommit={(v) => setCardDaysInput(String(v))}
+                />
+              </div>
+              <Slider
+                id="cardDays"
+                min={30}
+                max={730}
+                step={1}
+                value={[Math.min(Math.max(parsedCardDays ?? providerDays, 30), 730)]}
+                onValueChange={(v) => setCardDaysInput(String(v[0]))}
+                aria-label="Caducidad de esta tarjeta en días"
+              />
+              <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                <span>Mínimo 30 días</span>
+                <span>Máximo 730 días</span>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  {parsedCardDays === undefined
+                    ? `Usa la caducidad del Proveedor (${providerDays} días).`
+                    : `Propia de esta tarjeta; el Proveedor tiene ${providerDays} días.`}
+                </span>
+                {parsedCardDays !== undefined && (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setCardDaysInput("")}>
+                    Usar la del Proveedor
+                  </Button>
+                )}
               </div>
             </div>
 

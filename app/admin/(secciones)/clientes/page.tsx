@@ -54,9 +54,8 @@ const ptsPerUsd = (usdPerPoint: number) =>
   usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
 
 export default function AdminClientesPage() {
-  const { settings } = useAdminSettings()
+  const { settings, clients, setClients, providers, products } = useAdminSettings()
   const [loading, setLoading] = useState(true)
-  const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
 
   // Estado del modal de cliente (creación / edición)
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -168,8 +167,8 @@ export default function AdminClientesPage() {
       : [...clients, cand]
     return validatePricing({
       settings,
-      providers: MOCK_PROVIDERS,
-      products: MOCK_PRODUCTS,
+      providers,
+      products,
       standardPacks: MOCK_STANDARD_PACKS,
       publicPacks: MOCK_PUBLIC_PACKS,
       clients: simulated,

@@ -29,9 +29,6 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import {
-  MOCK_CLIENTS_ADMIN,
-  MOCK_PRODUCTS,
-  MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
@@ -50,9 +47,8 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
-  const { settings } = useAdminSettings()
+  const { settings, providers, setProviders, products, clients } = useAdminSettings()
   const [loading, setLoading] = useState(true)
-  const [providers, setProviders] = useState<Provider[]>(MOCK_PROVIDERS)
 
   // Diálogo de edición
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -101,7 +97,7 @@ export default function AdminProveedoresPage() {
     : [...providers, candidateProvider]
 
   // Los productos de este proveedor se validan como activos aunque hoy estén ocultos
-  const validationProducts = MOCK_PRODUCTS.map((p) =>
+  const validationProducts = products.map((p) =>
     editingProvider && p.providerId === editingProvider.id ? { ...p, active: true } : p,
   )
 
@@ -111,7 +107,7 @@ export default function AdminProveedoresPage() {
     products: validationProducts,
     standardPacks: MOCK_STANDARD_PACKS,
     publicPacks: MOCK_PUBLIC_PACKS,
-    clients: MOCK_CLIENTS_ADMIN,
+    clients: clients,
   })
 
   // Rango del descuento válido para este proveedor, calculado con las mismas reglas (sin fórmulas propias).
@@ -121,7 +117,7 @@ export default function AdminProveedoresPage() {
   const DISCOUNT_CAP_UNITS = 500 // tope de la demo: ningún descuento por encima de 50 %
   const discountBounds = (() => {
     if (!editingProvider) return null
-    const tags = MOCK_PRODUCTS.filter((p) => p.providerId === editingProvider.id).map(
+    const tags = products.filter((p) => p.providerId === editingProvider.id).map(
       (p) => `${p.storeName} $${(p.faceCents / 100).toFixed(2)}`,
     )
     if (!tags.length) return null
@@ -135,7 +131,7 @@ export default function AdminProveedoresPage() {
         products: validationProducts,
         standardPacks: MOCK_STANDARD_PACKS,
         publicPacks: MOCK_PUBLIC_PACKS,
-        clients: MOCK_CLIENTS_ADMIN,
+        clients: clients,
       })
     const countLow = (u: number) => at(u).filter((i) => (i.rule === 1 || i.rule === 4) && mine(i.message)).length
     const countHigh = (u: number) => at(u).filter((i) => i.rule === 3 && mine(i.message)).length
@@ -170,7 +166,7 @@ export default function AdminProveedoresPage() {
 
   // Productos de este proveedor para vista previa
   const providerProducts = editingProvider
-    ? MOCK_PRODUCTS.filter((prod) => prod.providerId === editingProvider.id)
+    ? products.filter((prod) => prod.providerId === editingProvider.id)
     : []
 
   const refCents = referenceCentsPerPoint(MOCK_STANDARD_PACKS)
@@ -342,7 +338,7 @@ export default function AdminProveedoresPage() {
 
               <div className="space-y-2">
                 <div className="flex items-baseline justify-between">
-                  <Label htmlFor="cardValidDays">Caducidad de las tarjetas</Label>
+                  <Label htmlFor="cardValidDays">Caducidad por defecto de las tarjetas</Label>
                   <EditableNumber
                     label="Caducidad de las tarjetas"
                     display={String(parsedDays > 0 ? parsedDays : "—")}
@@ -365,7 +361,7 @@ export default function AdminProveedoresPage() {
                   <span>Máximo 730 días</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Días de validez para el canjeador desde la emisión.
+                  Días de validez desde la emisión. Cada tarjeta puede tener la suya propia en Precios.
                 </p>
               </div>
             </div>
