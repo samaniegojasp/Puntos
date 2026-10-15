@@ -53,6 +53,12 @@ export const pointsFor = (usd: number) => usd * POINTS_PER_USD
 /** Dólares enteros necesarios para cubrir `missingPoints` con la compra a tu medida (se redondea hacia arriba y se acota al rango permitido). */
 export const usdForPoints = (missingPoints: number, custom = { minUsd: 1, maxUsd: 500, pointsPerUsd: 100 }) =>
   Math.min(custom.maxUsd, Math.max(custom.minUsd, Math.ceil(missingPoints / custom.pointsPerUsd)))
+
+/** Paquete fijo más pequeño que cubre `missingPoints`; si ninguno alcanza, el más grande. */
+export const packForPoints = (missingPoints: number, packs: PointsPack[]) => {
+  const sorted = [...packs].sort((a, b) => a.points - b.points)
+  return sorted.find((p) => p.points >= missingPoints) ?? sorted[sorted.length - 1]
+}
 export const formatPoints = (n: number) => new Intl.NumberFormat("es-EC").format(n)
 
 export const isHexColor = (v: unknown): v is string => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v)

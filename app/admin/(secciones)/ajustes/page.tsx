@@ -731,9 +731,9 @@ export default function AdminAjustesPage() {
               {/* Compra a tu medida del Canjeador */}
               <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
                 <div>
-                  <h4 className="text-sm font-semibold">Compra a tu medida del Canjeador</h4>
+                  <h4 className="text-sm font-semibold">Compra a tu medida (Clientes y Nosotros)</h4>
                   <p className="text-xs text-muted-foreground">
-                    Además de los paquetes, el Canjeador puede comprar el monto en dólares enteros que elija (por ejemplo, para completar lo que le falta). Su precio nunca puede ser más barato que el del paquete más pequeño del Canjeador.
+                    Además de los paquetes, los Clientes y Nosotros pueden comprar el monto en dólares enteros que elijan. Su precio nunca puede ser más barato que el del paquete más pequeño del Canjeador.
                   </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">

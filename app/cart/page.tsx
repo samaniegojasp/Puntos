@@ -7,16 +7,19 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GiftCardFace } from "@/components/gift-card"
-import { formatPoints, usdForPoints } from "@/lib/catalog"
-import { useCardPoints, usePublicOffer } from "@/lib/mock/admin-settings"
+import { formatPoints, packForPoints, usdForPoints } from "@/lib/catalog"
+import { useCanBuyCustom, useCardPoints, usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
   const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
   const cardPoints = useCardPoints()
-  const { custom } = usePublicOffer()
+  const { custom, packs } = usePublicOffer()
+  const canCustom = useCanBuyCustom()
   const { findStore } = useCatalog()
+  // Cliente y Nosotros compran el monto exacto a tu medida; el Canjeador, el paquete fijo que cubre lo que falta.
+  const suggested = packForPoints(Math.max(0, cartTotal - balance), packs)
 
   if (!ready) {
     return (
@@ -162,7 +165,14 @@ export default function CartPage() {
                   </div>
                   <Button className="w-full" asChild>
                     <Link href={`/recargar?faltan=${cartTotal - balance}`}>
-                      Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance, custom)})
+                      {canCustom ? (
+                        <>Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance, custom)})</>
+                      ) : (
+                        <>
+                          Recargar el paquete de ${suggested.usd} ({formatPoints(suggested.points)} pts)
+                          {suggested.points < cartTotal - balance && " (no alcanza; puedes repetir)"}
+                        </>
+                      )}
                     </Link>
                   </Button>
                   <Button variant="outline" className="w-full" asChild>

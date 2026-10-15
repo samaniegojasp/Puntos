@@ -11,8 +11,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Card, CardContent } from "@/components/ui/card"
-import { formatPoints, usdForPoints } from "@/lib/catalog"
-import { useCardPoints, usePublicOffer } from "@/lib/mock/admin-settings"
+import { formatPoints, packForPoints, usdForPoints } from "@/lib/catalog"
+import { useCanBuyCustom, useCardPoints, usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
@@ -21,12 +21,15 @@ export default function CheckoutPage() {
   const router = useRouter()
   const { cart, cartTotal, balance, ready, redeem } = usePoints()
   const cardPoints = useCardPoints()
-  const { custom } = usePublicOffer()
+  const { custom, packs } = usePublicOffer()
+  const canCustom = useCanBuyCustom()
   const { findStore } = useCatalog()
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
   const missing = cartTotal - balance
+  // Cliente y Nosotros compran el monto exacto a tu medida; el Canjeador, el paquete fijo que cubre lo que falta.
+  const suggested = packForPoints(Math.max(0, missing), packs)
 
   if (!ready) return <div className="container px-4 py-12 text-center text-muted-foreground">Cargando…</div>
 
@@ -91,7 +94,14 @@ export default function CheckoutPage() {
                 <p className="text-sm text-destructive">Te faltan {formatPoints(missing)} pts.</p>
                 <Button className="w-full" size="lg" asChild>
                   <Link href={`/recargar?faltan=${missing}`}>
-                    Comprar los {formatPoints(missing)} pts que faltan (${usdForPoints(missing, custom)})
+                    {canCustom ? (
+                      <>Comprar los {formatPoints(missing)} pts que faltan (${usdForPoints(missing, custom)})</>
+                    ) : (
+                      <>
+                        Recargar el paquete de ${suggested.usd} ({formatPoints(suggested.points)} pts)
+                        {suggested.points < missing && " (no alcanza; puedes repetir)"}
+                      </>
+                    )}
                   </Link>
                 </Button>
               </>

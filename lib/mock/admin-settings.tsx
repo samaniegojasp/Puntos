@@ -15,6 +15,7 @@ import {
 } from "@/lib/mock/data"
 import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import type { AdminSettings, ClientAdminRow, PointsPack, Product, Provider } from "@/lib/domain/types"
+import { useMockSession } from "@/lib/mock/session"
 
 type Ctx = {
   settings: AdminSettings
@@ -82,6 +83,12 @@ export function usePublicOffer() {
       pointsPerUsd: settings.customPointsPerUsd ?? 100,
     },
   }
+}
+
+/** "A tu medida" solo para Cliente y Nosotros (admin). El Canjeador compra paquetes fijos. */
+export function useCanBuyCustom() {
+  const { role } = useMockSession()
+  return role === "cliente" || role === "admin"
 }
 
 /** Puntos que cuesta una tarjeta en la tienda: valor facial + recargo, al punto del paquete más pequeño del Canjeador. */

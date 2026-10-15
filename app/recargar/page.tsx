@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import Link from "next/link"
 import { Gem, Lock, ShieldCheck, Info } from "lucide-react"
 import { toast } from "sonner"
@@ -10,8 +10,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { formatPoints, usdForPoints, type PointsPack } from "@/lib/catalog"
-import { usePublicOffer } from "@/lib/mock/admin-settings"
+import { formatPoints, packForPoints, usdForPoints, type PointsPack } from "@/lib/catalog"
+import { useCanBuyCustom, usePublicOffer } from "@/lib/mock/admin-settings"
+import { useMockSession } from "@/lib/mock/session"
 import { usePoints } from "@/lib/points-store"
 import { formatCardNumber, formatExp, validateCard, type CardErrors, type CardInput } from "@/lib/payment"
 
@@ -19,6 +20,10 @@ import { formatCardNumber, formatExp, validateCard, type CardErrors, type CardIn
 export default function RecargarPage() {
   const { balance, ready, topUp, topUpCustom } = usePoints()
   const { packs: PACKS, custom } = usePublicOffer()
+  // "A tu medida" solo para Cliente y Nosotros. Se muestra cuando la sesión ya está lista, para no esconderla al cargar.
+  const canCustom = useCanBuyCustom()
+  const { ready: sessionReady } = useMockSession()
+  const showCustom = sessionReady && canCustom
   const CUSTOM_MIN_USD = custom.minUsd
   const CUSTOM_MAX_USD = custom.maxUsd
   const CUSTOM_POINTS_PER_USD = custom.pointsPerUsd
@@ -30,17 +35,24 @@ export default function RecargarPage() {
   const customValid = Number.isInteger(customN) && customN >= CUSTOM_MIN_USD && customN <= CUSTOM_MAX_USD
   const isCustom = pack?.id === "custom"
 
-  // Si llegas desde el carrito con "faltan N puntos", se propone exactamente el monto que cubre lo que falta
+  // Si llegas desde el carrito con "faltan N puntos": Cliente y Nosotros reciben el monto exacto a tu medida;
+  // el Canjeador recibe el paquete fijo que cubre lo que falta. Corre una vez, cuando la sesión ya está lista.
+  const appliedFaltan = useRef(false)
   useEffect(() => {
+    if (!sessionReady || appliedFaltan.current) return
+    appliedFaltan.current = true
     const n = Number(new URLSearchParams(window.location.search).get("faltan"))
-    if (Number.isInteger(n) && n > 0) {
+    if (!Number.isInteger(n) || n <= 0) return
+    setMissing(n)
+    if (canCustom) {
       const usd = usdForPoints(n, custom)
-      setMissing(n)
       setCustomUsd(String(usd))
       setPack({ id: "custom", points: Math.floor(usd * custom.pointsPerUsd), usd })
+    } else {
+      setPack(packForPoints(n, PACKS))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [sessionReady])
 
   const chooseCustom = (value: string) => {
     setCustomUsd(value)
@@ -60,6 +72,7 @@ export default function RecargarPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!pack || processing) return
+    if (pack.id === "custom" && !canCustom) return
     const errs = validateCard(card)
     setErrors(errs)
     if (Object.keys(errs).length) return
@@ -92,14 +105,17 @@ export default function RecargarPage() {
         Modo demostración: no se realiza ningún cobro real. Prueba con 4242 4242 4242 4242.
       </div>
 
-      <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label="Paquetes de Puntos">
+      <div className={cn("mb-8 grid gap-4 sm:grid-cols-2", showCustom ? "lg:grid-cols-4" : "lg:grid-cols-3")} role="radiogroup" aria-label="Paquetes de Puntos">
         {PACKS.map((p) => (
           <button
             key={p.id}
             type="button"
             role="radio"
             aria-checked={pack?.id === p.id}
-            onClick={() => setPack(p)}
+            onClick={() => {
+              setPack(p)
+              setMissing(0)
+            }}
             className={cn(
               "relative flex flex-col items-center gap-2 rounded-2xl border-2 bg-card p-6 text-center transition-all hover:-translate-y-1 hover:border-primary",
               pack?.id === p.id && "border-primary shadow-lg",
@@ -116,6 +132,7 @@ export default function RecargarPage() {
         ))}
 
         {/* A tu medida */}
+        {showCustom && (
         <div
           role="radio"
           aria-checked={isCustom}
@@ -150,13 +167,23 @@ export default function RecargarPage() {
             <span className="text-xs text-destructive">Entre ${CUSTOM_MIN_USD} y ${CUSTOM_MAX_USD}</span>
           )}
         </div>
+        )}
       </div>
 
-      {missing > 0 && isCustom && (
+      {missing > 0 && pack && (
         <p className="mb-6 rounded-lg bg-primary/10 p-3 text-center text-sm">
-          Te faltan <strong>{formatPoints(missing)} pts</strong>. Con <strong>${pack?.usd}</strong> compras{" "}
-          <strong>{formatPoints(pack?.points ?? 0)} pts</strong>
-          {pack && pack.points > missing ? ` (te sobran ${formatPoints(pack.points - missing)})` : ""}.
+          Te faltan <strong>{formatPoints(missing)} pts</strong>.{" "}
+          {isCustom ? (
+            <>
+              Con <strong>${pack.usd}</strong> compras <strong>{formatPoints(pack.points)} pts</strong>
+            </>
+          ) : (
+            <>
+              Con el paquete de <strong>${pack.usd}</strong> compras <strong>{formatPoints(pack.points)} pts</strong>
+            </>
+          )}
+          {pack.points > missing ? ` (te sobran ${formatPoints(pack.points - missing)})` : ""}.
+          {!isCustom && pack.points < missing && " Este es el paquete más grande; puedes repetir la recarga."}
         </p>
       )}
 
