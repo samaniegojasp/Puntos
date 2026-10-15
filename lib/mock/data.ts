@@ -6,7 +6,6 @@ import type {
   ClientAccount,
   ClientAdminRow,
   GiftCard,
-  GrantBatch,
   GrantedItem,
   LedgerEntry,
   PointLot,
@@ -145,48 +144,12 @@ export const MOCK_CLIENT_PACKS: PointsPack[] = [
   { id: "cp-2", usdCents: c(400), points: 41150, badge: "Acuerdo" },
 ]
 
-const row = (rowNo: number, docNumber: string, points: number | null, extra: Partial<GrantBatch["rows"][number]> = {}) => ({
-  rowNo, docType: "cedula" as const, docNumber, points, ...extra,
-})
-
-/** Los 4 escenarios de la pantalla "Repartir". El prototipo los carga con un selector. */
-export const MOCK_BATCHES: Record<"ok" | "errors" | "insufficient" | "duplicate", GrantBatch> = {
-  ok: {
-    id: "b-ok", fileName: "reparto-octubre.xlsx", status: "draft", bagBefore: 38000, totalPoints: 7350,
-    rows: [
-      row(2, "1712345675", 2000, { reference: "Factura 001-0451" }),
-      row(3, "0908765431", 1850, { reference: "Factura 001-0452" }),
-      row(4, "1704567898", 1500, { saleAmountCents: c(20000), reference: "Factura 001-0453" }),
-      row(5, "1711111110", 2000),
-    ],
-  },
-  errors: {
-    id: "b-err", fileName: "reparto-con-errores.xlsx", status: "draft", bagBefore: 38000, totalPoints: 6500,
-    rows: [
-      row(2, "1712345675", 2000),
-      row(3, "1712345670", 1500, { error: "La cédula no es válida. Revisa los 10 dígitos." }),
-      row(4, "0908765431", 1000),
-      row(5, "1704567898", 0, { error: "Los puntos deben ser un número entero mayor que 0." }),
-      row(6, "1711111110", 2000),
-    ],
-  },
-  insufficient: {
-    id: "b-ins", fileName: "reparto-grande.xlsx", status: "draft", bagBefore: 38000, totalPoints: 45000,
-    rows: [row(2, "1712345675", 20000), row(3, "0908765431", 15000), row(4, "1704567898", 10000)],
-  },
-  duplicate: {
-    id: "b-dup", fileName: "reparto-septiembre.xlsx", status: "draft", bagBefore: 38000, totalPoints: 3000,
-    alreadySentAt: "2026-09-30T17:00:00-05:00",
-    rows: [row(2, "1712345675", 1000), row(3, "0908765431", 1000), row(4, "1704567898", 1000)],
-  },
-}
-
 export const MOCK_GRANTED: GrantedItem[] = [
-  { id: "g-1", batchId: "b-sep", docType: "cedula", docNumber: "1712345675", reference: "Factura 001-0398", points: 21250, pointsUsed: 5670, sentAt: "2026-07-18T11:00:00-05:00" },
-  { id: "g-2", batchId: "b-sep", docType: "cedula", docNumber: "0908765431", reference: "Factura 001-0399", points: 12000, pointsUsed: 0, sentAt: "2026-07-18T11:00:00-05:00" },
-  { id: "g-3", batchId: "b-sep", docType: "cedula", docNumber: "1704567898", points: 8500, pointsUsed: 8500, sentAt: "2026-07-18T11:00:00-05:00" },
-  { id: "g-4", batchId: "b-oct", docType: "pasaporte", docNumber: "PA123456", reference: "Factura 001-0440", points: 5000, pointsUsed: 0, sentAt: "2026-09-30T17:00:00-05:00" },
-  { id: "g-5", batchId: "b-oct", docType: "cedula", docNumber: "1711111110", points: 3000, pointsUsed: 1200, sentAt: "2026-09-30T17:00:00-05:00" },
+  { id: "g-1", batchId: "b-sep", docType: "cedula", docNumber: "1712345675", email: "ana.mora@ejemplo.ec", reference: "Factura 001-0398", points: 21250, pointsUsed: 5670, sentAt: "2026-07-18T11:00:00-05:00" },
+  { id: "g-2", batchId: "b-sep", docType: "cedula", docNumber: "0908765431", email: "pedro.r@ejemplo.ec", reference: "Factura 001-0399", points: 12000, pointsUsed: 0, sentAt: "2026-07-18T11:00:00-05:00" },
+  { id: "g-3", batchId: "b-sep", docType: "cedula", docNumber: "1704567898", email: "carlos.t@ejemplo.ec", points: 8500, pointsUsed: 8500, sentAt: "2026-07-18T11:00:00-05:00" },
+  { id: "g-4", batchId: "b-oct", docType: "pasaporte", docNumber: "PA123456", email: "viajero@ejemplo.ec", reference: "Factura 001-0440", points: 5000, pointsUsed: 0, sentAt: "2026-09-30T17:00:00-05:00" },
+  { id: "g-5", batchId: "b-oct", docType: "cedula", docNumber: "1711111110", email: "sofia.l@ejemplo.ec", points: 3000, pointsUsed: 1200, sentAt: "2026-09-30T17:00:00-05:00" },
 ]
 
 // ---------- Proveedor (Fybeca) ----------

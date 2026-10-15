@@ -63,3 +63,11 @@ export function ageOn(birthDate: string, on: Date): number {
 }
 
 export const isAdult = (birthDate: string, on: Date = new Date()) => ageOn(birthDate, on) >= 18
+
+/** "ana.mora@ejemplo.ec" → "a******@ejemplo.ec" (deja el primer carácter del usuario y el dominio). */
+export const maskEmail = (value: string) => {
+  const [local, domain] = value.split("@")
+  if (!domain) return "—"
+  return `${local.slice(0, 1)}${"*".repeat(Math.max(1, Math.min(local.length - 1, 6)))}@${domain}`
+}
+

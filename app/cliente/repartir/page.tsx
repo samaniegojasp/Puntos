@@ -32,13 +32,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
 import {
   Table,
@@ -49,22 +42,13 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_BATCHES, MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
+import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatDate, formatPct, formatPts } from "@/lib/domain/format"
 import { toast } from "sonner"
 import { DOC_TYPE_LABEL, type GrantBatch } from "@/lib/domain/types"
 import { downloadCsv } from "@/lib/domain/csv"
 import { downloadGrantTemplate } from "@/lib/domain/xlsx-template"
-
-type ScenarioKey = "ok" | "errors" | "insufficient" | "duplicate"
-
-const SCENARIO_LABELS: Record<ScenarioKey, string> = {
-  ok: "Archivo correcto (4 filas, 7.350 pts)",
-  errors: "Con errores (filas inválidas)",
-  insufficient: "Saldo insuficiente (necesita 45.000 pts)",
-  duplicate: "Ya enviado antes (duplicado)",
-}
 
 export default function ClienteRepartirPage() {
   const { clients } = useAdminSettings()
@@ -77,9 +61,8 @@ export default function ClienteRepartirPage() {
   const rowCountNum = Number(rowCountInput.trim())
   const isRowCountValid = Number.isInteger(rowCountNum) && rowCountNum >= 1 && rowCountNum <= 1000
 
-  // Estado de subida y simulación
+  // Estado de subida
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [selectedScenario, setSelectedScenario] = useState<ScenarioKey>("ok")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Estado del lote en revisión
@@ -121,18 +104,7 @@ export default function ClienteRepartirPage() {
   // Paso 2: Revisar archivo (simulado)
   const handleReviewFile = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedFile) return
-
-    // Carga el escenario simulado seleccionado
-    const templateBatch = MOCK_BATCHES[selectedScenario]
-    setReviewedBatch({
-      ...templateBatch,
-      fileName: selectedFile.name || templateBatch.fileName,
-    })
-
-    // Reinicia las casillas de verificación
-    setAuthChecked(false)
-    setDuplicateChecked(false)
+    toast.info("En construcción: se conecta en la Parte P")
   }
 
   // Paso 4: Confirmación y envío del reparto
@@ -158,7 +130,6 @@ export default function ClienteRepartirPage() {
     setSelectedFile(null)
     setAuthChecked(false)
     setDuplicateChecked(false)
-    setSelectedScenario("ok")
     if (fileInputRef.current) {
       fileInputRef.current.value = ""
     }
@@ -188,7 +159,7 @@ export default function ClienteRepartirPage() {
 
   // Si ya fue enviado, mostrar la pantalla de éxito "Reparto enviado"
   if (isSent && reviewedBatch) {
-    const newBagBalance = reviewedBatch.bagBefore - reviewedBatch.totalPoints
+    const newBagBalance = (reviewedBatch.bagBefore ?? 0) - reviewedBatch.totalPoints
 
     return (
       <div className="space-y-8">
@@ -262,8 +233,9 @@ export default function ClienteRepartirPage() {
 
   // Cálculos de validación sobre el lote revisado
   const hasErrors = reviewedBatch ? reviewedBatch.rows.some((r) => !!r.error) : false
-  const isInsufficient = reviewedBatch ? reviewedBatch.totalPoints > reviewedBatch.bagBefore : false
-  const missingPoints = reviewedBatch && isInsufficient ? reviewedBatch.totalPoints - reviewedBatch.bagBefore : 0
+  const bagBefore = reviewedBatch?.bagBefore ?? 0
+  const isInsufficient = reviewedBatch ? reviewedBatch.totalPoints > bagBefore : false
+  const missingPoints = reviewedBatch && isInsufficient ? reviewedBatch.totalPoints - bagBefore : 0
   const isDuplicate = !!reviewedBatch?.alreadySentAt
 
   // Condiciones para habilitar el botón "Enviar reparto"
@@ -361,46 +333,21 @@ export default function ClienteRepartirPage() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleReviewFile} className="space-y-6">
-            <div className="grid gap-6 md:grid-cols-2">
-              {/* Selector de archivo real */}
-              <div className="space-y-2">
-                <Label htmlFor="fileInput">Archivo de reparto (.xlsx o .csv)</Label>
-                <Input
-                  id="fileInput"
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.csv"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    setSelectedFile(file || null)
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Máximo 5 MB y 1.000 filas.
-                </p>
-              </div>
-
-              {/* Selector de simulación del prototipo */}
-              <div className="space-y-2">
-                <Label htmlFor="simulationSelector">Simular resultado del archivo</Label>
-                <Select
-                  value={selectedScenario}
-                  onValueChange={(val) => setSelectedScenario(val as ScenarioKey)}
-                >
-                  <SelectTrigger id="simulationSelector">
-                    <SelectValue placeholder="Elige un escenario de prueba" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ok">{SCENARIO_LABELS.ok}</SelectItem>
-                    <SelectItem value="errors">{SCENARIO_LABELS.errors}</SelectItem>
-                    <SelectItem value="insufficient">{SCENARIO_LABELS.insufficient}</SelectItem>
-                    <SelectItem value="duplicate">{SCENARIO_LABELS.duplicate}</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Permite probar los distintos casos de validación del sistema.
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="fileInput">Archivo de reparto (.xlsx o .csv)</Label>
+              <Input
+                id="fileInput"
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  setSelectedFile(file || null)
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Máximo 5 MB y 1.000 filas.
+              </p>
             </div>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t pt-4">
@@ -453,12 +400,12 @@ export default function ClienteRepartirPage() {
                 />
                 <KpiCard
                   label="Bolsa antes"
-                  value={formatPts(reviewedBatch.bagBefore)}
+                  value={formatPts(bagBefore)}
                   hint="Saldo actual disponible"
                 />
                 <KpiCard
                   label="Bolsa después"
-                  value={isInsufficient ? "—" : formatPts(reviewedBatch.bagBefore - reviewedBatch.totalPoints)}
+                  value={isInsufficient ? "—" : formatPts(bagBefore - reviewedBatch.totalPoints)}
                   hint={isInsufficient ? "Saldo insuficiente" : "Saldo restante estimado"}
                 />
               </div>
@@ -480,7 +427,7 @@ export default function ClienteRepartirPage() {
                   <AlertTitle>Saldo insuficiente en tu bolsa</AlertTitle>
                   <AlertDescription className="space-y-3">
                     <p>
-                      Tu bolsa tiene {formatPts(reviewedBatch.bagBefore)} puntos y este reparto necesita{" "}
+                      Tu bolsa tiene {formatPts(bagBefore)} puntos y este reparto necesita{" "}
                       {formatPts(reviewedBatch.totalPoints)}. Faltan {formatPts(missingPoints)}.
                     </p>
                     <Button

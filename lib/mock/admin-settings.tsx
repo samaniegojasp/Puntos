@@ -6,7 +6,10 @@
 // El valor vive en memoria mientras no se recargue la página; al recargar vuelve a los datos de ejemplo.
 import { createContext, useContext, useState } from "react"
 import {
+  MOCK_CLIENT,
   MOCK_CLIENTS_ADMIN,
+  MOCK_CLIENT_PACKS,
+  MOCK_GRANTED,
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
@@ -14,7 +17,8 @@ import {
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
 import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
-import type { AdminSettings, ClientAdminRow, PointsPack, Product, Provider } from "@/lib/domain/types"
+import { clientBasePack } from "@/lib/domain/grants"
+import type { AdminSettings, ClientAdminRow, GrantedItem, PointsPack, Product, Provider } from "@/lib/domain/types"
 import { useMockSession } from "@/lib/mock/session"
 
 type Ctx = {
@@ -30,6 +34,10 @@ type Ctx = {
   setPublicPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
   standardPacks: PointsPack[]
   setStandardPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
+  grantedItems: GrantedItem[]
+  setGrantedItems: React.Dispatch<React.SetStateAction<GrantedItem[]>>
+  sentBatches: { hash: string; sentAt: string }[]
+  setSentBatches: React.Dispatch<React.SetStateAction<{ hash: string; sentAt: string }[]>>
 }
 
 const AdminSettingsContext = createContext<Ctx | null>(null)
@@ -41,6 +49,8 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
   const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
   const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
   const [standardPacks, setStandardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
+  const [grantedItems, setGrantedItems] = useState<GrantedItem[]>(MOCK_GRANTED)
+  const [sentBatches, setSentBatches] = useState<{ hash: string; sentAt: string }[]>([])
   return (
     <AdminSettingsContext.Provider
       value={{
@@ -56,6 +66,10 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
         setPublicPacks,
         standardPacks,
         setStandardPacks,
+        grantedItems,
+        setGrantedItems,
+        sentBatches,
+        setSentBatches,
       }}
     >
       {children}
@@ -96,5 +110,15 @@ export function useCardPoints() {
   const { publicPacks, settings } = useAdminSettings()
   const ref = referenceCentsPerPoint(publicPacks)
   return (usd: number) => productPoints({ faceCents: Math.round(usd * 100) }, settings, ref)
+}
+
+/** Cliente de la sesión de ejemplo, con su tramo base y su bolsa viva (la misma que ven Clientes y Resumen). */
+export function useCurrentClient() {
+  const { clients, setClients, standardPacks } = useAdminSettings()
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS, active: true }
+  const base = clientBasePack(client, standardPacks)
+  const addToBag = (delta: number) =>
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, bagPoints: c.bagPoints + delta } : c)))
+  return { client, base, bag: client.bagPoints, addToBag }
 }
 

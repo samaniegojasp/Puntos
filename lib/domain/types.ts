@@ -130,8 +130,9 @@ export type GrantRow = {
   rowNo: number
   docType: DocType | null
   docNumber: string
+  email: string
+  commissionCents: number | null
   points: number | null
-  saleAmountCents?: number
   reference?: string
   /** Mensaje en español si la fila es inválida */
   error?: string
@@ -142,11 +143,12 @@ export type GrantBatchStatus = "draft" | "sent"
 export type GrantBatch = {
   id: string
   fileName: string
+  fileHash: string
   status: GrantBatchStatus
   rows: GrantRow[]
   totalPoints: number
-  /** Saldo de la bolsa del Cliente al revisar */
-  bagBefore: number
+  /** Saldo de la bolsa al enviar */
+  bagBefore?: number
   /** Si el mismo archivo ya se envió antes */
   alreadySentAt?: string
   sentAt?: string
@@ -158,6 +160,7 @@ export type GrantedItem = {
   batchId: string
   docType: DocType
   docNumber: string
+  email?: string
   reference?: string
   points: number
   pointsUsed: number

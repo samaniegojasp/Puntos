@@ -25,3 +25,61 @@ export function downloadCsv(filename: string, headers: string[], rows: (string |
   a.click()
   URL.revokeObjectURL(url)
 }
+
+/** Parsea un texto CSV detectando separador (; o ,), quitando BOM y respetando comillas y saltos de línea. */
+export function parseCsv(text: string): string[][] {
+  let s = text
+  if (s.charCodeAt(0) === 0xfeff) s = s.slice(1)
+  const firstLine = s.split(/\r?\n/)[0] ?? ""
+  const semiCount = (firstLine.match(/;/g) || []).length
+  const commaCount = (firstLine.match(/,/g) || []).length
+  const sep = semiCount >= commaCount ? ";" : ","
+
+  const rows: string[][] = []
+  let currentRow: string[] = []
+  let currentField = ""
+  let inQuotes = false
+
+  for (let i = 0; i < s.length; i++) {
+    const char = s[i]
+    const next = s[i + 1]
+
+    if (inQuotes) {
+      if (char === '"') {
+        if (next === '"') {
+          currentField += '"'
+          i++
+        } else {
+          inQuotes = false
+        }
+      } else {
+        currentField += char
+      }
+    } else {
+      if (char === '"') {
+        inQuotes = true
+      } else if (char === sep) {
+        currentRow.push(currentField)
+        currentField = ""
+      } else if (char === "\r") {
+        if (next === "\n") i++
+        currentRow.push(currentField)
+        rows.push(currentRow)
+        currentRow = []
+        currentField = ""
+      } else if (char === "\n") {
+        currentRow.push(currentField)
+        rows.push(currentRow)
+        currentRow = []
+        currentField = ""
+      } else {
+        currentField += char
+      }
+    }
+  }
+  if (currentField.length > 0 || currentRow.length > 0) {
+    currentRow.push(currentField)
+    rows.push(currentRow)
+  }
+  return rows
+}

@@ -15,7 +15,9 @@ export async function downloadGrantTemplate(rowCount: number): Promise<void> {
 
   // Import dinámico para que no sobrecargue el bundle inicial de la página
   const ExcelJS = await import("exceljs")
-  const WorkbookClass = ExcelJS.Workbook ?? (ExcelJS as unknown as { default: { Workbook: typeof ExcelJS.Workbook } }).default?.Workbook
+  const WorkbookClass =
+    ExcelJS.Workbook ??
+    (ExcelJS as unknown as { default: { Workbook: typeof ExcelJS.Workbook } }).default?.Workbook
   const workbook = new WorkbookClass()
 
   // --------------------------------------------------------------------------
@@ -26,11 +28,11 @@ export async function downloadGrantTemplate(rowCount: number): Promise<void> {
   })
 
   wsReparto.columns = [
-    { header: "tipo_documento", key: "tipo_documento", width: 18 },
-    { header: "numero_documento", key: "numero_documento", width: 22 },
-    { header: "puntos", key: "puntos", width: 12 },
-    { header: "monto_venta", key: "monto_venta", width: 14 },
-    { header: "referencia", key: "referencia", width: 28 },
+    { header: "Tipo de documento", key: "tipo_documento", width: 20 },
+    { header: "Número de documento", key: "numero_documento", width: 22 },
+    { header: "Correo electrónico", key: "correo_electronico", width: 32 },
+    { header: "Valor de comisión ($)", key: "valor_comision", width: 22 },
+    { header: "Referencia", key: "referencia", width: 28 },
   ]
 
   // Fila de encabezados: negrita y fondo gris claro
@@ -70,25 +72,24 @@ export async function downloadGrantTemplate(rowCount: number): Promise<void> {
   })
 
   wsValidations.add(`C2:C${lastRow}`, {
-    type: "whole",
-    operator: "between",
-    formulae: [1, 10000000],
+    type: "custom",
     allowBlank: true,
+    formulae: ['AND(ISNUMBER(FIND("@",C2)),ISNUMBER(FIND(".",C2,FIND("@",C2))))'],
     showErrorMessage: true,
     errorStyle: "stop",
-    errorTitle: "Puntos inválidos",
-    error: "Escribe un número entero de puntos mayor que 0 (o deja la celda vacía y completa monto_venta).",
+    errorTitle: "Correo electrónico inválido",
+    error: "Escribe un correo electrónico válido (por ejemplo nombre@dominio.com).",
   })
 
   wsValidations.add(`D2:D${lastRow}`, {
     type: "decimal",
-    operator: "greaterThanOrEqual",
-    formulae: [0],
+    operator: "between",
+    formulae: [0.01, 100000],
     allowBlank: true,
     showErrorMessage: true,
     errorStyle: "stop",
-    errorTitle: "Monto de venta inválido",
-    error: "Escribe el monto en dólares (por ejemplo 250 o 250.50).",
+    errorTitle: "Comisión inválida",
+    error: "Escribe la comisión en dólares (por ejemplo 20 o 20.50). Máximo $100.000.",
   })
 
   wsValidations.add(`E2:E${lastRow}`, {
@@ -102,29 +103,13 @@ export async function downloadGrantTemplate(rowCount: number): Promise<void> {
     error: "La referencia no puede superar los 60 caracteres.",
   })
 
-  // Formato numérico y de texto en las filas de datos
+  // Formato numérico y de texto en las filas de datos (filas en blanco, sin ejemplos)
   for (let r = 2; r <= lastRow; r++) {
     const row = wsReparto.getRow(r)
     row.getCell(2).numFmt = "@"
+    row.getCell(3).numFmt = "@"
     row.getCell(4).numFmt = "0.00"
     row.getCell(5).numFmt = "@"
-  }
-
-  // Ejemplos en filas 2 y 3 (el segundo documento conserva su cero inicial como texto)
-  if (rowCount >= 1) {
-    const row2 = wsReparto.getRow(2)
-    row2.getCell(1).value = "Cédula"
-    row2.getCell(2).value = "1712345675"
-    row2.getCell(3).value = 2000
-    row2.getCell(5).value = "Factura 001-0451"
-  }
-
-  if (rowCount >= 2) {
-    const row3 = wsReparto.getRow(3)
-    row3.getCell(1).value = "Cédula"
-    row3.getCell(2).value = "0908765431"
-    row3.getCell(4).value = 250
-    row3.getCell(5).value = "Factura 001-0452"
   }
 
   // --------------------------------------------------------------------------
@@ -135,13 +120,15 @@ export async function downloadGrantTemplate(rowCount: number): Promise<void> {
 
   const instructions = [
     "1. Llena una persona por fila en la hoja Reparto. No cambies los encabezados ni el orden de las columnas.",
-    "2. tipo_documento: elige de la lista (Cédula, RUC o Pasaporte).",
-    "3. numero_documento: escríbelo tal cual, con ceros iniciales. Sin espacios ni guiones.",
-    "4. puntos: número entero mayor que 0. Si lo dejas vacío y completas monto_venta, calculamos los puntos con tu bono.",
-    "5. monto_venta y referencia son opcionales (ejemplo de referencia: Factura 001-0451).",
-    `6. Esta plantilla tiene ${rowCount} filas. El máximo por reparto es de 1.000 filas y 5 MB.`,
-    "7. Si pegas valores desde otro archivo, la lista desplegable puede perderse: la revisión de Regala volverá a validar cada fila.",
-    "8. Revisar el archivo no cambia nada. Los puntos solo se descuentan al confirmar el envío.",
+    "2. Tipo de documento: elige de la lista (Cédula, RUC o Pasaporte).",
+    "3. Número de documento: escríbelo tal cual, con ceros iniciales. Sin espacios ni guiones.",
+    "4. Correo electrónico: el de la persona a quien le entregas los puntos.",
+    "5. Valor de comisión ($): los dólares que quieres entregar a esa persona. La página los convierte a puntos; no necesitas calcularlos. Puedes usar la calculadora de Mi bono para saber cuánta comisión corresponde a una venta.",
+    "6. Referencia: opcional (ejemplo: Factura 001-0451).",
+    "7. Ejemplo: Cédula | 1712345675 | ana@ejemplo.com | 20.00 | Factura 001-0451",
+    `8. Esta plantilla tiene ${rowCount} filas. El máximo por reparto es de 1.000 filas y 5 MB.`,
+    "9. Si pegas valores desde otro archivo, la lista desplegable puede perderse: la revisión de Regala volverá a validar cada fila.",
+    "10. Revisar el archivo no cambia nada. Los puntos solo se descuentan al confirmar el envío.",
   ]
 
   instructions.forEach((text, i) => {
