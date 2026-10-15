@@ -29,7 +29,7 @@ import {
 } from "@/lib/mock/data"
 import { formatPct, formatPts } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { pointsPrice, productPriceCents, referenceCentsPerPoint, validatePricing } from "@/lib/domain/pricing"
+import { pointsPrice, productPoints, productPriceCents, referenceCentsPerPoint, validatePricing } from "@/lib/domain/pricing"
 import { rescaleForFactor } from "@/lib/domain/points-factor"
 import { adminConfigured, verifyAdmin } from "@/lib/admin-auth"
 import type { AdminSettings } from "@/lib/domain/types"
@@ -102,6 +102,8 @@ export default function AdminAjustesPage() {
   const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
   const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
   const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
+  const [redeemSurchargeInput, setRedeemSurchargeInput] = useState((((current.redeemSurchargePct ?? 0.03) * 100)).toString())
+  const [minPackHeadroomInput, setMinPackHeadroomInput] = useState((((current.minPackHeadroomPct ?? 0.3) * 100)).toString())
   const [cardDenomMinInput, setCardDenomMinInput] = useState(String(current.cardDenomMinUsd ?? 5))
   const [cardDenomMaxInput, setCardDenomMaxInput] = useState(String(current.cardDenomMaxUsd ?? 500))
   // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
@@ -126,6 +128,8 @@ export default function AdminAjustesPage() {
   const rawWindowDays = parseInt(exchangeWindowDaysInput, 10)
   const rawGrantDays = parseInt(pendingGrantDaysInput, 10)
   const rawBenefit = parseFloat(benefitInput.replace(",", "."))
+  const rawRedeemSurcharge = parseFloat(redeemSurchargeInput.replace(",", "."))
+  const rawMinPackHeadroom = parseFloat(minPackHeadroomInput.replace(",", "."))
   const rawCustomMin = parseInt(customMinInput, 10)
   const rawCustomMax = parseInt(customMaxInput, 10)
 
@@ -150,6 +154,14 @@ export default function AdminAjustesPage() {
 
   if (isNaN(rawBenefit) || rawBenefit < 0 || rawBenefit > 50) {
     errors.push("El beneficio mínimo del Cliente debe ser un porcentaje entre 0 y 50 %.")
+  }
+
+  if (isNaN(rawRedeemSurcharge) || rawRedeemSurcharge < 0) {
+    errors.push("El recargo al canjear debe ser un porcentaje mayor o igual a 0 %.")
+  }
+
+  if (isNaN(rawMinPackHeadroom) || rawMinPackHeadroom < 0) {
+    errors.push("La holgura del paquete más pequeño debe ser un porcentaje mayor o igual a 0 %.")
   }
 
   if (isNaN(rawGrantDays) || rawGrantDays < 1) {
@@ -222,6 +234,8 @@ export default function AdminAjustesPage() {
   const parsedExchangeFeeFraction = !isNaN(rawExchangeFee) ? Math.round(rawExchangeFee * 1000) / 100000 : 0.1
   const parsedWindowDays = !isNaN(rawWindowDays) ? Math.max(0, rawWindowDays) : 30
   const parsedGrantDays = !isNaN(rawGrantDays) ? Math.max(1, rawGrantDays) : 90
+  const parsedRedeemSurcharge = !isNaN(rawRedeemSurcharge) ? Math.round(rawRedeemSurcharge * 1000) / 100000 : 0.03
+  const parsedMinPackHeadroom = !isNaN(rawMinPackHeadroom) ? Math.round(rawMinPackHeadroom * 1000) / 100000 : 0.3
 
   const candidateSettings: AdminSettings = {
     ...current,
@@ -229,6 +243,8 @@ export default function AdminAjustesPage() {
     exchangeFeePct: parsedExchangeFeeFraction,
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
+    redeemSurchargePct: parsedRedeemSurcharge,
+    minPackHeadroomPct: parsedMinPackHeadroom,
     pointsMultiple: multiple,
     customMinUsd: !isNaN(rawCustomMin) ? rawCustomMin : 1,
     customMaxUsd: !isNaN(rawCustomMax) ? rawCustomMax : 500,
@@ -277,6 +293,8 @@ export default function AdminAjustesPage() {
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
     setBenefitInput(((MOCK_SETTINGS.clientBenefitPct ?? 0.01) * 100).toString())
+    setRedeemSurchargeInput((((MOCK_SETTINGS.redeemSurchargePct ?? 0.03) * 100)).toString())
+    setMinPackHeadroomInput((((MOCK_SETTINGS.minPackHeadroomPct ?? 0.3) * 100)).toString())
     setMultiple(MOCK_SETTINGS.pointsMultiple)
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
@@ -401,7 +419,7 @@ export default function AdminAjustesPage() {
           </div>
 
           <p className="text-sm text-muted-foreground">
-            Hoy: $10 = {formatPts(smallestPoints)} pts → con factor {isFactorValid ? parsedFactor : "N"}:{" "}
+            Hoy: ${smallestPublic.usdCents / 100} = {formatPts(smallestPoints)} pts → con factor {isFactorValid ? parsedFactor : "N"}:{" "}
             {previewPoints !== null ? formatPts(previewPoints) : "—"} pts
           </p>
 
@@ -588,6 +606,46 @@ export default function AdminAjustesPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Cada tramo de un Cliente debe dar al menos este % más de puntos por dólar que el Canjeador. Así quien recibe un bono ve que le rinde más (con 1 %, una tarjeta que cuesta 1.000 pts equivale a unos 990 pts del Cliente).
+                </p>
+              </div>
+
+              {/* Recargo al canjear */}
+              <div className="space-y-2">
+                <Label htmlFor="redeemSurcharge">Recargo al canjear (%)</Label>
+                <div className="relative">
+                  <Input
+                    id="redeemSurcharge"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={redeemSurchargeInput}
+                    onChange={(e) => setRedeemSurchargeInput(e.target.value)}
+                    required
+                  />
+                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Se suma al valor facial: con 3 %, una tarjeta de $10 cuesta 1.030 pts del Canjeador. Sugerido: entre 2 y 5 %.
+                </p>
+              </div>
+
+              {/* Holgura del paquete más pequeño */}
+              <div className="space-y-2">
+                <Label htmlFor="minPackHeadroom">Holgura del paquete más pequeño (%)</Label>
+                <div className="relative">
+                  <Input
+                    id="minPackHeadroom"
+                    type="number"
+                    step="1"
+                    min="0"
+                    value={minPackHeadroomInput}
+                    onChange={(e) => setMinPackHeadroomInput(e.target.value)}
+                    required
+                  />
+                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  El paquete más pequeño del Canjeador debe dar al menos este % más de puntos que la tarjeta más barata. Por defecto 30 %.
                 </p>
               </div>
 
@@ -781,10 +839,7 @@ export default function AdminAjustesPage() {
                   {products
                     .filter((p) => p.active)
                     .map((p) => {
-                      const prov = providers.find((x) => x.id === p.providerId)
-                      const pts = prov
-                        ? pointsPrice(productPriceCents(p, prov), referenceCentsPerPoint(publicPacks), multiple)
-                        : 0
+                      const pts = productPoints(p, { ...candidateSettings, pointsMultiple: multiple }, referenceCentsPerPoint(publicPacks))
                       return `${p.storeName} $${p.faceCents / 100} → ${new Intl.NumberFormat("es-EC").format(pts)} pts`
                     })
                     .join(" · ")}

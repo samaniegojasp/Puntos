@@ -13,6 +13,7 @@ import {
   MOCK_SETTINGS,
   MOCK_STANDARD_PACKS,
 } from "@/lib/mock/data"
+import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import type { AdminSettings, ClientAdminRow, PointsPack, Product, Provider } from "@/lib/domain/types"
 
 type Ctx = {
@@ -83,9 +84,10 @@ export function usePublicOffer() {
   }
 }
 
-/** Factor de conversión de dólares a puntos (entero ≥ 1). Por defecto 1. */
-export function usePointsFactor() {
-  const { settings } = useAdminSettings()
-  return settings.pointsFactor ?? 1
+/** Puntos que cuesta una tarjeta en la tienda: valor facial + recargo, al punto del paquete más pequeño del Canjeador. */
+export function useCardPoints() {
+  const { publicPacks, settings } = useAdminSettings()
+  const ref = referenceCentsPerPoint(publicPacks)
+  return (usd: number) => productPoints({ faceCents: Math.round(usd * 100) }, settings, ref)
 }
 

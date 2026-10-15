@@ -36,7 +36,9 @@ import {
   marginAtPack,
   pointsPrice,
   productCostCents,
+  productPoints,
   productPriceCents,
+  productTotalCostCents,
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
@@ -332,7 +334,7 @@ export default function AdminProveedoresPage() {
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">
-                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial. Los límites salen de las reglas: abajo, que el precio no supere el valor facial; arriba, el margen mínimo.
+                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial. Los límites salen de las reglas: el margen mínimo en cada tabla de paquetes.
                 </p>
               </div>
 
@@ -407,9 +409,10 @@ export default function AdminProveedoresPage() {
                     <TableBody>
                       {providerProducts.map((prod) => {
                         const cost = productCostCents(prod, candidateProvider)
-                        const price = productPriceCents(prod, candidateProvider)
-                        const pts = pointsPrice(price, refCents, settings.pointsMultiple)
-                        const margin = marginAtPack(pts, std10Pack, cost)
+                        const totalCost = productTotalCostCents(prod, candidateProvider)
+                        const price = productPriceCents(prod, settings)
+                        const pts = productPoints(prod, settings, refCents)
+                        const margin = marginAtPack(pts, std10Pack, totalCost)
                         const isMarginLow = margin.marginPct < settings.minMarginPct
 
                         return (

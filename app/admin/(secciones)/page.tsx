@@ -14,10 +14,10 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { GiftCardFace } from "@/components/gift-card"
 import { cn } from "@/lib/utils"
-import { THEMES, formatPoints, pointsFor, type Store, type ThemeKey } from "@/lib/catalog"
+import { THEMES, formatPoints, type Store, type ThemeKey } from "@/lib/catalog"
 import { isActive, isValidImage, useCatalog } from "@/lib/catalog-store"
 import { adminConfigured, endAdminSession, hasAdminSession, verifyAdmin } from "@/lib/admin-auth"
-import { useAdminSettings, usePointsFactor } from "@/lib/mock/admin-settings"
+import { useAdminSettings, useCardPoints } from "@/lib/mock/admin-settings"
 
 type Draft = {
   id: string | null // null = tienda nueva
@@ -211,7 +211,7 @@ function LoginForm({ onSuccess }: { onSuccess: () => void }) {
 function Panel({ onLogout }: { onLogout: () => void }) {
   const { allStores, customized, saveStore, removeStore, resetCatalog } = useCatalog()
   const { settings } = useAdminSettings()
-  const factor = usePointsFactor()
+  const cardPoints = useCardPoints()
   const min = settings.cardDenomMinUsd ?? 5
   const max = settings.cardDenomMaxUsd ?? 500
 
@@ -373,7 +373,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                   {!isActive(s) && <Badge variant="outline">Oculta</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{s.category}</p>
-                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}</p>
+                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(cardPoints(d))} pts`).join(" · ")}</p>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" onClick={() => edit(s)} aria-label={`Editar ${s.name}`}>
@@ -548,7 +548,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                 </Button>
                 {preview.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {preview.map((d) => `$${d} = ${formatPoints(pointsFor(d, factor))} pts`).join(" · ")}
+                    {preview.map((d) => `$${d} = ${formatPoints(cardPoints(d))} pts`).join(" · ")}
                   </p>
                 )}
               </div>

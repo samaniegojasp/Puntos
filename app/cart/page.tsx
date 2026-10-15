@@ -7,14 +7,14 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { GiftCardFace } from "@/components/gift-card"
-import { formatPoints, pointsFor, usdForPoints } from "@/lib/catalog"
-import { usePointsFactor, usePublicOffer } from "@/lib/mock/admin-settings"
+import { formatPoints, usdForPoints } from "@/lib/catalog"
+import { useCardPoints, usePublicOffer } from "@/lib/mock/admin-settings"
 import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
   const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
-  const factor = usePointsFactor()
+  const cardPoints = useCardPoints()
   const { custom } = usePublicOffer()
   const { findStore } = useCatalog()
 
@@ -59,7 +59,7 @@ export default function CartPage() {
             {cart.map((item) => {
               const store = findStore(item.storeId)
               if (!store) return null
-              const unitPoints = pointsFor(item.usd, factor)
+              const unitPoints = cardPoints(item.usd)
               const itemTotalPoints = unitPoints * item.qty
 
               return (

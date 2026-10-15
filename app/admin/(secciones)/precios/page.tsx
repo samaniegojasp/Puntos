@@ -56,7 +56,9 @@ import {
   marginAtPack,
   pointsPrice,
   productCostCents,
+  productPoints,
   productPriceCents,
+  productTotalCostCents,
   referenceCentsPerPoint,
   validatePricing,
 } from "@/lib/domain/pricing"
@@ -84,7 +86,6 @@ export default function AdminPreciosPage() {
   // Modal para editar producto
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
-  const [marginPctInput, setMarginPctInput] = useState("15")
   const [costOverrideInput, setCostOverrideInput] = useState("")
   // Caducidad propia de la tarjeta (días); vacío = usa la del Proveedor
   const [cardDaysInput, setCardDaysInput] = useState("")
@@ -119,13 +120,12 @@ export default function AdminPreciosPage() {
   const handleToggleErrorCase = () => {
     const f = settings.pointsFactor ?? 1
     if (!isErrorCaseActive) {
-      // Subir puntos del primer paquete público a 1.300 * f (más puntos por dólar que el Cliente) para romper la regla 2
       setPublicPacks((prev) => [
-        { ...prev[0], points: Math.round(1300 * f) },
+        { ...prev[0], points: Math.round((prev[0].usdCents / 100) * 130 * f) },
         ...prev.slice(1),
       ])
       setIsErrorCaseActive(true)
-      toast.info("Caso de error activado: Canjeador paga menos que Cliente a $10")
+      toast.info("Caso de error activado: el paquete más pequeño del Canjeador da más puntos por dólar que los Clientes")
     } else {
       const rescaled = rescaleForFactor(
         { settings, publicPacks: MOCK_PUBLIC_PACKS, standardPacks, clients },
@@ -141,7 +141,6 @@ export default function AdminPreciosPage() {
   // Modal de edición de producto
   const handleOpenEditProduct = (prod: Product) => {
     setEditingProduct(prod)
-    setMarginPctInput((prod.marginPct * 100).toString())
     setCostOverrideInput(
       prod.costCentsOverride != null ? (prod.costCentsOverride / 100).toString() : ""
     )
@@ -149,7 +148,6 @@ export default function AdminPreciosPage() {
     setDialogOpen(true)
   }
 
-  const parsedMarginPct = (parseFloat(marginPctInput.replace(",", ".")) || 0) / 100
   const parsedCostOverride = costOverrideInput.trim()
     ? Math.round((parseFloat(costOverrideInput.replace(",", ".")) || 0) * 100)
     : undefined
@@ -159,10 +157,9 @@ export default function AdminPreciosPage() {
   const candidateProduct: Product = editingProduct
     ? {
         ...editingProduct,
-        marginPct: parsedMarginPct,
         costCentsOverride: parsedCostOverride,
         cardValidDays: parsedCardDays,
-        // Se valida como si estuviera activo: un producto oculto hoy podría activarse mañana con un margen absurdo
+        // Se valida como si estuviera activo: un producto oculto hoy podría activarse mañana
         active: true,
       }
     : products[0]
@@ -182,53 +179,16 @@ export default function AdminPreciosPage() {
 
   const dialogErrors = dialogIssues.filter((i) => i.severity === "error")
   const dialogWarnings = dialogIssues.filter((i) => i.severity === "warning")
-  const canSaveProduct = dialogErrors.length === 0 && parsedMarginPct >= 0
+  const canSaveProduct = dialogErrors.length === 0
 
-  // Márgenes válidos para este producto, calculados con las mismas reglas (sin fórmulas propias).
-  // Se prueba cada valor (de 0,1 en 0,1 %) porque el redondeo de los puntos a múltiplos de 100 hace que el resultado
-  // no sea parejo: puede haber valores sueltos inválidos dentro del rango. La barra solo recorre los válidos.
-  const MARGIN_UNIT = 1000 // décimas de punto porcentual (0,1 %)
-  const MARGIN_CAP_UNITS = 2000 // hasta 200 %
-  const editingId = editingProduct?.id
-  const validMargins = useMemo(() => {
-    if (!editingProduct) return null
-    const face = `$${(editingProduct.faceCents / 100).toFixed(2)}`
-    const tag = `${editingProduct.storeName} ${face}`
-    const list: number[] = []
-    for (let u = 0; u <= MARGIN_CAP_UNITS; u++) {
-      const errs = validatePricing({
-        settings,
-        providers,
-        products: products.map((p) =>
-          p.id === editingProduct.id
-            ? { ...editingProduct, marginPct: u / MARGIN_UNIT, costCentsOverride: parsedCostOverride, active: true }
-            : p,
-        ),
-        standardPacks,
-        publicPacks,
-        clients,
-      }).filter((i) => i.severity === "error" && i.message.includes(tag))
-      if (errs.length === 0) list.push(u)
-    }
-    return list.length ? list : null
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId, products, providers, clients, settings, standardPacks, publicPacks, parsedCostOverride])
-
-  const marginUnit = Math.round(parsedMarginPct * MARGIN_UNIT)
-  const marginIndex = validMargins
-    ? validMargins.reduce((best, u, i) => (Math.abs(u - marginUnit) < Math.abs(validMargins[best] - marginUnit) ? i : best), 0)
-    : 0
-  const marginIsValid = validMargins ? validMargins.includes(marginUnit) : false
-  const marginHasGaps = validMargins ? validMargins[validMargins.length - 1] - validMargins[0] + 1 !== validMargins.length : false
-
-  // Vista previa de lo que produce el margen que se está editando (y lo que hay guardado hoy)
+  // Vista previa de lo que producen los cambios (y lo que hay guardado hoy)
   const preview = editingProduct
     ? (() => {
         const provider = providerOf(editingProduct.providerId)
         const calc = (prod: Product) => {
-          const cost = productCostCents(prod, provider)
-          const price = productPriceCents(prod, provider)
-          const pts = pointsPrice(price, refCents, settings.pointsMultiple)
+          const cost = productTotalCostCents(prod, provider)
+          const price = productPriceCents(prod, settings)
+          const pts = productPoints(prod, settings, refCents)
           return {
             cost,
             price,
@@ -344,7 +304,7 @@ export default function AdminPreciosPage() {
             <CardTitle className="text-lg">Reglas del sistema de precios</CardTitle>
           </div>
           <CardDescription>
-            Auditoría en tiempo real de márgenes mínimos, consistencia de tramos y piso de tarjetas
+            Auditoría en tiempo real de márgenes mínimos, consistencia de tramos y holgura del paquete más pequeño
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -395,8 +355,7 @@ export default function AdminPreciosPage() {
                   <TableHead className="text-right">Facial</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Transp.</TableHead>
-                  <TableHead className="text-right">Margen %</TableHead>
-                  <TableHead className="text-right">Precio USD</TableHead>
+                  <TableHead className="text-right">Precio al Canjeador</TableHead>
                   <TableHead className="text-right">Puntos</TableHead>
                   <TableHead className="text-center" colSpan={3}>
                     Margen tramos estándar ($10 / $50 / $100)
@@ -408,13 +367,14 @@ export default function AdminPreciosPage() {
                 {products.map((prod) => {
                   const provider = providerOf(prod.providerId)
                   const cost = productCostCents(prod, provider)
-                  const price = productPriceCents(prod, provider)
-                  const pts = pointsPrice(price, refCents, settings.pointsMultiple)
+                  const totalCost = productTotalCostCents(prod, provider)
+                  const price = productPriceCents(prod, settings)
+                  const pts = productPoints(prod, settings, refCents)
 
                   // Margen en cada tramo estándar (10, 50, 100)
-                  const m10 = marginAtPack(pts, standardPacks[0], cost)
-                  const m50 = marginAtPack(pts, standardPacks[1], cost)
-                  const m100 = marginAtPack(pts, standardPacks[2], cost)
+                  const m10 = marginAtPack(pts, standardPacks[0], totalCost)
+                  const m50 = marginAtPack(pts, standardPacks[1], totalCost)
+                  const m100 = marginAtPack(pts, standardPacks[2], totalCost)
 
                   return (
                     <TableRow key={prod.id}>
@@ -436,9 +396,6 @@ export default function AdminPreciosPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs text-muted-foreground">
                         {formatUsd(prod.shippingCents)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-xs">
-                        {formatPct(prod.marginPct)}
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs font-bold text-foreground">
                         {formatUsd(price)}
@@ -630,83 +587,11 @@ export default function AdminPreciosPage() {
           <DialogHeader>
             <DialogTitle>Editar producto: {editingProduct?.storeName}</DialogTitle>
             <DialogDescription>
-              Ajusta el margen comercial y opcionalmente sobreescribe el costo directo.
+              Sobreescribe el costo directo o ajusta la caducidad de esta tarjeta.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSaveProduct} className="space-y-4 pt-2">
-            <div className="space-y-2">
-              <div className="flex items-baseline justify-between">
-                <Label htmlFor="marginPct">Margen comercial</Label>
-                <EditableNumber
-                  label="Margen comercial"
-                  display={new Intl.NumberFormat("es-EC", { maximumFractionDigits: 2 }).format(parsedMarginPct * 100)}
-                  initial={String(Math.round(parsedMarginPct * 10000) / 100)}
-                  suffix="%"
-                  decimals
-                  allowZero
-                  onCommit={(v) => setMarginPctInput(String(Math.round(v * 100) / 100))}
-                />
-              </div>
-              {validMargins ? (
-                <>
-                  <Slider
-                    id="marginPct"
-                    min={0}
-                    max={Math.max(validMargins.length - 1, 0)}
-                    step={1}
-                    value={[marginIndex]}
-                    onValueChange={(v) => setMarginPctInput(String(validMargins[v[0]] / 10))}
-                    aria-label="Margen comercial"
-                  />
-                  <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Mínimo {new Intl.NumberFormat("es-EC").format(validMargins[0] / 10)} %</span>
-                    <span>Máximo {new Intl.NumberFormat("es-EC").format(validMargins[validMargins.length - 1] / 10)} %</span>
-                  </div>
-                  {!marginIsValid && (
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="text-[11px] text-destructive">
-                        El valor actual no cumple las reglas. Mueve la barra o usa el válido más cercano.
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setMarginPctInput(String(validMargins[marginIndex] / 10))}
-                      >
-                        Usar {new Intl.NumberFormat("es-EC").format(validMargins[marginIndex] / 10)} %
-                      </Button>
-                    </div>
-                  )}
-                  {marginHasGaps && (
-                    <p className="text-[11px] text-muted-foreground">
-                      La barra salta algunos valores del medio que, por el redondeo de puntos, romperían una regla.
-                    </p>
-                  )}
-                </>
-              ) : (
-                <div className="space-y-2 rounded-md border border-destructive/30 bg-destructive/5 p-3">
-                  <p className="text-xs font-medium text-destructive">
-                    Con este costo no existe ningún margen que cumpla las reglas, así que la barra no se puede mostrar.
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Suele pasar cuando el costo queda muy cerca del valor facial: para ganar el margen mínimo en los paquetes grandes harían falta más puntos de los que el precio permite sin superar el valor facial.
-                    {parsedCostOverride !== undefined
-                      ? " Prueba quitando el costo directo o bajándolo."
-                      : " Revisa el descuento del Proveedor en la pestaña Proveedores."}
-                  </p>
-                  {parsedCostOverride !== undefined && (
-                    <Button type="button" size="sm" variant="outline" onClick={() => setCostOverrideInput("")}>
-                      Quitar costo directo
-                    </Button>
-                  )}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Los límites salen de las reglas: abajo, el margen mínimo en cada tramo; arriba, que el paquete de ese valor siga alcanzando para la tarjeta y que el precio no supere el valor facial.
-              </p>
-            </div>
-
             <div className="space-y-2">
               <Label htmlFor="costOverride">
                 Costo directo en USD (opcional, anula descuento de proveedor)
@@ -769,13 +654,13 @@ export default function AdminPreciosPage() {
             {preview && (
               <div className="space-y-2 rounded-lg border bg-muted/30 p-3 text-sm">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Vista previa con este margen
+                  Vista previa con estos cambios
                 </p>
                 <div className="grid grid-cols-[auto_1fr_1fr] gap-x-4 gap-y-1 text-xs">
                   <span />
                   <span className="text-muted-foreground">Guardado hoy</span>
-                  <span className="text-muted-foreground">Con este margen</span>
-                  <span className="text-muted-foreground">Precio</span>
+                  <span className="text-muted-foreground">Con estos cambios</span>
+                  <span className="text-muted-foreground">Precio al Canjeador</span>
                   <span className="font-mono">{formatUsd(preview.now.price)}</span>
                   <span className="font-mono font-semibold">{formatUsd(preview.next.price)}</span>
                   <span className="text-muted-foreground">Puntos de la tarjeta</span>
@@ -806,7 +691,7 @@ export default function AdminPreciosPage() {
                 </div>
                 {preview.next.pts === preview.now.pts && (
                   <p className="text-[11px] text-muted-foreground">
-                    Los puntos no cambian: se redondean hacia arriba a múltiplos de {settings.pointsMultiple} y este margen no cruza al siguiente escalón.
+                    Los puntos no cambian: se redondean hacia arriba a múltiplos de {settings.pointsMultiple}.
                   </p>
                 )}
               </div>

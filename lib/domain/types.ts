@@ -230,8 +230,6 @@ export type Product = {
   /** Si existe, reemplaza face × (1 − descuento) */
   costCentsOverride?: number
   shippingCents: number
-  /** 0.15 = 15 % sobre el costo */
-  marginPct: number
   active: boolean
   /** Caducidad propia de esta tarjeta (días). Si no existe, se usa la del Proveedor. */
   cardValidDays?: number
@@ -251,6 +249,10 @@ export type AdminSettings = {
   pointsMultiple: number
   /** Multiplica la conversión USD → puntos (entero ≥ 1). Por defecto 1. */
   pointsFactor?: number
+  /** Recargo sobre el valor facial al canjear (0.03 = 3 %). Por defecto 3 %. */
+  redeemSurchargePct?: number
+  /** El paquete más pequeño del Canjeador debe dar al menos este % más de puntos que la tarjeta activa más barata (0.3 = 30 %). */
+  minPackHeadroomPct?: number
   /** Límites opcionales del precio por punto (USD) de un cliente. Solo pueden estrechar lo que ya imponen las reglas 2 y 3. */
   pricePerPointMin?: number
   pricePerPointMax?: number

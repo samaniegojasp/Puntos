@@ -25,7 +25,7 @@ Código clave:
 
 ## Decisiones de negocio vigentes
 - **Confidencialidad (regla 13):** solo "Nosotros" ve precio por punto, márgenes y costos del proveedor. Canjeador, Cliente y Proveedor ven "USD → puntos".
-- **Modelo de precios (oct 2026):** el punto de referencia es el del Canjeador (paquete de $10 = 1.000 pts); una tarjeta de $10 cuesta 1.000 pts. Los Clientes compran más barato (beneficio mínimo 1 %). Reglas: 1 piso (también en paquetes del Canjeador), 2 Canjeador paga más por punto que cualquier Cliente, 3 margen mínimo, 4 precio ≤ valor facial (error), 5 múltiplo de puntos (10/50/100), 6 límites opcionales de precio por punto, 7 beneficio mínimo del Cliente, 8 compra a tu medida no más barata que el paquete más pequeño.
+- **Modelo de precios (oct 2026):** el punto de referencia es el del paquete más pequeño del Canjeador ($15 = 1.500 pts). Precio en puntos de una tarjeta = valor facial × (1 + recargo) (recargo global en Ajustes, 3 % por defecto; $10 → 1.030 pts). Los Clientes compran más barato (beneficio mínimo 1 %). Reglas: 1 el paquete más pequeño del Canjeador da ≥ 30 % (editable) más puntos que la tarjeta más barata, 2 el Canjeador paga más por punto que cualquier Cliente, 3 margen mínimo (también con paquetes del Canjeador; costo + transporte), 4 recargo ≥ 0, 5 múltiplo de puntos (10/50/100, por defecto 10), 6 límites opcionales de precio por punto, 7 beneficio mínimo del Cliente, 8 compra a tu medida no más barata que el paquete más pequeño.
 - El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño. El bono (%) lo edita el Cliente; el precio del punto lo fija Nosotros.
 - Reparto por Excel: todo o nada, irreversible, idempotente, sin enumeración de documentos al revisar. El Cliente SÍ ve usados/disponibles por documento en "Lo repartido" (decisión del dueño).
 - Edad: siempre "declaración", nunca "verificamos".
@@ -35,4 +35,3 @@ Código clave:
 2. Pasarela de pago: Payphone primero (Deuna como segunda opción); correo transaccional: servicio por definir, dominio propio antes de producción.
 3. Pregunta abierta de negocio: con tramos de precios distintos, ¿qué precio convierte el bono en puntos?
 4. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
-5. Tienda pública: el precio de las tarjetas en puntos aún usa 100 pts por dólar fijos (no el cálculo del panel); lo resuelve el backend.

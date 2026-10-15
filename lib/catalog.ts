@@ -1,6 +1,6 @@
 // Catálogo de gift cards y paquetes de Puntos. Fuente única de verdad.
 
-/** Puntos que cuesta cada $1 de valor facial. Coherente con el paquete del Canjeador: $10 compran 1 000 pts y la tarjeta de $10 cuesta 1 000 pts. */
+/** Solo referencia histórica; los puntos de una tarjeta salen de useCardPoints() */
 export const POINTS_PER_USD = 100
 export const WELCOME_POINTS = 500
 
@@ -45,7 +45,7 @@ export const DEFAULT_STORES: Store[] = [
 
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }
 
-export const pointsFor = (usd: number, factor = 1) => usd * POINTS_PER_USD * factor
+export const pointsFor = (usd: number) => usd * POINTS_PER_USD
 
 /** Dólares enteros necesarios para cubrir `missingPoints` con la compra a tu medida (se redondea hacia arriba y se acota al rango permitido). */
 export const usdForPoints = (missingPoints: number, custom = { minUsd: 1, maxUsd: 500, pointsPerUsd: 100 }) =>

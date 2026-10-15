@@ -135,7 +135,7 @@ export const MOCK_STANDARD_PACKS: PointsPack[] = [
 
 /** Paquetes que ve un Canjeador (cada punto cuesta más que al Cliente). */
 export const MOCK_PUBLIC_PACKS: PointsPack[] = [
-  { id: "pub-10", usdCents: c(10), points: 1000 },
+  { id: "pub-15", usdCents: c(15), points: 1500 },
   { id: "pub-25", usdCents: c(25), points: 2500, badge: "Popular" },
   { id: "pub-50", usdCents: c(50), points: 5100, badge: "Mejor valor" },
 ]
@@ -228,19 +228,19 @@ export const MOCK_PROVIDERS: Provider[] = [
   { id: "p-deprati", name: "De Prati", discountPct: 0.07, cardValidDays: 240, active: false },
 ]
 
-const prod = (id: string, storeId: string, storeName: string, providerId: string, face: number, margin = 0.15, active = true): Product => ({
-  id, storeId, storeName, providerId, faceCents: c(face), shippingCents: 0, marginPct: margin, active,
+const prod = (id: string, storeId: string, storeName: string, providerId: string, face: number, active = true): Product => ({
+  id, storeId, storeName, providerId, faceCents: c(face), shippingCents: 0, active,
 })
 
 export const MOCK_PRODUCTS: Product[] = [
-  prod("pr-1", "supermaxi", "Supermaxi", "p-supermaxi", 10, 0.08),
-  prod("pr-2", "supermaxi", "Supermaxi", "p-supermaxi", 25, 0.08),
-  prod("pr-3", "fybeca", "Fybeca", "p-fybeca", 10, 0.12),
-  prod("pr-4", "fybeca", "Fybeca", "p-fybeca", 30, 0.12),
-  prod("pr-5", "marathon", "Marathon Sports", "p-marathon", 50, 0.10),
-  prod("pr-6", "kywi", "Kywi", "p-kywi", 20, 0.09),
-  prod("pr-7", "jugueton", "Juguetón", "p-jugueton", 15, 0.05),
-  prod("pr-8", "deprati", "De Prati", "p-deprati", 25, 0.07, false),
+  prod("pr-1", "supermaxi", "Supermaxi", "p-supermaxi", 10),
+  prod("pr-2", "supermaxi", "Supermaxi", "p-supermaxi", 25),
+  prod("pr-3", "fybeca", "Fybeca", "p-fybeca", 10),
+  prod("pr-4", "fybeca", "Fybeca", "p-fybeca", 30),
+  prod("pr-5", "marathon", "Marathon Sports", "p-marathon", 50),
+  prod("pr-6", "kywi", "Kywi", "p-kywi", 20),
+  prod("pr-7", "jugueton", "Juguetón", "p-jugueton", 15),
+  prod("pr-8", "deprati", "De Prati", "p-deprati", 25, false),
 ]
 
 export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
@@ -250,7 +250,7 @@ export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
 ]
 
 export const MOCK_SETTINGS: AdminSettings = {
-  minMarginPct: 0.02, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 100, pointsFactor: 1, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100, cardDenomMinUsd: 5, cardDenomMaxUsd: 500,
+  minMarginPct: 0.02, exchangeFeePct: 0.1, exchangeWindowDays: 30, pendingGrantDays: 90, pointsMultiple: 10, pointsFactor: 1, redeemSurchargePct: 0.03, minPackHeadroomPct: 0.3, clientBenefitPct: 0.01, customMinUsd: 1, customMaxUsd: 500, customPointsPerUsd: 100, cardDenomMinUsd: 5, cardDenomMaxUsd: 500,
 }
 
 export const MOCK_USERS: UserRow[] = [

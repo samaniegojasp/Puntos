@@ -16,9 +16,8 @@ import type {
 export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 
 /**
- * Precio de referencia del punto: el del paquete más pequeño que compra el Canjeador por su cuenta (el de $10).
- * Con él se expresan las tarjetas en puntos, de modo que lo que cuesta una tarjeta nunca supere
- * lo que el Canjeador compra con el paquete del mismo valor (p. ej. tarjeta de $10 ≤ 1 000 pts si $10 = 1 000 pts).
+ * Precio de referencia del punto: precio del punto del paquete más pequeño del Canjeador;
+ * las tarjetas cuestan valor facial + recargo a ese precio.
  */
 export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
   centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
@@ -27,14 +26,20 @@ export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
 export const productCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
   p.costCentsOverride ?? Math.round(p.faceCents * (1 - provider.discountPct))
 
-/** Precio en dólares: costo + transporte + costo × margen. */
-export function productPriceCents(p: Product, provider: Pick<Provider, "discountPct">) {
-  const cost = productCostCents(p, provider)
-  return cost + p.shippingCents + Math.round(cost * p.marginPct)
-}
+/** Precio en dólares que paga el Canjeador por la tarjeta: valor facial + recargo. */
+export const productPriceCents = (p: Pick<Product, "faceCents">, settings: Pick<AdminSettings, "redeemSurchargePct">) =>
+  Math.round(p.faceCents * (1 + (settings.redeemSurchargePct ?? 0.03)))
 
-/** Puntos de la tarjeta: se redondea y luego se sube al siguiente múltiplo (100). */
-export const pointsPrice = (priceCents: number, refCentsPerPoint: number, multiple = 100) =>
+/** Costo total de la tarjeta para Regala: lo que se paga al Proveedor + transporte. */
+export const productTotalCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
+  productCostCents(p, provider) + p.shippingCents
+
+/** Puntos de la tarjeta al punto de referencia (paquete más pequeño del Canjeador). */
+export const productPoints = (p: Pick<Product, "faceCents">, settings: Pick<AdminSettings, "redeemSurchargePct" | "pointsMultiple">, refCentsPerPoint: number) =>
+  pointsPrice(productPriceCents(p, settings), refCentsPerPoint, settings.pointsMultiple)
+
+/** Puntos de la tarjeta: se redondea y luego se sube al siguiente múltiplo. */
+export const pointsPrice = (priceCents: number, refCentsPerPoint: number, multiple = 10) =>
   Math.ceil(Math.round(priceCents / refCentsPerPoint) / multiple) * multiple
 
 /** Ingreso y margen que deja una tarjeta pagada con puntos comprados en cierto paquete. */
@@ -75,25 +80,24 @@ export function validatePricing({ settings, providers, products, standardPacks, 
   const active = products.filter((p) => p.active)
   const money = (c: number) => `$${(c / 100).toFixed(2)}`
 
-  // Regla 5: las tarjetas valen múltiplos de 100 puntos (lo garantiza `pointsPrice`). Los paquetes no tienen esa restricción.
+  // Regla 5: las tarjetas valen múltiplos de puntos (lo garantiza pointsPrice). Los paquetes no tienen esa restricción.
   for (const prod of active) {
-    const pts = pointsPrice(productPriceCents(prod, providerOf(prod.providerId)), ref, settings.pointsMultiple)
+    const pts = productPoints(prod, settings, ref)
     if (pts % settings.pointsMultiple !== 0) {
       issues.push({ rule: 5, severity: "error", message: `${prod.storeName} ${money(prod.faceCents)}: los puntos (${pts}) deben ser múltiplo de ${settings.pointsMultiple}.` })
     }
   }
 
-  // Regla 1: piso. Un paquete debe alcanzar para cualquier tarjeta cuyo valor facial no lo supere.
-  // Vale para los paquetes estándar y también para los del Canjeador: si compra $10 en puntos, la tarjeta de $10 le debe alcanzar.
-  for (const [who, packs] of [["", standardPacks], ["del Canjeador ", publicPacks]] as const) {
-    for (const pack of packs) {
-      for (const prod of active) {
-        if (prod.faceCents > pack.usdCents) continue
-        const pts = pointsPrice(productPriceCents(prod, providerOf(prod.providerId)), ref, settings.pointsMultiple)
-        if (pack.points < pts) {
-          issues.push({ rule: 1, severity: "error", message: `El paquete ${who}de ${money(pack.usdCents)} (${pack.points} pts) no alcanza para ${prod.storeName} ${money(prod.faceCents)} (${pts} pts).` })
-        }
-      }
+  // Regla 1: el paquete más pequeño del Canjeador alcanza para la tarjeta activa más barata con holgura (30 % por defecto).
+  const headroom = settings.minPackHeadroomPct ?? 0.3
+  const smallestPack = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
+  const cheapest = active
+    .map((prod) => ({ prod, pts: productPoints(prod, settings, ref) }))
+    .sort((a, b) => a.pts - b.pts)[0]
+  if (smallestPack && cheapest) {
+    const need = Math.ceil(cheapest.pts * (1 + headroom))
+    if (smallestPack.points < need) {
+      issues.push({ rule: 1, severity: "error", message: `El paquete más pequeño del Canjeador (${money(smallestPack.usdCents)}, ${smallestPack.points} pts) debe dar al menos ${(headroom * 100).toFixed(1)} % más que la tarjeta más barata (${cheapest.prod.storeName} ${money(cheapest.prod.faceCents)}, ${cheapest.pts} pts): mínimo ${need} pts.` })
     }
   }
 
@@ -110,11 +114,12 @@ export function validatePricing({ settings, providers, products, standardPacks, 
   }
 
   // Regla 3: margen mínimo en cada tramo de cada tabla.
+  const allTables = [{ who: "Canjeador", packs: publicPacks }, ...tables]
   for (const prod of active) {
     const provider = providerOf(prod.providerId)
-    const cost = productCostCents(prod, provider)
-    const pts = pointsPrice(productPriceCents(prod, provider), ref, settings.pointsMultiple)
-    for (const t of tables) {
+    const cost = productTotalCostCents(prod, provider)
+    const pts = productPoints(prod, settings, ref)
+    for (const t of allTables) {
       for (const pack of t.packs) {
         const m = marginAtPack(pts, pack, cost)
         if (m.marginPct < settings.minMarginPct) {
@@ -124,12 +129,9 @@ export function validatePricing({ settings, providers, products, standardPacks, 
     }
   }
 
-  // Regla 4: el precio en dólares de una tarjeta nunca puede superar su valor facial.
-  for (const prod of active) {
-    const price = productPriceCents(prod, providerOf(prod.providerId))
-    if (price > prod.faceCents) {
-      issues.push({ rule: 4, severity: "error", message: `${prod.storeName} ${money(prod.faceCents)}: el precio (${money(price)}) supera el valor facial.` })
-    }
+  // Regla 4: el recargo al canjear no puede ser negativo.
+  if ((settings.redeemSurchargePct ?? 0.03) < 0) {
+    issues.push({ rule: 4, severity: "error", message: "El recargo al canjear no puede ser negativo." })
   }
   // Regla 7: beneficio mínimo del Cliente. Cada tramo de cada tabla de Cliente debe dar al menos `clientBenefitPct`
   // más puntos por dólar que el punto de referencia (el del Canjeador). Así quien recibe un bono ve que le rinde más.
