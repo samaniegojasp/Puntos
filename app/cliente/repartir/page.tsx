@@ -49,7 +49,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_BATCHES, MOCK_CLIENT } from "@/lib/mock/data"
+import { MOCK_BATCHES, MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatDate, formatPct, formatPts } from "@/lib/domain/format"
 import { DOC_TYPE_LABEL, type GrantBatch } from "@/lib/domain/types"
 import { downloadCsv } from "@/lib/domain/csv"
@@ -64,6 +65,8 @@ const SCENARIO_LABELS: Record<ScenarioKey, string> = {
 }
 
 export default function ClienteRepartirPage() {
+  const { clients } = useAdminSettings()
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
   // Estado de subida y simulación
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [selectedScenario, setSelectedScenario] = useState<ScenarioKey>("ok")
@@ -275,7 +278,7 @@ export default function ClienteRepartirPage() {
               <strong>Tipos de documento válidos:</strong> Cédula (<code className="text-foreground">cedula</code>), RUC (<code className="text-foreground">ruc</code>) o Pasaporte (<code className="text-foreground">pasaporte</code>).
             </p>
             <p>
-              Los campos <code className="text-foreground">monto_venta</code> y <code className="text-foreground">referencia</code> son opcionales. Si dejas <code className="text-foreground">puntos</code> vacío y pones <code className="text-foreground">monto_venta</code>, calculamos los puntos con tu bono ({formatPct(MOCK_CLIENT.bonusPct)}).
+              Los campos <code className="text-foreground">monto_venta</code> y <code className="text-foreground">referencia</code> son opcionales. Si dejas <code className="text-foreground">puntos</code> vacío y pones <code className="text-foreground">monto_venta</code>, calculamos los puntos con tu bono ({formatPct(client.bonusPct)}).
             </p>
             <p className="text-xs italic text-muted-foreground">
               Nota: En la versión real será un archivo Excel (.xlsx) con lista desplegable.

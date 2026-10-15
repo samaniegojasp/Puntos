@@ -38,7 +38,8 @@ import { Progress } from "@/components/ui/progress"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Spinner } from "@/components/ui/spinner"
 import StatusBadge from "@/components/panel/status-badge"
-import { MOCK_CARDS, MOCK_NOW, MOCK_SETTINGS } from "@/lib/mock/data"
+import { MOCK_CARDS, MOCK_NOW } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import {
   formatDate,
   formatDateTime,
@@ -66,6 +67,7 @@ const FILTER_TABS: { key: "todas" | CardStatus; label: string }[] = [
 ]
 
 export default function CuentaTarjetasPage() {
+  const { settings } = useAdminSettings()
   const [loading, setLoading] = useState(true)
   const [cards, setCards] = useState<GiftCard[]>(MOCK_CARDS)
   const [filter, setFilter] = useState<"todas" | CardStatus>("todas")
@@ -114,7 +116,7 @@ export default function CuentaTarjetasPage() {
     // Regla 7: Simular 800 ms de procesamiento
     setTimeout(() => {
       const targetCard = exchangingCard
-      const preview = exchangePreview(targetCard, MOCK_SETTINGS, MOCK_NOW)
+      const preview = exchangePreview(targetCard, settings, MOCK_NOW)
 
       if (preview.allowed) {
         setCards((prev) =>
@@ -238,7 +240,7 @@ export default function CuentaTarjetasPage() {
                 : 0
 
             // Vista previa del cambio por puntos
-            const preview = exchangePreview(card, MOCK_SETTINGS, MOCK_NOW)
+            const preview = exchangePreview(card, settings, MOCK_NOW)
 
             return (
               <Card key={card.id} className="flex flex-col justify-between overflow-hidden">
@@ -481,7 +483,7 @@ export default function CuentaTarjetasPage() {
             <AlertDialogDescription asChild>
               <div className="space-y-3 text-sm text-muted-foreground pt-2">
                 {exchangingCard && (() => {
-                  const preview = exchangePreview(exchangingCard, MOCK_SETTINGS, MOCK_NOW)
+                  const preview = exchangePreview(exchangingCard, settings, MOCK_NOW)
                   if (!preview.allowed) return null
 
                   return (

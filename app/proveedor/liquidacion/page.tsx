@@ -29,7 +29,8 @@ function formatPeriod(period: string): string {
   const [year, month] = period.split("-")
   if (!year || !month) return period
   const date = new Date(Number(year), Number(month) - 1, 1)
-  return new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)
+  const s = new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export default function ProveedorLiquidacionPage() {
@@ -110,7 +111,7 @@ export default function ProveedorLiquidacionPage() {
                   const statusInfo = SETTLEMENT_STATUS_MAP[item.status]
                   return (
                     <TableRow key={item.id}>
-                      <TableCell className="font-medium capitalize">
+                      <TableCell className="font-medium">
                         {formatPeriod(item.period)}
                       </TableCell>
                       <TableCell className="text-right font-mono">

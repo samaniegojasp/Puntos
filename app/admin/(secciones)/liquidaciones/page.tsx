@@ -51,7 +51,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import KpiCard from "@/components/panel/kpi-card"
-import { MOCK_PROVIDERS, MOCK_SETTLEMENTS } from "@/lib/mock/data"
+import { MOCK_SETTLEMENTS } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatUsd } from "@/lib/domain/format"
 import { downloadCsv } from "@/lib/domain/csv"
 import type { Settlement, SettlementStatus } from "@/lib/domain/types"
@@ -66,10 +67,12 @@ function formatPeriod(period: string): string {
   const [year, month] = period.split("-")
   if (!year || !month) return period
   const date = new Date(Number(year), Number(month) - 1, 1)
-  return new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)
+  const s = new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(date)
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export default function AdminLiquidacionesPage() {
+  const { providers } = useAdminSettings()
   const [loading, setLoading] = useState(true)
   const [settlements, setSettlements] = useState<Settlement[]>(MOCK_SETTLEMENTS)
 
@@ -252,7 +255,7 @@ export default function AdminLiquidacionesPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los proveedores</SelectItem>
-                  {MOCK_PROVIDERS.map((p) => (
+                  {providers.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
                       {p.name}
                     </SelectItem>
@@ -317,7 +320,7 @@ export default function AdminLiquidacionesPage() {
                         <TableCell className="font-semibold text-foreground">
                           {s.providerName}
                         </TableCell>
-                        <TableCell className="capitalize text-sm font-medium">
+                        <TableCell className="text-sm font-medium">
                           {formatPeriod(s.period)}
                         </TableCell>
                         <TableCell className="text-right font-mono text-sm">

@@ -23,8 +23,10 @@ const SERIES_B_BG = "bg-[#0d9488] dark:bg-[#17a899]"
 
 const monthLabel = (m: string) =>
   new Intl.DateTimeFormat("es-EC", { month: "short" }).format(new Date(`${m}-15T12:00:00`)).replace(".", "")
-const monthLong = (m: string) =>
-  new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(new Date(`${m}-15T12:00:00`))
+const monthLong = (m: string) => {
+  const s = new Intl.DateTimeFormat("es-EC", { month: "long", year: "numeric" }).format(new Date(`${m}-15T12:00:00`))
+  return s.charAt(0).toUpperCase() + s.slice(1)
+}
 
 /** Rectángulo con las dos esquinas superiores redondeadas (el extremo de datos); la base queda recta sobre el eje. */
 function topRoundedBar(x: number, y: number, w: number, h: number, r: number) {

@@ -42,7 +42,7 @@ export const DEFAULT_STORES: Store[] = [
   { id: "marathon", name: "Marathon Sports", category: "Deportes", theme: "deporte", denoms: [25, 50, 100], description: "Ropa, calzado y equipamiento deportivo.", featured: true },
   { id: "kywi", name: "Kywi", category: "Hogar y ferretería", theme: "hogar", denoms: [20, 50, 100], description: "Herramientas y todo para mejorar tu casa." },
   { id: "jugueton", name: "Juguetón", category: "Juguetes", theme: "juguete", denoms: [15, 30, 60], description: "El regalo perfecto para los más pequeños.", featured: true },
-  { id: "deprati", name: "De Prati", category: "Moda", theme: "moda", denoms: [25, 50, 100], description: "Moda, accesorios y decoración." },
+  { id: "deprati", name: "De Prati", category: "Moda", theme: "moda", denoms: [25, 50, 100], description: "Moda, accesorios y decoración.", active: false },
 ]
 
 export type PointsPack = { id: string; points: number; usd: number; badge?: string }

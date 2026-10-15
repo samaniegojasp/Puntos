@@ -9,15 +9,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MOCK_CLIENT } from "@/lib/mock/data"
+import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatPts, formatUsd } from "@/lib/domain/format"
 import { bonusFromSale } from "@/lib/domain/pricing"
 
 export default function ClienteBonoPage() {
+  const { clients } = useAdminSettings()
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
   const [loading, setLoading] = useState(true)
 
-  // Campo "Mi % de bono" precargado con MOCK_CLIENT.bonusPct * 100 (0.85)
-  const [bonusInput, setBonusInput] = useState<string>((Math.round(MOCK_CLIENT.bonusPct * 10000) / 100).toString())
+  // Campo "Mi % de bono" precargado con client.bonusPct * 100 (0.85)
+  const [bonusInput, setBonusInput] = useState<string>((Math.round(client.bonusPct * 10000) / 100).toString())
   // Campo "Monto de la venta (USD)" precargado con 20000
   const [saleInput, setSaleInput] = useState<string>("20000")
 
@@ -53,10 +56,10 @@ export default function ClienteBonoPage() {
 
   // Conversión cuidando el redondeo a centavos
   const saleCents = isSaleValid ? Math.round(parsedSale * 100) : 0
-  const bonusPctFraction = isBonusValid ? parsedBonus / 100 : MOCK_CLIENT.bonusPct
+  const bonusPctFraction = isBonusValid ? parsedBonus / 100 : client.bonusPct
 
   // Cálculo de bono con la función de dominio
-  const calculation = bonusFromSale(saleCents, bonusPctFraction, MOCK_CLIENT.usdPerPoint)
+  const calculation = bonusFromSale(saleCents, bonusPctFraction, client.usdPerPoint)
 
   const handleSaveBonus = (e: React.FormEvent) => {
     e.preventDefault()

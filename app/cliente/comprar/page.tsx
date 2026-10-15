@@ -14,7 +14,7 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 
 export default function ClienteComprarPage() {
   const [loading, setLoading] = useState(true)
-  const { standardPacks } = useAdminSettings()
+  const { standardPacks, clients } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -37,7 +37,8 @@ export default function ClienteComprarPage() {
     )
   }
 
-  const packs = MOCK_CLIENT.packMode === "custom" ? MOCK_CLIENT_PACKS : standardPacks
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
+  const packs = client.packMode === "custom" ? client.customPacks : standardPacks
   const maxPoints = Math.max(...packs.map((p) => p.points))
 
   return (

@@ -65,9 +65,9 @@ import {
 import {
   MOCK_CLIENTS_ADMIN,
   MOCK_PROFILES,
-  MOCK_PROVIDERS,
   MOCK_USERS,
 } from "@/lib/mock/data"
+import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatDate } from "@/lib/domain/format"
 import { ROLE_LABEL, type Role, type UserRow } from "@/lib/domain/types"
 
@@ -79,6 +79,7 @@ const ROLE_BADGE_STYLE: Record<Role, string> = {
 }
 
 export default function AdminUsuariosPage() {
+  const { providers } = useAdminSettings()
   const [loading, setLoading] = useState(true)
   const [users, setUsers] = useState<UserRow[]>(MOCK_USERS)
 
@@ -94,7 +95,7 @@ export default function AdminUsuariosPage() {
   const [newClientName, setNewClientName] = useState("")
   // Empresas creadas aquí durante la sesión (estado local, se pierden al recargar)
   const [extraClients, setExtraClients] = useState<{ id: string; name: string }[]>([])
-  const [selectedProviderId, setSelectedProviderId] = useState<string>("")
+  const [selectedProviderId, setSelectedProviderId] = useState<string>(providers[0]?.id || "")
 
   // AlertDialog de confirmación para cambio de rol
   const [confirmRoleAlertOpen, setConfirmRoleAlertOpen] = useState(false)
@@ -132,7 +133,7 @@ export default function AdminUsuariosPage() {
     setNewRole(user.role)
     setSelectedClientId(MOCK_CLIENTS_ADMIN[0]?.id || "")
     setNewClientName("")
-    setSelectedProviderId(MOCK_PROVIDERS[0]?.id || "")
+    setSelectedProviderId(providers[0]?.id || "")
     setRoleDialogOpen(true)
   }
 
@@ -529,7 +530,7 @@ export default function AdminUsuariosPage() {
                       <SelectValue placeholder="Selecciona un proveedor" />
                     </SelectTrigger>
                     <SelectContent>
-                      {MOCK_PROVIDERS.map((p) => (
+                      {providers.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
                           {p.name}
                         </SelectItem>

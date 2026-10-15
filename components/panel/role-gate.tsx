@@ -26,6 +26,10 @@ export default function RoleGate({ allow, children }: { allow: Role[]; children:
 
   if (role === "admin" || allow.includes(role)) return <>{children}</>
 
+  const rolesText = Array.from(new Set([...allow, "admin" as Role]))
+    .map((r) => ROLE_LABEL[r])
+    .join(", ")
+
   return (
     <div className="container flex justify-center px-4 py-16">
       <Card className="w-full max-w-md text-center">
@@ -36,7 +40,7 @@ export default function RoleGate({ allow, children }: { allow: Role[]; children:
           <h1 className="text-xl font-bold">No tienes acceso a esta sección</h1>
           <p className="text-sm text-muted-foreground">
             Tu cuenta es de tipo <strong>{ROLE_LABEL[role]}</strong>. Esta sección es para:{" "}
-            {allow.map((r) => ROLE_LABEL[r]).join(", ")}.
+            {rolesText}.
           </p>
           <Button asChild>
             <Link href="/">Volver al inicio</Link>
