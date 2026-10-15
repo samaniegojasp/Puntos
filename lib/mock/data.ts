@@ -123,7 +123,7 @@ export const MOCK_CARDS: GiftCard[] = [
 // ---------- Cliente ----------
 
 export const MOCK_CLIENT: ClientAccount = {
-  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00904255, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
+  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00913978, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
 }
 
 /** Paquetes estándar (precio por volumen). Ilustrativos. */
@@ -141,8 +141,8 @@ export const MOCK_PUBLIC_PACKS: PointsPack[] = [
 ]
 
 export const MOCK_CLIENT_PACKS: PointsPack[] = [
-  { id: "cp-1", usdCents: c(170), points: 18800 },
-  { id: "cp-2", usdCents: c(400), points: 44200, badge: "Acuerdo" },
+  { id: "cp-1", usdCents: c(170), points: 18600 },
+  { id: "cp-2", usdCents: c(400), points: 43800, badge: "Acuerdo" },
 ]
 
 const row = (rowNo: number, docNumber: string, points: number | null, extra: Partial<GrantBatch["rows"][number]> = {}) => ({

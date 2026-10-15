@@ -20,7 +20,7 @@ import {
 } from "@/lib/mock/data"
 import { formatPct } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { validatePricing } from "@/lib/domain/pricing"
+import { pointsPrice, productPriceCents, referenceCentsPerPoint, validatePricing } from "@/lib/domain/pricing"
 import type { AdminSettings } from "@/lib/domain/types"
 
 export default function AdminAjustesPage() {
@@ -32,6 +32,7 @@ export default function AdminAjustesPage() {
   const [exchangeFeePctInput, setExchangeFeePctInput] = useState((current.exchangeFeePct * 100).toString())
   const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
   const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
+  const [multiple, setMultiple] = useState<number>(current.pointsMultiple)
   const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
   // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
   type LimitUnit = "ppd" | "price"
@@ -135,7 +136,7 @@ export default function AdminAjustesPage() {
     exchangeFeePct: parsedExchangeFeeFraction,
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
-    pointsMultiple: MOCK_SETTINGS.pointsMultiple,
+    pointsMultiple: multiple,
     clientBenefitPct: !isNaN(rawBenefit) ? Math.round(rawBenefit * 1000) / 100000 : 0.01,
     pricePerPointMin: priceMin,
     pricePerPointMax: priceMax,
@@ -170,6 +171,7 @@ export default function AdminAjustesPage() {
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
     setBenefitInput(((MOCK_SETTINGS.clientBenefitPct ?? 0.01) * 100).toString())
+    setMultiple(MOCK_SETTINGS.pointsMultiple)
     setLimitUnit("ppd")
     setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
     setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
@@ -391,18 +393,42 @@ export default function AdminAjustesPage() {
                 </div>
               </div>
 
-              {/* pointsMultiple (solo lectura) */}
-              <div className="space-y-2 sm:col-span-2 max-w-sm">
-                <Label htmlFor="pointsMultiple">Múltiplo de puntos (constante del sistema)</Label>
-                <Input
-                  id="pointsMultiple"
-                  value={MOCK_SETTINGS.pointsMultiple}
-                  disabled
-                  readOnly
-                  className="bg-muted font-mono"
-                />
+              {/* Múltiplo de puntos de las tarjetas */}
+              <div className="space-y-2 sm:col-span-2">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <Label id="multipleLabel">Redondeo de los puntos de las tarjetas</Label>
+                  <div className="inline-flex rounded-md border bg-background p-0.5" role="group" aria-labelledby="multipleLabel">
+                    {[10, 50, 100].map((m) => (
+                      <button
+                        key={m}
+                        type="button"
+                        aria-pressed={multiple === m}
+                        onClick={() => setMultiple(m)}
+                        className={
+                          "rounded px-3 py-1 text-xs font-medium transition-colors " +
+                          (multiple === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
+                        }
+                      >
+                        De {m} en {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Todas las tarjetas de regalo se redondean obligatoriamente a este múltiplo.
+                  El precio en puntos de cada tarjeta se sube al siguiente múltiplo de este valor. Con un múltiplo menor, el precio sigue más de cerca al costo y hay menos saltos en las barras de margen y descuento; con uno mayor, los precios son más fáciles de recordar. Vale para compras nuevas; lo ya pagado no cambia.
+                </p>
+                <p className="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">Así quedarían: </span>
+                  {products
+                    .filter((p) => p.active)
+                    .map((p) => {
+                      const prov = providers.find((x) => x.id === p.providerId)
+                      const pts = prov
+                        ? pointsPrice(productPriceCents(p, prov), referenceCentsPerPoint(MOCK_PUBLIC_PACKS), multiple)
+                        : 0
+                      return `${p.storeName} $${p.faceCents / 100} → ${new Intl.NumberFormat("es-EC").format(pts)} pts`
+                    })
+                    .join(" · ")}
                 </p>
               </div>
             </div>

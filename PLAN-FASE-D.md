@@ -109,13 +109,13 @@ Probar la base: `git pull` → `npm install` → `npm run dev` → abre http://l
 >
 > **Comprar puntos:** si `MOCK_CLIENT.packMode === "custom"` usa `MOCK_CLIENT_PACKS`, si no `MOCK_STANDARD_PACKS`. Cada paquete en una tarjeta: USD, puntos, insignia ("Mejor valor" en el paquete más grande). Sin "USD por punto" ni % de ahorro. Botón "Pagar con la pasarela" → `toast` "Prototipo: aquí se abre el pago seguro de la pasarela". Texto: "Pagarás en la página segura de la pasarela. Regala no ve los datos de tu tarjeta."
 >
-> **Mi bono:** campo "Mi % de bono" (número 0–100, paso 0,01, se guarda con botón → `toast`; inválido → mensaje). Texto: "Este porcentaje es tuyo y lo puedes cambiar cuando quieras. No cambia el precio de tus puntos: ese lo fija Regala." **Calculadora:** campo "Monto de la venta (USD)" (precargado 20000) → muestra solo "Bono en dólares" y "Puntos a repartir" (`bonusFromSale(centavos, pct/100, MOCK_CLIENT.usdPerPoint)`; `usdPerPoint` se usa para calcular pero **nunca se muestra**, regla 13; no agregues "Costo para ti" ni ningún precio por punto). Debe cuadrar: venta $20.000 × 0,85 % con punto a $0,00904 (el tramo de $170 del cliente de ejemplo da 18.800 puntos) = $170,00 → 18.800 puntos.
+> **Mi bono:** campo "Mi % de bono" (número 0–100, paso 0,01, se guarda con botón → `toast`; inválido → mensaje). Texto: "Este porcentaje es tuyo y lo puedes cambiar cuando quieras. No cambia el precio de tus puntos: ese lo fija Regala." **Calculadora:** campo "Monto de la venta (USD)" (precargado 20000) → muestra solo "Bono en dólares" y "Puntos a repartir" (`bonusFromSale(centavos, pct/100, MOCK_CLIENT.usdPerPoint)`; `usdPerPoint` se usa para calcular pero **nunca se muestra**, regla 13; no agregues "Costo para ti" ni ningún precio por punto). Debe cuadrar: venta $20.000 × 0,85 % con punto a $0,00914 (el tramo de $170 del cliente de ejemplo da 18.600 puntos) = $170,00 → 18.600 puntos.
 >
 > **Lo repartido:** tabla con `MOCK_GRANTED`: documento (tipo + número completo, lo escribió el Cliente), referencia, puntos, usados, disponibles, fecha, etiqueta "Enviado" (siempre la misma: no se muestra si la persona se registró). Buscador por documento. Fila de totales. Botón "Descargar CSV" con `downloadCsv`. Estado vacío cuando la búsqueda no encuentra nada.
 >
 > Pruebas manuales: con cada rol (Canjeador y Proveedor ven "No tienes acceso"; Cliente y Nosotros entran), descarga el CSV y ábrelo, cambia el bono y la calculadora, mira a 375 px. Luego regla 12.
 
-**Criterio de aceptación:** calculadora da 17.000 centavos ($170,00) y 18.800 puntos con los valores de ejemplo; el CSV abre con las tildes bien; "No tienes acceso" para Canjeador y Proveedor.
+**Criterio de aceptación:** calculadora da 17.000 centavos ($170,00) y 18.600 puntos con los valores de ejemplo; el CSV abre con las tildes bien; "No tienes acceso" para Canjeador y Proveedor.
 
 ---
 

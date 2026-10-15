@@ -142,7 +142,7 @@ points    = CEIL( ROUND(price_usd / pv_ref) / 100 ) × 100
 `pv_ref` es el precio de referencia del punto: el del **primer paquete** (el de $10). Es global: **la misma tarjeta cuesta los mismos puntos para todos**, porque los puntos son acumulables y de distintos orígenes.
 
 ### 5.2 Paquetes por volumen
-Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de las tarjetas**, no a los paquetes (un paquete negociado, como $170 → 18 800, puede no serlo). Cada paquete grande da más puntos por dólar.
+Tabla `packs` global (USD → puntos). El múltiplo de 100 aplica al **precio de las tarjetas**, no a los paquetes (un paquete negociado, como $170 → 18 600, puede no serlo). Cada paquete grande da más puntos por dólar.
 
 **Decisión de modelo (dueño, octubre 2026): el punto de referencia es el del Canjeador.** Las tarjetas se expresan en puntos con el precio del paquete más pequeño que compra el Canjeador ($10 → 1 000 pts, 0,01 por punto). Así, **lo que cuesta una tarjeta nunca supera lo que el Canjeador compra con el paquete del mismo valor**: con $10 compra 1 000 pts y la tarjeta de $10 cuesta 1 000 pts. Los Clientes compran más barato (más puntos por dólar) y quien recibe su bono ve que le rinde más que el bono.
 
