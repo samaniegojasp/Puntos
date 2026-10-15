@@ -52,19 +52,19 @@ export const MOCK_PROFILES: Record<Role, Profile> = {
 // ---------- Canjeador: puntos por origen (del más antiguo al más nuevo) ----------
 
 export const MOCK_LOTS: PointLot[] = [
-  { id: "lot-1", origin: "grant_client", originClientName: "Concesionaria Andina", pointsInitial: 21250, pointsRemaining: 14750, usdPerPoint: 0.008, createdAt: "2026-07-18T11:00:00-05:00", note: "Bono por compra de vehículo" },
-  { id: "lot-2", origin: "purchase_self", pointsInitial: 2600, pointsRemaining: 2600, usdPerPoint: 0.009615, createdAt: "2026-08-30T16:20:00-05:00" },
-  { id: "lot-3", origin: "grant_client", originClientName: "Ferretería La Unión", pointsInitial: 1000, pointsRemaining: 1000, usdPerPoint: 0.0085, createdAt: "2026-09-21T09:10:00-05:00" },
-  { id: "lot-4", origin: "exchange", pointsInitial: 2160, pointsRemaining: 2160, usdPerPoint: 0.008, createdAt: "2026-10-02T10:00:00-05:00", note: "Cambio de tarjeta caducada" },
+  { id: "lot-1", origin: "grant_client", originClientName: "Concesionaria Andina", pointsInitial: 21250, pointsRemaining: 15580, usdPerPoint: 0.00971984, createdAt: "2026-07-18T11:00:00-05:00", note: "Bono por compra de vehículo" },
+  { id: "lot-2", origin: "purchase_self", pointsInitial: 2500, pointsRemaining: 2500, usdPerPoint: 0.01, createdAt: "2026-08-30T16:20:00-05:00" },
+  { id: "lot-3", origin: "grant_client", originClientName: "Ferretería La Unión", pointsInitial: 1000, pointsRemaining: 1000, usdPerPoint: 0.0098039, createdAt: "2026-09-21T09:10:00-05:00" },
+  { id: "lot-4", origin: "exchange", pointsInitial: 1854, pointsRemaining: 1854, usdPerPoint: 0.00971984, createdAt: "2026-10-02T10:00:00-05:00", note: "Cambio de tarjeta caducada" },
 ]
 
 export const MOCK_LEDGER: LedgerEntry[] = [
   { id: "l-1", date: "2026-07-18T11:00:00-05:00", kind: "grant_received", delta: 21250, description: "Puntos de Concesionaria Andina" },
-  { id: "l-2", date: "2026-08-02T18:45:00-05:00", kind: "redeem", delta: -3500, description: "Tarjeta Fybeca $30" },
-  { id: "l-3", date: "2026-08-30T16:20:00-05:00", kind: "purchase", delta: 2600, description: "Compra de puntos ($25)" },
+  { id: "l-2", date: "2026-08-02T18:45:00-05:00", kind: "redeem", delta: -3090, description: "Tarjeta Fybeca $30" },
+  { id: "l-3", date: "2026-08-30T16:20:00-05:00", kind: "purchase", delta: 2500, description: "Compra de puntos ($25)" },
   { id: "l-4", date: "2026-09-21T09:10:00-05:00", kind: "grant_received", delta: 1000, description: "Puntos de Ferretería La Unión" },
-  { id: "l-5", date: "2026-10-02T10:00:00-05:00", kind: "exchange", delta: 2160, description: "Cambio de tarjeta caducada Kywi $20" },
-  { id: "l-6", date: "2026-10-09T08:30:00-05:00", kind: "redeem", delta: -3000, description: "Tarjeta Supermaxi $25" },
+  { id: "l-5", date: "2026-10-02T10:00:00-05:00", kind: "exchange", delta: 1854, description: "Cambio de tarjeta caducada Kywi $20" },
+  { id: "l-6", date: "2026-10-09T08:30:00-05:00", kind: "redeem", delta: -2580, description: "Tarjeta Supermaxi $25" },
 ]
 
 // ---------- Canjeador: tarjetas en todos los estados ----------
@@ -74,7 +74,7 @@ const c = (n: number) => n * 100
 export const MOCK_CARDS: GiftCard[] = [
   {
     id: "card-1", storeId: "fybeca", storeName: "Fybeca", providerId: "p-fybeca", faceCents: c(30), balanceCents: c(18),
-    code: "FYB-7K2M-9QX4", status: "active", issuedAt: "2026-08-02T18:45:00-05:00", expiresAt: "2027-02-02T18:45:00-05:00", pointsPaid: 3500,
+    code: "FYB-7K2M-9QX4", status: "active", issuedAt: "2026-08-02T18:45:00-05:00", expiresAt: "2027-02-02T18:45:00-05:00", pointsPaid: 3090,
     movements: [
       { id: "m-1", type: "issue", amountCents: c(30), at: "2026-08-02T18:45:00-05:00" },
       { id: "m-2", type: "consume", amountCents: c(12), at: "2026-09-10T13:05:00-05:00", note: "Fybeca Quicentro" },
@@ -82,12 +82,12 @@ export const MOCK_CARDS: GiftCard[] = [
   },
   {
     id: "card-2", storeId: "supermaxi", storeName: "Supermaxi", providerId: "p-supermaxi", faceCents: c(25), balanceCents: c(25),
-    code: "SMX-3D8P-6TLB", status: "active", issuedAt: "2026-10-09T08:30:00-05:00", expiresAt: "2026-11-02T08:30:00-05:00", pointsPaid: 3000,
+    code: "SMX-3D8P-6TLB", status: "active", issuedAt: "2026-10-09T08:30:00-05:00", expiresAt: "2026-11-02T08:30:00-05:00", pointsPaid: 2580,
     movements: [{ id: "m-3", type: "issue", amountCents: c(25), at: "2026-10-09T08:30:00-05:00" }],
   },
   {
     id: "card-3", storeId: "marathon", storeName: "Marathon Sports", providerId: "p-marathon", faceCents: c(50), balanceCents: c(50),
-    code: "MAR-5H1N-2WRC", status: "expired", issuedAt: "2026-02-01T10:00:00-05:00", expiresAt: "2026-10-01T10:00:00-05:00", pointsPaid: 6000,
+    code: "MAR-5H1N-2WRC", status: "expired", issuedAt: "2026-02-01T10:00:00-05:00", expiresAt: "2026-10-01T10:00:00-05:00", pointsPaid: 5150,
     movements: [
       { id: "m-4", type: "issue", amountCents: c(50), at: "2026-02-01T10:00:00-05:00" },
       { id: "m-5", type: "expire", amountCents: c(50), at: "2026-10-01T10:00:00-05:00" },
@@ -95,7 +95,7 @@ export const MOCK_CARDS: GiftCard[] = [
   },
   {
     id: "card-4", storeId: "kywi", storeName: "Kywi", providerId: "p-kywi", faceCents: c(20), balanceCents: 0,
-    code: "KYW-8B4Z-1MNE", status: "exchanged", issuedAt: "2026-01-10T12:00:00-05:00", expiresAt: "2026-09-20T12:00:00-05:00", pointsPaid: 2400,
+    code: "KYW-8B4Z-1MNE", status: "exchanged", issuedAt: "2026-01-10T12:00:00-05:00", expiresAt: "2026-09-20T12:00:00-05:00", pointsPaid: 2060,
     movements: [
       { id: "m-6", type: "issue", amountCents: c(20), at: "2026-01-10T12:00:00-05:00" },
       { id: "m-7", type: "expire", amountCents: c(20), at: "2026-09-20T12:00:00-05:00" },
@@ -104,7 +104,7 @@ export const MOCK_CARDS: GiftCard[] = [
   },
   {
     id: "card-5", storeId: "jugueton", storeName: "Juguetón", providerId: "p-jugueton", faceCents: c(15), balanceCents: 0,
-    code: "JUG-2C9V-5AKD", status: "consumed", issuedAt: "2026-06-14T17:00:00-05:00", expiresAt: "2026-12-14T17:00:00-05:00", pointsPaid: 1800,
+    code: "JUG-2C9V-5AKD", status: "consumed", issuedAt: "2026-06-14T17:00:00-05:00", expiresAt: "2026-12-14T17:00:00-05:00", pointsPaid: 1550,
     movements: [
       { id: "m-9", type: "issue", amountCents: c(15), at: "2026-06-14T17:00:00-05:00" },
       { id: "m-10", type: "consume", amountCents: c(15), at: "2026-06-20T11:40:00-05:00", note: "Juguetón El Recreo" },
@@ -112,7 +112,7 @@ export const MOCK_CARDS: GiftCard[] = [
   },
   {
     id: "card-6", storeId: "deprati", storeName: "De Prati", providerId: "p-deprati", faceCents: c(25), balanceCents: c(25),
-    code: "DEP-6F3Y-7JQS", status: "expired", issuedAt: "2026-01-05T09:00:00-05:00", expiresAt: "2026-08-20T09:00:00-05:00", pointsPaid: 3000,
+    code: "DEP-6F3Y-7JQS", status: "expired", issuedAt: "2026-01-05T09:00:00-05:00", expiresAt: "2026-08-20T09:00:00-05:00", pointsPaid: 2580,
     movements: [
       { id: "m-11", type: "issue", amountCents: c(25), at: "2026-01-05T09:00:00-05:00" },
       { id: "m-12", type: "expire", amountCents: c(25), at: "2026-08-20T09:00:00-05:00" },
@@ -182,7 +182,7 @@ export const MOCK_BATCHES: Record<"ok" | "errors" | "insufficient" | "duplicate"
 }
 
 export const MOCK_GRANTED: GrantedItem[] = [
-  { id: "g-1", batchId: "b-sep", docType: "cedula", docNumber: "1712345675", reference: "Factura 001-0398", points: 21250, pointsUsed: 3400, sentAt: "2026-07-18T11:00:00-05:00" },
+  { id: "g-1", batchId: "b-sep", docType: "cedula", docNumber: "1712345675", reference: "Factura 001-0398", points: 21250, pointsUsed: 5670, sentAt: "2026-07-18T11:00:00-05:00" },
   { id: "g-2", batchId: "b-sep", docType: "cedula", docNumber: "0908765431", reference: "Factura 001-0399", points: 12000, pointsUsed: 0, sentAt: "2026-07-18T11:00:00-05:00" },
   { id: "g-3", batchId: "b-sep", docType: "cedula", docNumber: "1704567898", points: 8500, pointsUsed: 8500, sentAt: "2026-07-18T11:00:00-05:00" },
   { id: "g-4", batchId: "b-oct", docType: "pasaporte", docNumber: "PA123456", reference: "Factura 001-0440", points: 5000, pointsUsed: 0, sentAt: "2026-09-30T17:00:00-05:00" },
@@ -198,7 +198,7 @@ export const MOCK_PROVIDER_TERMS: ProviderTerms = {
 
 export const MOCK_PROVIDER_KPIS: ProviderKpis = {
   issuedCount: 214, issuedFaceCents: c(6420), liveCards: 96, liveBalanceCents: c(2310),
-  consumedLast30dCents: c(1580), settlementPendingCents: c(1311), settlementPaidCents: c(3902), expiringSoonCount: 7,
+  consumedLast30dCents: c(1580), settlementPendingCents: 139040, settlementPaidCents: c(3902), expiringSoonCount: 7,
 }
 
 export const MOCK_PROVIDER_CARDS: ProviderCardRow[] = [
@@ -212,7 +212,7 @@ export const MOCK_PROVIDER_CARDS: ProviderCardRow[] = [
 export const MOCK_SETTLEMENTS: Settlement[] = [
   { id: "s-1", providerId: "p-fybeca", providerName: "Fybeca", period: "2026-08", consumptions: 41, amountCents: c(1980), status: "paid", invoiceRef: "001-001-000412" },
   { id: "s-2", providerId: "p-fybeca", providerName: "Fybeca", period: "2026-09", consumptions: 38, amountCents: c(1922), status: "paid", invoiceRef: "001-001-000437" },
-  { id: "s-3", providerId: "p-fybeca", providerName: "Fybeca", period: "2026-10", consumptions: 29, amountCents: c(1311), status: "pending" },
+  { id: "s-3", providerId: "p-fybeca", providerName: "Fybeca", period: "2026-10", consumptions: 29, amountCents: 139040, status: "pending" },
   { id: "s-4", providerId: "p-supermaxi", providerName: "Supermaxi", period: "2026-09", consumptions: 77, amountCents: c(3240), status: "invoiced", invoiceRef: "FAC-2201" },
   { id: "s-5", providerId: "p-marathon", providerName: "Marathon Sports", period: "2026-09", consumptions: 12, amountCents: c(940), status: "pending" },
 ]
