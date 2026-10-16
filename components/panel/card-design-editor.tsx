@@ -34,12 +34,14 @@ export type CardDesignEditorProps = {
   value: CardDesignValue
   onChange: (patch: Partial<CardDesignValue>) => void
   resetKey: string
+  disabled?: boolean
 }
 
 export function CardDesignEditor({
   value,
   onChange,
   resetKey,
+  disabled = false,
 }: CardDesignEditorProps) {
   const [singleColor, setSingleColor] = useState(
     Boolean(value.colors && value.colors.from.toLowerCase() === value.colors.to.toLowerCase()),
@@ -112,6 +114,7 @@ export function CardDesignEditor({
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="max-w-xs"
+            disabled={disabled}
             onChange={async (e) => {
               const file = e.target.files?.[0]
               e.target.value = ""
@@ -124,7 +127,7 @@ export function CardDesignEditor({
             }}
           />
           {value.image && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => onChange({ image: null })}>
+            <Button type="button" variant="ghost" size="sm" disabled={disabled} onClick={() => onChange({ image: null })}>
               <Trash2 className="mr-1 h-4 w-4" /> Quitar imagen
             </Button>
           )}
@@ -144,6 +147,7 @@ export function CardDesignEditor({
             type="file"
             accept="image/png,image/jpeg,image/webp"
             className="max-w-xs"
+            disabled={disabled}
             onChange={async (e) => {
               const file = e.target.files?.[0]
               e.target.value = ""
@@ -164,6 +168,7 @@ export function CardDesignEditor({
               type="button"
               variant="ghost"
               size="sm"
+              disabled={disabled}
               onClick={() => {
                 onChange({ logo: null })
                 setLogoOriginal(null)
@@ -197,14 +202,14 @@ export function CardDesignEditor({
                   <Checkbox
                     id="removeBg"
                     checked={removeBg}
-                    disabled={!logoOriginal}
+                    disabled={disabled || !logoOriginal}
                     onCheckedChange={(checked) => setRemoveBg(Boolean(checked))}
                   />
                   <Label
                     htmlFor="removeBg"
                     className={cn(
                       "text-sm font-normal",
-                      logoOriginal ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground",
+                      !disabled && logoOriginal ? "cursor-pointer" : "cursor-not-allowed text-muted-foreground",
                     )}
                   >
                     Quitar fondo (fondos lisos)
@@ -229,6 +234,7 @@ export function CardDesignEditor({
                   min={0}
                   max={100}
                   step={1}
+                  disabled={disabled}
                   value={[tolerance]}
                   onValueChange={([val]) => setTolerance(val)}
                   aria-label="Tolerancia para quitar el fondo"
@@ -252,6 +258,7 @@ export function CardDesignEditor({
               key={t}
               type="button"
               role="radio"
+              disabled={disabled}
               aria-checked={value.colors === null && value.theme === t}
               aria-label={THEME_LABELS[t]}
               title={THEME_LABELS[t]}
@@ -263,12 +270,14 @@ export function CardDesignEditor({
                 "h-8 w-8 rounded-full bg-gradient-to-br ring-offset-2 ring-offset-background",
                 THEMES[t],
                 value.colors === null && value.theme === t && "ring-2 ring-primary",
+                disabled && "cursor-not-allowed opacity-50",
               )}
             />
           ))}
           <button
             type="button"
             role="radio"
+            disabled={disabled}
             aria-checked={value.colors !== null}
             aria-label="Personalizado"
             title="Personalizado"
@@ -282,6 +291,7 @@ export function CardDesignEditor({
             className={cn(
               "flex h-8 w-8 items-center justify-center rounded-full text-white ring-offset-2 ring-offset-background",
               value.colors !== null && "ring-2 ring-primary",
+              disabled && "cursor-not-allowed opacity-50",
             )}
           >
             <Palette className="h-4 w-4 drop-shadow" />
@@ -293,6 +303,7 @@ export function CardDesignEditor({
               <Checkbox
                 id="singleColor"
                 checked={singleColor}
+                disabled={disabled}
                 onCheckedChange={(checked) => {
                   const isSingle = Boolean(checked)
                   setSingleColor(isSingle)
@@ -301,7 +312,7 @@ export function CardDesignEditor({
                   }
                 }}
               />
-              <Label htmlFor="singleColor" className="cursor-pointer text-sm font-normal">
+              <Label htmlFor="singleColor" className={cn("text-sm font-normal", disabled ? "cursor-not-allowed text-muted-foreground" : "cursor-pointer")}>
                 Un solo color
               </Label>
             </div>
@@ -314,6 +325,7 @@ export function CardDesignEditor({
                   <input
                     id="colorFrom"
                     type="color"
+                    disabled={disabled}
                     value={value.colors.from}
                     onChange={(e) => {
                       const val = e.target.value
@@ -325,7 +337,10 @@ export function CardDesignEditor({
                         },
                       })
                     }}
-                    className="h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0"
+                    className={cn(
+                      "h-8 w-8 rounded border border-input bg-transparent p-0",
+                      disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                    )}
                   />
                   <span className="font-mono text-xs uppercase">{value.colors.from}</span>
                 </div>
@@ -339,7 +354,7 @@ export function CardDesignEditor({
                     id="colorTo"
                     type="color"
                     value={value.colors.to}
-                    disabled={singleColor}
+                    disabled={disabled || singleColor}
                     onChange={(e) => {
                       const val = e.target.value
                       if (!value.colors) return
@@ -351,8 +366,8 @@ export function CardDesignEditor({
                       })
                     }}
                     className={cn(
-                      "h-8 w-8 cursor-pointer rounded border border-input bg-transparent p-0",
-                      singleColor && "cursor-not-allowed opacity-50",
+                      "h-8 w-8 rounded border border-input bg-transparent p-0",
+                      (disabled || singleColor) ? "cursor-not-allowed opacity-50" : "cursor-pointer",
                     )}
                   />
                   <span className="font-mono text-xs uppercase">{value.colors.to}</span>

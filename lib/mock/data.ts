@@ -20,6 +20,7 @@ import type {
   Settlement,
   UserRow,
 } from "@/lib/domain/types"
+import type { CardRequest } from "@/lib/domain/card-requests"
 
 export const MOCK_NOW = new Date("2026-10-14T12:00:00-05:00")
 
@@ -223,4 +224,56 @@ export const MOCK_USERS: UserRow[] = [
   { id: "u-ana", fullName: "Ana Mora", email: "ana.mora@ejemplo.ec", role: "canjeador", docMasked: "******5675", createdAt: "2026-06-02T10:00:00-05:00", blocked: false },
   { id: "u-pedro", fullName: "Pedro Ramírez", email: "pedro.r@ejemplo.ec", role: "canjeador", docMasked: "******5431", createdAt: "2026-07-11T19:12:00-05:00", blocked: false },
   { id: "u-spam", fullName: "Cuenta sospechosa", email: "x1@ejemplo.ec", role: "canjeador", docMasked: "PAS****", createdAt: "2026-09-29T03:00:00-05:00", blocked: true },
+]
+
+export const MOCK_CARD_REQUESTS: CardRequest[] = [
+  {
+    id: "cr-1",
+    providerId: "p-fybeca",
+    name: "Fybeca Mamá y Bebé",
+    category: "Salud y belleza",
+    description: "Cuidado infantil, productos de maternidad y bienestar familiar.",
+    theme: "salud",
+    denoms: [20, 40, 60],
+    status: "submitted",
+    createdAt: "2026-10-08T10:00:00-05:00",
+    submittedAt: "2026-10-08T14:30:00-05:00",
+  },
+  {
+    id: "cr-2",
+    providerId: "p-fybeca",
+    name: "Fybeca Regalo",
+    category: "Salud y belleza",
+    description: "El detalle ideal para consentir con salud y cuidado personal.",
+    theme: "juguete",
+    denoms: [10, 25],
+    status: "draft",
+    createdAt: "2026-10-10T09:15:00-05:00",
+  },
+  {
+    id: "cr-3",
+    providerId: "p-fybeca",
+    name: "Fybeca Express",
+    category: "Salud y belleza",
+    description: "Compras rápidas de conveniencia y artículos de primera necesidad.",
+    theme: "deporte",
+    denoms: [15],
+    status: "rejected",
+    createdAt: "2026-10-05T11:00:00-05:00",
+    submittedAt: "2026-10-05T11:30:00-05:00",
+    reviewedAt: "2026-10-06T16:00:00-05:00",
+    rejectReason: "El nombre se parece demasiado al de otra tarjeta del catálogo. Cámbialo y vuelve a enviar.",
+  },
+  {
+    id: "cr-4",
+    providerId: "p-kywi",
+    name: "Kywi Pro",
+    category: "Hogar y ferretería",
+    description: "Herramientas y suministros para proyectos y refacciones del hogar.",
+    theme: "hogar",
+    denoms: [50, 100],
+    status: "submitted",
+    createdAt: "2026-10-12T08:45:00-05:00",
+    submittedAt: "2026-10-12T09:00:00-05:00",
+  },
 ]

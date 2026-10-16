@@ -15,10 +15,12 @@ import {
   MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
   MOCK_STANDARD_PACKS,
+  MOCK_CARD_REQUESTS,
 } from "@/lib/mock/data"
 import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import { clientBasePack } from "@/lib/domain/grants"
 import type { AdminSettings, ClientAdminRow, GrantedItem, PointsPack, Product, Provider } from "@/lib/domain/types"
+import type { CardRequest } from "@/lib/domain/card-requests"
 import { useMockSession } from "@/lib/mock/session"
 
 type Ctx = {
@@ -38,6 +40,8 @@ type Ctx = {
   setGrantedItems: React.Dispatch<React.SetStateAction<GrantedItem[]>>
   sentBatches: { hash: string; sentAt: string }[]
   setSentBatches: React.Dispatch<React.SetStateAction<{ hash: string; sentAt: string }[]>>
+  cardRequests: CardRequest[]
+  setCardRequests: React.Dispatch<React.SetStateAction<CardRequest[]>>
 }
 
 const AdminSettingsContext = createContext<Ctx | null>(null)
@@ -51,6 +55,7 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
   const [standardPacks, setStandardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
   const [grantedItems, setGrantedItems] = useState<GrantedItem[]>(MOCK_GRANTED)
   const [sentBatches, setSentBatches] = useState<{ hash: string; sentAt: string }[]>([])
+  const [cardRequests, setCardRequests] = useState<CardRequest[]>(MOCK_CARD_REQUESTS)
   return (
     <AdminSettingsContext.Provider
       value={{
@@ -70,6 +75,8 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
         setGrantedItems,
         sentBatches,
         setSentBatches,
+        cardRequests,
+        setCardRequests,
       }}
     >
       {children}
@@ -121,4 +128,13 @@ export function useCurrentClient() {
     setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, bagPoints: c.bagPoints + delta } : c)))
   return { client, base, bag: client.bagPoints, addToBag }
 }
+
+/** Proveedor de la sesión de ejemplo: el del perfil; si entra Nosotros al panel, Fybeca. */
+export function useCurrentProvider() {
+  const { profile } = useMockSession()
+  const { providers } = useAdminSettings()
+  const providerId = profile.providerId ?? "p-fybeca"
+  return { providerId, provider: providers.find((p) => p.id === providerId) }
+}
+
 
