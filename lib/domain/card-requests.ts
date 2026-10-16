@@ -103,12 +103,13 @@ export function validateCardRequestDraft(
 export function requestToProducts(
   req: { name: string },
   denoms: number[],
-  providerId: string
+  providerId: string,
+  storeId?: string
 ): Product[] {
-  const slug = slugify(req.name)
+  const sid = storeId ?? slugify(req.name)
   return denoms.map((usd) => ({
-    id: `pr-${slug}-${usd}`,
-    storeId: slug,
+    id: `pr-${sid}-${usd}`,
+    storeId: sid,
     storeName: req.name,
     providerId,
     faceCents: usd * 100,

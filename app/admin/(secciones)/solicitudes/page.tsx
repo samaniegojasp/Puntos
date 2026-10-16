@@ -232,7 +232,8 @@ export default function AdminSolicitudesPage() {
     const newProducts = requestToProducts(
       selectedRequest,
       sortedMarcados,
-      selectedRequest.providerId
+      selectedRequest.providerId,
+      id
     )
     setProducts((prev) => [...prev, ...newProducts])
 

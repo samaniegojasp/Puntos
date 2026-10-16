@@ -53,6 +53,9 @@ export function CardDesignEditor({
   const valueLogoRef = useRef(value.logo)
   valueLogoRef.current = value.logo
 
+  const onChangeRef = useRef(onChange)
+  onChangeRef.current = onChange
+
   useEffect(() => {
     setLogoOriginal(null)
     setRemoveBg(false)
@@ -80,7 +83,7 @@ export function CardDesignEditor({
     if (!logoOriginal) return
     if (!removeBg) {
       if (valueLogoRef.current !== logoOriginal) {
-        onChange({ logo: logoOriginal })
+        onChangeRef.current({ logo: logoOriginal })
       }
       return
     }
@@ -89,7 +92,7 @@ export function CardDesignEditor({
       try {
         const cleaned = await removeFlatBackground(logoOriginal, tolerance)
         if (!cancelled) {
-          onChange({ logo: cleaned })
+          onChangeRef.current({ logo: cleaned })
         }
       } catch (err) {
         if (!cancelled) {
@@ -101,7 +104,7 @@ export function CardDesignEditor({
       cancelled = true
       clearTimeout(timer)
     }
-  }, [removeBg, tolerance, logoOriginal, onChange])
+  }, [removeBg, tolerance, logoOriginal])
 
   return (
     <div className="space-y-4">
