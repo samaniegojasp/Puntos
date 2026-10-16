@@ -408,7 +408,7 @@ export default function AdminClientesPage() {
                   </>
                 ) : (
                   <p className="text-[11px] text-destructive">
-                    No existe un precio por punto que cumpla las reglas con los datos actuales.
+                    Indica un monto mayor a 0 para calcular la barra de puntos.
                   </p>
                 )}
                 <p className="text-xs text-muted-foreground">

@@ -39,9 +39,12 @@ import {
 } from "@/components/ui/table"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import {
+  cardMargin,
   centsPerPoint,
+  clientReferenceCentsPerPoint,
   marginAtPack,
   pointsPrice,
+  productClientPriceCents,
   productCostCents,
   productPoints,
   productPriceCents,
@@ -79,6 +82,7 @@ export default function AdminPreciosPage() {
 
   // Referencia común para cálculos de puntos
   const refCents = referenceCentsPerPoint(publicPacks)
+  const clientRefCents = clientReferenceCentsPerPoint(standardPacks)
   const providerOf = (id: string): Provider =>
     providers.find((x) => x.id === id) ?? {
       id,
@@ -125,13 +129,18 @@ export default function AdminPreciosPage() {
         const provider = providerOf(editingProduct.providerId)
         const calc = (prod: Product) => {
           const cost = productTotalCostCents(prod, provider)
-          const price = productPriceCents(prod, settings)
+          const priceGeneral = productPriceCents(prod, settings)
           const pts = productPoints(prod, settings, refCents)
+          const marginGeneral = cardMargin(priceGeneral, cost)
+          const priceClient = productClientPriceCents(prod, pts, clientRefCents)
+          const marginClient = cardMargin(priceClient, cost)
           return {
             cost,
-            price,
+            priceGeneral,
             pts,
-            margins: standardPacks.slice(0, 3).map((pack) => ({ usd: pack.usdCents, ...marginAtPack(pts, pack, cost) })),
+            marginGeneral,
+            priceClient,
+            marginClient,
           }
         }
         return { now: calc(editingProduct), next: calc(candidateProduct) }
@@ -200,7 +209,7 @@ export default function AdminPreciosPage() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table className="min-w-[850px]">
+            <Table className="min-w-[1000px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Tienda</TableHead>
@@ -208,11 +217,11 @@ export default function AdminPreciosPage() {
                   <TableHead className="text-right">Facial</TableHead>
                   <TableHead className="text-right">Costo</TableHead>
                   <TableHead className="text-right">Transp.</TableHead>
-                  <TableHead className="text-right">Precio al Canjeador</TableHead>
+                  <TableHead className="text-right">Canjeador General</TableHead>
                   <TableHead className="text-right">Puntos</TableHead>
-                  <TableHead className="text-center" colSpan={3}>
-                    Margen tramos estándar ($10 / $50 / $100)
-                  </TableHead>
+                  <TableHead className="text-right">Margen General</TableHead>
+                  <TableHead className="text-right">Canjeador de Cliente</TableHead>
+                  <TableHead className="text-right">Margen Cliente</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
@@ -221,13 +230,11 @@ export default function AdminPreciosPage() {
                   const provider = providerOf(prod.providerId)
                   const cost = productCostCents(prod, provider)
                   const totalCost = productTotalCostCents(prod, provider)
-                  const price = productPriceCents(prod, settings)
+                  const priceGen = productPriceCents(prod, settings)
                   const pts = productPoints(prod, settings, refCents)
-
-                  // Margen en cada tramo estándar (10, 50, 100)
-                  const m10 = marginAtPack(pts, standardPacks[0], totalCost)
-                  const m50 = marginAtPack(pts, standardPacks[1], totalCost)
-                  const m100 = marginAtPack(pts, standardPacks[2], totalCost)
+                  const mGen = cardMargin(priceGen, totalCost)
+                  const priceCli = productClientPriceCents(prod, pts, clientRefCents)
+                  const mCli = cardMargin(priceCli, totalCost)
 
                   return (
                     <TableRow key={prod.id}>
@@ -250,37 +257,97 @@ export default function AdminPreciosPage() {
                       <TableCell className="text-right font-mono text-xs text-muted-foreground">
                         {formatUsd(prod.shippingCents)}
                       </TableCell>
-                      <TableCell className="text-right font-mono text-xs font-bold text-foreground">
-                        {formatUsd(price)}
+                      <TableCell className="text-right font-mono text-xs">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
+                            {prod.priceGeneralCents != null && (
+                              <span className="font-bold text-primary" title="Precio fijado a mano">·</span>
+                            )}
+                            <EditableNumber
+                              label={`Precio General de ${prod.storeName} $${prod.faceCents / 100}`}
+                              display={(priceGen / 100).toFixed(2)}
+                              initial={(priceGen / 100).toFixed(2)}
+                              suffix="USD"
+                              decimals
+                              onCommit={(val) => {
+                                const valCents = Math.round(val * 100)
+                                setProducts((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, priceGeneralCents: valCents } : p))
+                                )
+                                toast.success(`Precio General de ${prod.storeName} actualizado`)
+                              }}
+                            />
+                          </div>
+                          {prod.priceGeneralCents != null ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setProducts((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, priceGeneralCents: undefined } : p))
+                                )
+                                toast.success(`Precio General de ${prod.storeName} restablecido a automático`)
+                              }}
+                            >
+                              Restablecer
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">automático</span>
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right font-mono text-xs font-bold text-primary">
                         {formatPts(pts)} pts
                       </TableCell>
-
-                      {/* Margen tramo $10 */}
-                      <TableCell
-                        className="text-right font-mono text-xs text-muted-foreground"
-                        title="Margen con paquete de $10"
-                      >
-                        {formatPct(m10.marginPct)}
+                      <TableCell className="text-right font-mono text-xs">
+                        <span className="block font-semibold">{formatUsd(mGen.marginCents)}</span>
+                        <span className="block text-muted-foreground">{formatPct(mGen.marginPct)}</span>
                       </TableCell>
-
-                      {/* Margen tramo $50 */}
-                      <TableCell
-                        className="text-right font-mono text-xs text-muted-foreground"
-                        title="Margen con paquete de $50"
-                      >
-                        {formatPct(m50.marginPct)}
+                      <TableCell className="text-right font-mono text-xs">
+                        <div className="flex flex-col items-end gap-0.5">
+                          <div className="flex items-center justify-end gap-1">
+                            {prod.priceClientCents != null && (
+                              <span className="font-bold text-primary" title="Precio fijado a mano">·</span>
+                            )}
+                            <EditableNumber
+                              label={`Precio de Cliente de ${prod.storeName} $${prod.faceCents / 100}`}
+                              display={(priceCli / 100).toFixed(2)}
+                              initial={(priceCli / 100).toFixed(2)}
+                              suffix="USD"
+                              decimals
+                              onCommit={(val) => {
+                                const valCents = Math.round(val * 100)
+                                setProducts((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, priceClientCents: valCents } : p))
+                                )
+                                toast.success(`Precio de Cliente de ${prod.storeName} actualizado`)
+                              }}
+                            />
+                          </div>
+                          {prod.priceClientCents != null ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1 text-[10px] text-muted-foreground hover:text-foreground"
+                              onClick={() => {
+                                setProducts((prev) =>
+                                  prev.map((p) => (p.id === prod.id ? { ...p, priceClientCents: undefined } : p))
+                                )
+                                toast.success(`Precio de Cliente de ${prod.storeName} restablecido a automático`)
+                              }}
+                            >
+                              Restablecer
+                            </Button>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">automático</span>
+                          )}
+                        </div>
                       </TableCell>
-
-                      {/* Margen tramo $100 */}
-                      <TableCell
-                        className="text-right font-mono text-xs text-muted-foreground"
-                        title="Margen con paquete de $100"
-                      >
-                        {formatPct(m100.marginPct)}
+                      <TableCell className="text-right font-mono text-xs">
+                        <span className="block font-semibold">{formatUsd(mCli.marginCents)}</span>
+                        <span className="block text-muted-foreground">{formatPct(mCli.marginPct)}</span>
                       </TableCell>
-
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"
@@ -498,9 +565,11 @@ export default function AdminPreciosPage() {
                   <span />
                   <span className="text-muted-foreground">Guardado hoy</span>
                   <span className="text-muted-foreground">Con estos cambios</span>
-                  <span className="text-muted-foreground">Precio al Canjeador</span>
-                  <span className="font-mono">{formatUsd(preview.now.price)}</span>
-                  <span className="font-mono font-semibold">{formatUsd(preview.next.price)}</span>
+
+                  <span className="text-muted-foreground">Precio General</span>
+                  <span className="font-mono">{formatUsd(preview.now.priceGeneral)}</span>
+                  <span className="font-mono font-semibold">{formatUsd(preview.next.priceGeneral)}</span>
+
                   <span className="text-muted-foreground">Puntos de la tarjeta</span>
                   <span className="font-mono">{formatPts(preview.now.pts)}</span>
                   <span className="font-mono font-semibold text-primary">
@@ -512,15 +581,26 @@ export default function AdminPreciosPage() {
                       </span>
                     )}
                   </span>
-                  {preview.next.margins.map((m, i) => (
-                    <div key={m.usd} className="contents">
-                      <span className="text-muted-foreground">Margen en tramo de {formatUsd(m.usd)}</span>
-                      <span className="font-mono">{formatPct(preview.now.margins[i].marginPct)}</span>
-                      <span className="font-mono font-semibold">
-                        {formatPct(m.marginPct)}
-                      </span>
-                    </div>
-                  ))}
+
+                  <span className="text-muted-foreground">Margen General</span>
+                  <span className="font-mono">
+                    {formatUsd(preview.now.marginGeneral.marginCents)} ({formatPct(preview.now.marginGeneral.marginPct)})
+                  </span>
+                  <span className="font-mono font-semibold">
+                    {formatUsd(preview.next.marginGeneral.marginCents)} ({formatPct(preview.next.marginGeneral.marginPct)})
+                  </span>
+
+                  <span className="text-muted-foreground">Precio Cliente</span>
+                  <span className="font-mono">{formatUsd(preview.now.priceClient)}</span>
+                  <span className="font-mono font-semibold">{formatUsd(preview.next.priceClient)}</span>
+
+                  <span className="text-muted-foreground">Margen Cliente</span>
+                  <span className="font-mono">
+                    {formatUsd(preview.now.marginClient.marginCents)} ({formatPct(preview.now.marginClient.marginPct)})
+                  </span>
+                  <span className="font-mono font-semibold">
+                    {formatUsd(preview.next.marginClient.marginCents)} ({formatPct(preview.next.marginClient.marginPct)})
+                  </span>
                 </div>
                 {preview.next.pts === preview.now.pts && (
                   <p className="text-[11px] text-muted-foreground">

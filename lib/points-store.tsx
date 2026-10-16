@@ -20,8 +20,8 @@ const initialState: State = { balance: WELCOME_POINTS, cart: [], orders: [], top
 // Validación estructural (no depende del catálogo): el catálogo se aplica al derivar el carrito.
 const isWellFormed = (i: CartItem) =>
   !!i && typeof i.storeId === "string" && Number.isInteger(i.usd) && i.usd > 0 && Number.isInteger(i.qty) && i.qty > 0
-const cartTotal = (cart: CartItem[], cardPoints: (usd: number) => number) =>
-  cart.reduce((sum, i) => sum + cardPoints(i.usd) * i.qty, 0)
+const cartTotal = (cart: CartItem[], cardPoints: (usd: number, storeId?: string) => number) =>
+  cart.reduce((sum, i) => sum + cardPoints(i.usd, i.storeId) * i.qty, 0)
 
 function load(): State {
   try {

@@ -95,7 +95,7 @@ export function GiftCardTile({ store }: { store: Store }) {
   const usd = store.denoms.includes(picked) ? picked : store.denoms[0]
   const cardPoints = useCardPoints()
   const { addToCart } = usePoints()
-  const points = cardPoints(usd)
+  const points = cardPoints(usd, store.id)
 
   return (
     <div className="group flex flex-col gap-3 rounded-2xl border bg-card p-3 transition-all hover:-translate-y-1 hover:shadow-xl">

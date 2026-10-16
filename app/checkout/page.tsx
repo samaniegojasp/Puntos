@@ -82,7 +82,7 @@ export default function CheckoutPage() {
                 <span>
                   {findStore(i.storeId)?.name} ${i.usd} × {i.qty}
                 </span>
-                <span className="tabular-nums">{formatPoints(cardPoints(i.usd) * i.qty)} pts</span>
+                <span className="tabular-nums">{formatPoints(cardPoints(i.usd, i.storeId) * i.qty)} pts</span>
               </div>
             ))}
             <Separator />

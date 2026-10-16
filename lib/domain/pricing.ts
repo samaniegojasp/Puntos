@@ -20,25 +20,50 @@ export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
   centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
 
+/**
+ * Precio de referencia del punto para Clientes: precio del punto del paquete estándar de menor monto.
+ */
+export const clientReferenceCentsPerPoint = (standardPacks: PointsPack[]) =>
+  centsPerPoint([...standardPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
+
 /** Costo que se le paga al Proveedor por la tarjeta. */
 export const productCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
   p.costCentsOverride ?? Math.round(p.faceCents * (1 - provider.discountPct))
 
-/** Precio en dólares que paga el Canjeador por la tarjeta: valor facial + recargo. */
-export const productPriceCents = (p: Pick<Product, "faceCents">, settings: Pick<AdminSettings, "redeemSurchargePct">) =>
-  Math.round(p.faceCents * (1 + (settings.redeemSurchargePct ?? 0.03)))
+/** Precio en dólares que paga el Canjeador por la tarjeta: precio General fijado o valor facial + recargo. */
+export const productPriceCents = (
+  p: Pick<Product, "faceCents" | "priceGeneralCents">,
+  settings: Pick<AdminSettings, "redeemSurchargePct">
+) => p.priceGeneralCents ?? Math.round(p.faceCents * (1 + (settings.redeemSurchargePct ?? 0.03)))
+
+/** Precio en centavos de USD que ingresa cuando se canjea con puntos de Cliente. */
+export const productClientPriceCents = (
+  p: Pick<Product, "priceClientCents">,
+  pts: number,
+  clientRefCentsPerPoint: number
+) => p.priceClientCents ?? Math.round(pts * clientRefCentsPerPoint)
 
 /** Costo total de la tarjeta para Regala: lo que se paga al Proveedor + transporte. */
 export const productTotalCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
   productCostCents(p, provider) + p.shippingCents
 
-/** Puntos de la tarjeta al punto de referencia (paquete más pequeño del Canjeador). */
-export const productPoints = (p: Pick<Product, "faceCents">, settings: Pick<AdminSettings, "redeemSurchargePct" | "pointsMultiple">, refCentsPerPoint: number) =>
-  pointsPrice(productPriceCents(p, settings), refCentsPerPoint, settings.pointsMultiple)
+/** Puntos de la tarjeta al punto de referencia (paquete más pequeño del Canjeador). Salen del precio General. */
+export const productPoints = (
+  p: Pick<Product, "faceCents" | "priceGeneralCents">,
+  settings: Pick<AdminSettings, "redeemSurchargePct" | "pointsMultiple">,
+  refCentsPerPoint: number
+) => pointsPrice(productPriceCents(p, settings), refCentsPerPoint, settings.pointsMultiple)
 
 /** Puntos de la tarjeta: se redondea y luego se sube al siguiente múltiplo. */
 export const pointsPrice = (priceCents: number, refCentsPerPoint: number, multiple = 10) =>
   Math.ceil(Math.round(priceCents / refCentsPerPoint) / multiple) * multiple
+
+/** Margen en centavos y porcentaje sobre el costo total. */
+export function cardMargin(priceCents: number, totalCostCents: number) {
+  const marginCents = priceCents - totalCostCents
+  const marginPct = totalCostCents > 0 ? (priceCents - totalCostCents) / totalCostCents : 0
+  return { marginCents, marginPct }
+}
 
 /** Ingreso y margen que deja una tarjeta pagada con puntos comprados en cierto paquete. */
 export function marginAtPack(points: number, pack: Pick<PointsPack, "usdCents" | "points">, costCents: number) {

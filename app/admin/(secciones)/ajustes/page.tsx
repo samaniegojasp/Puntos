@@ -160,11 +160,6 @@ export default function AdminAjustesPage() {
 
   const f = current.pointsFactor ?? 1
 
-  const smallestPublicPpd = (() => {
-    const sp = [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0]
-    return sp ? sp.points / (sp.usdCents / 100) : 100 * f
-  })()
-
   const canSave = errors.length === 0
 
   const handleSave = (e: React.FormEvent) => {
@@ -252,7 +247,7 @@ export default function AdminAjustesPage() {
       <div>
         <h2 className="text-xl font-semibold tracking-tight">Ajustes del sistema</h2>
         <p className="text-sm text-muted-foreground">
-          Parámetros globales de margen comercial, recargos y vigencias de la plataforma
+          Parámetros globales de recargos, vigencias y compra a tu medida
         </p>
       </div>
 
@@ -354,7 +349,7 @@ export default function AdminAjustesPage() {
             <CardTitle className="text-lg">Parámetros operativos y comerciales</CardTitle>
           </div>
           <CardDescription>
-            Estas variables rigen el motor de fijación de precios, liquidaciones y caducidades de Regala.
+            Estas variables rigen recargos, liquidaciones y caducidades de Regala.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -442,7 +437,7 @@ export default function AdminAjustesPage() {
                 <div>
                   <h4 className="text-sm font-semibold">Compra a tu medida (Clientes y Nosotros)</h4>
                   <p className="text-xs text-muted-foreground">
-                    Además de los paquetes, los Clientes y Nosotros pueden comprar el monto en dólares enteros que elijan. Su precio nunca puede ser más barato que el del paquete más pequeño del Canjeador.
+                    Además de los paquetes, los Clientes y Nosotros pueden comprar el monto en dólares enteros que elijan, al precio que fijes aquí.
                   </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -470,15 +465,15 @@ export default function AdminAjustesPage() {
                   <Slider
                     id="customPpd"
                     min={50 * f}
-                    max={Math.max(50 * f + 1, Math.floor(smallestPublicPpd))}
+                    max={200 * f}
                     step={1}
-                    value={[Math.min(Math.max(Math.round(customPpd), 50 * f), Math.max(50 * f + 1, Math.floor(smallestPublicPpd)))]}
+                    value={[Math.min(Math.max(Math.round(customPpd), 50 * f), 200 * f)]}
                     onValueChange={(v) => setCustomPpd(v[0])}
                     aria-label="Puntos por cada dólar de la compra a tu medida"
                   />
                   <div className="flex justify-between text-[10px] text-muted-foreground">
                     <span>Mínimo {50 * f} pts/$</span>
-                    <span>Máximo {new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(smallestPublicPpd)} pts/$ (el del paquete más pequeño)</span>
+                    <span>Máximo {200 * f} pts/$</span>
                   </div>
                 </div>
               </div>

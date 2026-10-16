@@ -19,6 +19,7 @@ Documentos (léelos antes de tocar el dominio):
 
 Código clave:
 - `lib/domain/{types,pricing,format,documento,csv}.ts`: contrato y cálculos (solo vista previa; el servidor decidirá los precios).
+- `lib/domain/pricing.ts`: precios por tarjeta (General y de Cliente), puntos y margen.
 - `lib/mock/{data,session,admin-settings,admin-kpis}`: datos de ejemplo; `admin-settings` es el estado compartido (ajustes, proveedores, productos, clientes, paquetes) para el panel y la tienda.
 - `components/panel/*`: shells por rol, `packs-editor`, `editable-number`, KpiCard.
 - `app/admin/(secciones)/*`: Resumen, Clientes, Proveedores, Precios, Usuarios, Liquidaciones, Ajustes.

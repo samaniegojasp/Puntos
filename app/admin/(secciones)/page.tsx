@@ -274,7 +274,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                   {!isActive(s) && <Badge variant="outline">Oculta</Badge>}
                 </div>
                 <p className="text-sm text-muted-foreground">{s.category}</p>
-                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(cardPoints(d))} pts`).join(" · ")}</p>
+                <p className="text-xs text-muted-foreground">{s.denoms.map((d) => `$${d} = ${formatPoints(cardPoints(d, s.id))} pts`).join(" · ")}</p>
               </div>
               <div className="flex shrink-0 gap-1">
                 <Button variant="ghost" size="icon" onClick={() => edit(s)} aria-label={`Editar ${s.name}`}>
@@ -316,7 +316,7 @@ function Panel({ onLogout }: { onLogout: () => void }) {
                 hint={
                   preview.length > 0 ? (
                     <p className="text-xs text-muted-foreground">
-                      {preview.map((d) => `$${d} = ${formatPoints(cardPoints(d))} pts`).join(" · ")}
+                      {preview.map((d) => `$${d} = ${formatPoints(cardPoints(d, draft.id || undefined))} pts`).join(" · ")}
                     </p>
                   ) : null
                 }

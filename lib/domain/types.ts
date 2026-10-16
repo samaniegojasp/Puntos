@@ -236,6 +236,10 @@ export type Product = {
   active: boolean
   /** Caducidad propia de esta tarjeta (días). Si no existe, se usa la del Proveedor. */
   cardValidDays?: number
+  /** Precio fijado a mano para el Canjeador General (centavos de USD). Si no existe, vale valor facial × (1 + recargo). */
+  priceGeneralCents?: number
+  /** Precio fijado a mano para el Canjeador de Cliente (centavos de USD). Si no existe, se calcula. */
+  priceClientCents?: number
 }
 
 export type ClientAdminRow = ClientAccount & {

@@ -436,7 +436,7 @@ export default function AdminSolicitudesPage() {
                   : "Solicitud rechazada"}
               </DialogTitle>
               <DialogDescription>
-                Detalles de la tarjeta y verificación de reglas de precios.
+                Detalles de la tarjeta, valores a aprobar y vista previa de precios y márgenes.
               </DialogDescription>
             </DialogHeader>
 

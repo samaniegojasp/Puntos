@@ -62,7 +62,7 @@ export default function CartPage() {
             {cart.map((item) => {
               const store = findStore(item.storeId)
               if (!store) return null
-              const unitPoints = cardPoints(item.usd)
+              const unitPoints = cardPoints(item.usd, item.storeId)
               const itemTotalPoints = unitPoints * item.qty
 
               return (

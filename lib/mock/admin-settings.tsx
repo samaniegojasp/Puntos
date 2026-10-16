@@ -112,11 +112,20 @@ export function useCanBuyCustom() {
   return role === "cliente" || role === "admin"
 }
 
-/** Puntos que cuesta una tarjeta en la tienda: valor facial + recargo, al punto del paquete más pequeño del Canjeador. */
+/** Puntos que cuesta una tarjeta en la tienda: precio General al punto del paquete más pequeño del Canjeador. */
 export function useCardPoints() {
-  const { publicPacks, settings } = useAdminSettings()
+  const { publicPacks, settings, products } = useAdminSettings()
   const ref = referenceCentsPerPoint(publicPacks)
-  return (usd: number) => productPoints({ faceCents: Math.round(usd * 100) }, settings, ref)
+  return (usd: number, storeId?: string) => {
+    const faceCents = Math.round(usd * 100)
+    if (storeId) {
+      const prod = products.find((p) => p.active && p.storeId === storeId && p.faceCents === faceCents)
+      if (prod) {
+        return productPoints(prod, settings, ref)
+      }
+    }
+    return productPoints({ faceCents }, settings, ref)
+  }
 }
 
 /** Cliente de la sesión de ejemplo, con su tramo base y su bolsa viva (la misma que ven Clientes y Resumen). */
