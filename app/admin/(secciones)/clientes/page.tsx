@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertCircle, AlertTriangle, Building2, Check, Edit2, Info, Plus, Trash2 } from "lucide-react"
+import { Building2, Check, Edit2, Info, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -36,16 +35,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  MOCK_CLIENTS_ADMIN,
-  MOCK_PRODUCTS,
-  MOCK_PROVIDERS,
-  MOCK_PUBLIC_PACKS,
-} from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import EditableNumber from "@/components/panel/editable-number"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { validatePricing } from "@/lib/domain/pricing"
 import type { ClientAdminRow, PointsPack } from "@/lib/domain/types"
 
 /** Puntos que recibe el cliente por cada dólar (inverso del precio por punto). */
@@ -53,7 +45,7 @@ const ptsPerUsd = (usdPerPoint: number) =>
   usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
 
 export default function AdminClientesPage() {
-  const { settings, clients, setClients, providers, products, publicPacks, standardPacks } = useAdminSettings()
+  const { settings, clients, setClients } = useAdminSettings()
   const f = settings.pointsFactor ?? 1
   const [loading, setLoading] = useState(true)
 
@@ -96,14 +88,20 @@ export default function AdminClientesPage() {
     setDialogOpen(true)
   }
 
+  const POINTS_STEP = 50 * f
+  const packBoundsForUsd = (usdCents: number) => {
+    const usd = usdCents / 100
+    const min = Math.ceil((usd * 100 * f * 0.6) / POINTS_STEP) * POINTS_STEP
+    const max = Math.floor((usd * 100 * f * 1.4) / POINTS_STEP) * POINTS_STEP
+    return { min, max }
+  }
+
   // Manejo de tramos propios
-  // Tramo nuevo: se crea con los puntos en la mitad del rango permitido para que nazca válido
   const handleAddPack = () => {
-    const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 12000 * f }
-    const next = [...customPacks, fresh]
-    const b = boundsFor(next, next.length - 1)
-    if (b) fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
-    setCustomPacks(next.map((p) => (p.id === fresh.id ? fresh : p)))
+    const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 10000 * f }
+    const b = packBoundsForUsd(fresh.usdCents)
+    fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
+    setCustomPacks([...customPacks, fresh])
   }
 
   // Al cambiar el monto de un tramo se conserva su proporción de puntos por dólar y se ajusta al nuevo rango permitido
@@ -115,10 +113,9 @@ export default function AdminClientesPage() {
     }
     const ptsPerDollar = cur.points / (cur.usdCents / 100)
     let pts = Math.max(POINTS_STEP, Math.round(((usdCents / 100) * ptsPerDollar) / POINTS_STEP) * POINTS_STEP)
-    const next = customPacks.map((p, i) => (i === idx ? { ...p, usdCents, points: pts } : p))
-    const b = boundsFor(next, idx)
-    if (b) pts = Math.min(Math.max(pts, b.min), b.max)
-    setCustomPacks(next.map((p, i) => (i === idx ? { ...p, points: pts } : p)))
+    const b = packBoundsForUsd(usdCents)
+    pts = Math.min(Math.max(pts, b.min), b.max)
+    setCustomPacks(customPacks.map((p, i) => (i === idx ? { ...p, usdCents, points: pts } : p)))
   }
 
   const handleRemovePack = (idx: number) => {
@@ -133,7 +130,6 @@ export default function AdminClientesPage() {
     })
   }
 
-  // Validación en tiempo real con validatePricing
   // Con tramos propios, el precio por punto sale de su tramo más pequeño (una sola fuente de verdad).
   const baseIdx =
     packMode === "custom" && customPacks.length > 0
@@ -155,106 +151,29 @@ export default function AdminClientesPage() {
     active,
   }
 
-  // Revisa las reglas del sistema con un conjunto de tramos propios dado
-  const buildIssues = (packs: PointsPack[], forceCustom = false) => {
-    const cand: ClientAdminRow = {
-      ...candidateClient,
-      packMode: forceCustom ? "custom" : packMode,
-      customPacks: forceCustom || packMode === "custom" ? packs : [],
-    }
-    const simulated = editingClient
-      ? clients.map((c) => (c.id === editingClient.id ? cand : c))
-      : [...clients, cand]
-    return validatePricing({
-      settings,
-      providers,
-      products,
-      standardPacks,
-      publicPacks,
-      clients: simulated,
-    })
-  }
-
-  const issues = buildIssues(customPacks)
-
-  // Rango de puntos válido para un tramo, calculado con las mismas reglas (sin fórmulas propias).
-  // Regla 2 (el Canjeador paga más por punto): exige un mínimo de puntos.
-  // Regla 3 (margen mínimo): exige un máximo de puntos.
-  const POINTS_STEP = 50 * f
-  const POINTS_CAP = 5_000_000 * f
-  const boundsFor = (
-    packs: PointsPack[],
-    idx: number,
-    forceCustom = false,
-    step = POINTS_STEP,
-  ): { min: number; max: number } | null => {
-    const own = packs[idx]
+  const pointsBounds = (idx: number): { min: number; max: number } | null => {
+    const own = customPacks[idx]
     if (!own || own.usdCents <= 0) return null
-    const tag = `tramo $${(own.usdCents / 100).toFixed(2)}:`
-    const withPoints = (pts: number) => packs.map((x, i) => (i === idx ? { ...x, points: pts } : x))
-    // Se cuentan los errores que dependen de ESTE tramo y se comparan con el mejor caso posible.
-    // Así, un error que ya traen otros tramos no hace desaparecer el rango de este.
-    const countLow = (pts: number) =>
-      buildIssues(withPoints(pts), forceCustom).filter(
-        (i) => i.rule === 2 || i.rule === 7 || (i.rule === 6 && i.limit === "max"),
-      ).length
-    const countHigh = (pts: number) =>
-      buildIssues(withPoints(pts), forceCustom).filter(
-        (i) => (i.rule === 3 && i.message.includes(tag)) || (i.rule === 6 && i.limit === "min"),
-      ).length
-    const maxK = Math.floor(POINTS_CAP / step)
-    const baseLow = countLow(maxK * step)
-    const baseHigh = countHigh(step)
-    const lowOk = (pts: number) => countLow(pts) <= baseLow
-    const highOk = (pts: number) => countHigh(pts) <= baseHigh
-
-    // Menor valor que cumple la regla 2 (válido de ahí hacia arriba)
-    let a = 1
-    let b = maxK
-    while (a < b) {
-      const m = Math.floor((a + b) / 2)
-      if (lowOk(m * step)) b = m
-      else a = m + 1
-    }
-    const min = a * step
-    // Mayor valor que cumple la regla 3 (válido de ahí hacia abajo)
-    a = 1
-    b = maxK
-    while (a < b) {
-      const m = Math.ceil((a + b) / 2)
-      if (highOk(m * step)) a = m
-      else b = m - 1
-    }
-    const max = a * step
-    return min <= max ? { min, max } : null
+    return packBoundsForUsd(own.usdCents)
   }
-  const pointsBounds = (idx: number) => boundsFor(customPacks, idx)
 
   // Rango del precio por punto: el de un tramo de referencia ($10 si no hay tramos propios).
-  // Más puntos por el mismo monto = punto más barato, por eso los extremos se invierten.
   const REF_USD_CENTS = 1000
   const priceBounds = (() => {
     const b =
       baseIdx !== null && basePack
         ? pointsBounds(baseIdx)
-        : // Cliente estándar: su precio es el del tramo de $10 de la tabla estándar; los demás tramos quedan como están
-          boundsFor(
-            [
-              { id: "ref", usdCents: REF_USD_CENTS, points: 1020 * f },
-              ...standardPacks.filter((p) => p.usdCents > REF_USD_CENTS).map((p) => ({ ...p })),
-            ],
-            0,
-            true,
-            f,
-          )
+        : { min: Math.ceil((10 * 100 * f * 0.6) / POINTS_STEP) * POINTS_STEP, max: Math.floor((10 * 100 * f * 1.4) / POINTS_STEP) * POINTS_STEP }
     if (!b) return null
     const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
     return { min: usd / b.max, max: usd / b.min, pointsMin: b.min, pointsMax: b.max, usd }
   })()
 
-  const errorIssues = issues.filter((i) => i.severity === "error")
-  const warningIssues = issues.filter((i) => i.severity === "warning")
-  const hasErrors = errorIssues.length > 0 || !name.trim() || parsedUsdPerPoint <= 0
+  const duplicatedPacks = new Set(customPacks.map((p) => p.usdCents)).size !== customPacks.length
+  const invalidPacks =
+    packMode === "custom" &&
+    (customPacks.length === 0 || duplicatedPacks || customPacks.some((p) => p.usdCents <= 0 || p.points <= 0))
+  const hasErrors = !name.trim() || parsedUsdPerPoint <= 0 || invalidPacks
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -494,8 +413,8 @@ export default function AdminClientesPage() {
                 )}
                 <p className="text-xs text-muted-foreground">
                   {baseIdx !== null
-                    ? "Sale del tramo propio más pequeño: mover la barra ajusta los puntos de ese tramo. Los límites vienen de las reglas del sistema."
-                    : "Valor de referencia para convertir bono en puntos. Los límites vienen de las reglas del sistema."}
+                    ? "Sale del tramo propio más pequeño: mover la barra ajusta los puntos de ese tramo."
+                    : "Valor de referencia para convertir bono en puntos."}
                 </p>
               </div>
             </div>
@@ -543,9 +462,6 @@ export default function AdminClientesPage() {
               </p>
               <p className="text-[11px] text-muted-foreground">
                 Un cambio de precio afecta solo a los puntos que este cliente compre después; los ya vendidos no cambian.
-              </p>
-              <p className="text-[11px] text-muted-foreground">
-                validatePricing revisa únicamente los paquetes; el precio por punto de un cliente en modo estándar es informativo.
               </p>
             </div>
 
@@ -624,7 +540,7 @@ export default function AdminClientesPage() {
                             ) : (
                               <>
                                 <p className="text-[11px] text-destructive">
-                                  Con los otros tramos y el monto actuales no existe un valor que cumpla las reglas. Corrige el monto o los demás tramos.
+                                  El monto debe ser mayor a 0 para calcular la barra de puntos.
                                 </p>
                                 <Input
                                   type="number"
@@ -662,33 +578,6 @@ export default function AdminClientesPage() {
                   </div>
                 )}
               </div>
-            )}
-
-            {/* Avisos de validatePricing */}
-            {errorIssues.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Problemas que bloquean el guardado (Reglas del sistema)</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2">
-                  {errorIssues.map((issue, i) => (
-                    <p key={i} className="text-xs">
-                      • {issue.message}
-                    </p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {warningIssues.length > 0 && (
-              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="font-semibold text-amber-900">Avisos del sistema</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2 text-xs text-amber-800">
-                  {warningIssues.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
             )}
 
             <DialogFooter>

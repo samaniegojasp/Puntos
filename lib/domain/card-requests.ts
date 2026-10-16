@@ -1,13 +1,5 @@
 import type { ThemeKey } from "@/lib/catalog"
-import type {
-  AdminSettings,
-  ClientAdminRow,
-  PointsPack,
-  PricingIssue,
-  Product,
-  Provider,
-} from "./types"
-import { validatePricing } from "./pricing"
+import type { Product } from "./types"
 
 export type CardRequestStatus = "draft" | "submitted" | "approved" | "rejected"
 
@@ -30,14 +22,6 @@ export type CardRequest = {
   approvedStoreId?: string
 }
 
-export type PricingContext = {
-  settings: AdminSettings
-  providers: Provider[]
-  products: Product[]
-  standardPacks: PointsPack[]
-  publicPacks: PointsPack[]
-  clients: ClientAdminRow[]
-}
 
 export const slugify = (t: string) =>
   t
@@ -118,50 +102,3 @@ export function requestToProducts(
   }))
 }
 
-export function pricingErrorsFor(ctx: PricingContext, products: Product[]): PricingIssue[] {
-  const baseIssues = validatePricing(ctx)
-  const baseMessages = new Set(baseIssues.map((i) => i.message))
-  const newIssues = validatePricing({
-    ...ctx,
-    products,
-  })
-  return newIssues.filter((i) => !baseMessages.has(i.message))
-}
-
-export function incompatibleDenoms(
-  ctx: PricingContext,
-  req: { name: string; denoms: number[] },
-  providerId: string
-): { denoms: number[]; combined: boolean } {
-  const badDenoms: number[] = []
-  for (const d of req.denoms) {
-    const singleProduct = requestToProducts(req, [d], providerId)
-    const errors = pricingErrorsFor(ctx, [...ctx.products, ...singleProduct])
-    if (errors.length > 0) {
-      badDenoms.push(d)
-    }
-  }
-
-  const remaining = req.denoms.filter((d) => !badDenoms.includes(d))
-  let combined = false
-  if (remaining.length > 0) {
-    const combinedProducts = requestToProducts(req, remaining, providerId)
-    const errors = pricingErrorsFor(ctx, [...ctx.products, ...combinedProducts])
-    if (errors.length > 0) {
-      combined = true
-    }
-  }
-
-  return { denoms: badDenoms, combined }
-}
-
-export function providerSafeMessage(r: { denoms: number[]; combined: boolean }): string | null {
-  if (r.denoms.length > 0) {
-    const formatted = r.denoms.map((d) => `$${d}`).join(", ")
-    return `Estos valores no son compatibles con el catálogo actual: ${formatted}. Quítalos o cámbialos y vuelve a enviar.`
-  }
-  if (r.combined) {
-    return "La combinación de valores no es compatible con el catálogo actual. Prueba quitando alguno y vuelve a enviar."
-  }
-  return null
-}

@@ -45,12 +45,6 @@ export function rescaleForFactor<T extends RescaleFactorInput>(
     ...(input.settings.customPointsPerUsd !== undefined
       ? { customPointsPerUsd: Math.round(input.settings.customPointsPerUsd * ratio * 10) / 10 }
       : {}),
-    ...(input.settings.pricePerPointMin !== undefined
-      ? { pricePerPointMin: input.settings.pricePerPointMin / ratio }
-      : {}),
-    ...(input.settings.pricePerPointMax !== undefined
-      ? { pricePerPointMax: input.settings.pricePerPointMax / ratio }
-      : {}),
   }
 
   return {

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
-import { AlertCircle, AlertTriangle, Check, RefreshCw, RotateCcw, Settings, Sliders } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { AlertCircle, Check, RefreshCw, RotateCcw, Settings, Sliders } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -21,15 +21,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
-  MOCK_CLIENTS_ADMIN,
-  MOCK_PRODUCTS,
-  MOCK_PROVIDERS,
-  MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
 } from "@/lib/mock/data"
 import { formatPct, formatPts } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { pointsPrice, productPoints, productPriceCents, referenceCentsPerPoint, validatePricing } from "@/lib/domain/pricing"
+import { pointsPrice, productPoints, productPriceCents, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import { rescaleForFactor } from "@/lib/domain/points-factor"
 import { adminConfigured, verifyAdmin } from "@/lib/admin-auth"
 import type { AdminSettings } from "@/lib/domain/types"
@@ -78,22 +74,7 @@ export default function AdminAjustesPage() {
   const smallestPoints = smallestPublic ? smallestPublic.points : 1000 * currentFactor
   const previewPoints = isFactorValid ? Math.round((smallestPoints * parsedFactor) / currentFactor) : null
 
-  const factorIssues = useMemo(
-    () =>
-      isFactorValid && factorHasChanged
-        ? validatePricing(
-            rescaleForFactor(
-              { settings: current, publicPacks, standardPacks, clients, providers, products },
-              currentFactor,
-              parsedFactor,
-            ),
-          ).filter((i) => i.severity === "error")
-        : [],
-    [parsedFactor, isFactorValid, factorHasChanged, currentFactor, current, publicPacks, standardPacks, clients, providers, products],
-  )
-
   // Estado del formulario de ajustes
-  const [minMarginPctInput, setMinMarginPctInput] = useState((current.minMarginPct * 100).toString())
   const [exchangeFeePctInput, setExchangeFeePctInput] = useState((current.exchangeFeePct * 100).toString())
   const [exchangeWindowDaysInput, setExchangeWindowDaysInput] = useState(current.exchangeWindowDays.toString())
   const [pendingGrantDaysInput, setPendingGrantDaysInput] = useState(current.pendingGrantDays.toString())
@@ -101,21 +82,9 @@ export default function AdminAjustesPage() {
   const [customMinInput, setCustomMinInput] = useState(String(current.customMinUsd ?? 1))
   const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
   const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
-  const [benefitInput, setBenefitInput] = useState((((current.clientBenefitPct ?? 0.01) * 100)).toString())
   const [redeemSurchargeInput, setRedeemSurchargeInput] = useState((((current.redeemSurchargePct ?? 0.03) * 100)).toString())
-  const [minPackHeadroomInput, setMinPackHeadroomInput] = useState((((current.minPackHeadroomPct ?? 0.3) * 100)).toString())
   const [cardDenomMinInput, setCardDenomMinInput] = useState(String(current.cardDenomMinUsd ?? 5))
   const [cardDenomMaxInput, setCardDenomMaxInput] = useState(String(current.cardDenomMaxUsd ?? 500))
-  // Los límites se guardan siempre como USD por punto; aquí se pueden ver y editar en cualquiera de las dos unidades.
-  type LimitUnit = "ppd" | "price"
-  const fmtPrice = (n: number | undefined) => (n === undefined ? "" : n.toFixed(5))
-  const fmtPpd = (n: number | undefined) => (n === undefined ? "" : String(Math.round((1 / n) * 100) / 100))
-  const [limitUnit, setLimitUnit] = useState<LimitUnit>("ppd")
-  // lo = límite inferior de la cantidad mostrada; hi = límite superior (en puntos por dólar, el inferior es el precio máximo)
-  const [limitLoInput, setLimitLoInput] = useState(fmtPpd(current.pricePerPointMax))
-  const [limitHiInput, setLimitHiInput] = useState(fmtPpd(current.pricePerPointMin))
-  // Último texto escrito por la persona y su unidad: al volver a esa unidad se restaura tal cual (sin redondeos acumulados)
-  const typedRef = useRef<{ unit: LimitUnit; lo: string; hi: string } | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -123,22 +92,15 @@ export default function AdminAjustesPage() {
   }, [])
 
   // Parseo de campos con normalización de comas y redondeo limpio a fracciones
-  const rawMinMargin = parseFloat(minMarginPctInput.replace(",", "."))
   const rawExchangeFee = parseFloat(exchangeFeePctInput.replace(",", "."))
   const rawWindowDays = parseInt(exchangeWindowDaysInput, 10)
   const rawGrantDays = parseInt(pendingGrantDaysInput, 10)
-  const rawBenefit = parseFloat(benefitInput.replace(",", "."))
   const rawRedeemSurcharge = parseFloat(redeemSurchargeInput.replace(",", "."))
-  const rawMinPackHeadroom = parseFloat(minPackHeadroomInput.replace(",", "."))
   const rawCustomMin = parseInt(customMinInput, 10)
   const rawCustomMax = parseInt(customMaxInput, 10)
 
   // Validaciones individuales
   const errors: string[] = []
-
-  if (isNaN(rawMinMargin) || rawMinMargin < 0 || rawMinMargin > 100) {
-    errors.push("El margen mínimo debe ser un porcentaje entre 0 y 100 %.")
-  }
 
   if (isNaN(rawExchangeFee) || rawExchangeFee < 0 || rawExchangeFee > 100) {
     errors.push("El recargo por cambio de tarjeta debe ser un porcentaje entre 0 y 100 %.")
@@ -152,16 +114,8 @@ export default function AdminAjustesPage() {
     errors.push("Los montos de la compra a tu medida deben ser dólares enteros de al menos $1.")
   }
 
-  if (isNaN(rawBenefit) || rawBenefit < 0 || rawBenefit > 50) {
-    errors.push("El beneficio mínimo del Cliente debe ser un porcentaje entre 0 y 50 %.")
-  }
-
   if (isNaN(rawRedeemSurcharge) || rawRedeemSurcharge < 0) {
     errors.push("El recargo al canjear debe ser un porcentaje mayor o igual a 0 %.")
-  }
-
-  if (isNaN(rawMinPackHeadroom) || rawMinPackHeadroom < 0) {
-    errors.push("La holgura del paquete más pequeño debe ser un porcentaje mayor o igual a 0 %.")
   }
 
   if (isNaN(rawGrantDays) || rawGrantDays < 1) {
@@ -184,87 +138,25 @@ export default function AdminAjustesPage() {
     errors.push("Los valores de las tarjetas deben ser enteros múltiplos de 5 con 5 ≤ mín < máx ≤ 500.")
   }
 
-  // Límites opcionales del precio por punto (vacío = sin límite adicional)
-  const parseQty = (raw: string): number | undefined | "invalid" => {
-    const t = raw.trim().replace(",", ".")
-    if (!t) return undefined
-    const n = Number(t)
-    const max = limitUnit === "price" ? 100 : 100000
-    return Number.isFinite(n) && n > 0 && n < max ? n : "invalid"
-  }
-  const loQty = parseQty(limitLoInput)
-  const hiQty = parseQty(limitHiInput)
-  const round5 = (n: number) => Math.round(n * 100000) / 100000
-  // Precio por punto equivalente (USD). En puntos por dólar el límite inferior es el precio máximo.
-  const toPrice = (q: number | undefined | "invalid"): number | undefined =>
-    typeof q === "number" ? round5(limitUnit === "price" ? q : 1 / q) : undefined
-  const priceMin = limitUnit === "price" ? toPrice(loQty) : toPrice(hiQty)
-  const priceMax = limitUnit === "price" ? toPrice(hiQty) : toPrice(loQty)
-  const unitLabel = limitUnit === "price" ? "precio por punto" : "puntos por dólar"
-  if (loQty === "invalid" || hiQty === "invalid") {
-    errors.push(
-      limitUnit === "price"
-        ? "Los límites del precio por punto deben ser números mayores que 0 (USD, hasta 5 decimales) o quedar vacíos."
-        : "Los límites de puntos por dólar deben ser números mayores que 0 o quedar vacíos.",
-    )
-  } else if (typeof loQty === "number" && typeof hiQty === "number" && loQty > hiQty) {
-    errors.push(`El mínimo de ${unitLabel} no puede ser mayor que el máximo.`)
-  }
-  const fmtEq = (n: number) => new Intl.NumberFormat("es-EC", { maximumFractionDigits: limitUnit === "price" ? 1 : 5 }).format(n)
-
-  // Cambia de unidad convirtiendo lo que ya escribiste (el límite inferior y el superior se intercambian)
-  const switchUnit = (next: LimitUnit) => {
-    if (next === limitUnit) return
-    const conv = (raw: string) => {
-      const q = parseQty(raw)
-      if (typeof q !== "number") return raw.trim() ? raw : ""
-      return next === "price" ? fmtPrice(round5(1 / q)) : String(Math.round((1 / q) * 100) / 100)
-    }
-    const typed = typedRef.current
-    const restore = typed !== null && typed.unit === next
-    const newLo = restore ? typed.lo : conv(typed ? typed.hi : limitHiInput)
-    const newHi = restore ? typed.hi : conv(typed ? typed.lo : limitLoInput)
-    setLimitUnit(next)
-    setLimitLoInput(newLo)
-    setLimitHiInput(newHi)
-  }
-
   // Fracciones redondeadas para evitar números flotantes largos
-  const parsedMinMarginFraction = !isNaN(rawMinMargin) ? Math.round(rawMinMargin * 1000) / 100000 : 0.05
   const parsedExchangeFeeFraction = !isNaN(rawExchangeFee) ? Math.round(rawExchangeFee * 1000) / 100000 : 0.1
   const parsedWindowDays = !isNaN(rawWindowDays) ? Math.max(0, rawWindowDays) : 30
   const parsedGrantDays = !isNaN(rawGrantDays) ? Math.max(1, rawGrantDays) : 90
   const parsedRedeemSurcharge = !isNaN(rawRedeemSurcharge) ? Math.round(rawRedeemSurcharge * 1000) / 100000 : 0.03
-  const parsedMinPackHeadroom = !isNaN(rawMinPackHeadroom) ? Math.round(rawMinPackHeadroom * 1000) / 100000 : 0.3
 
   const candidateSettings: AdminSettings = {
     ...current,
-    minMarginPct: parsedMinMarginFraction,
     exchangeFeePct: parsedExchangeFeeFraction,
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     redeemSurchargePct: parsedRedeemSurcharge,
-    minPackHeadroomPct: parsedMinPackHeadroom,
     pointsMultiple: multiple,
     customMinUsd: !isNaN(rawCustomMin) ? rawCustomMin : 1,
     customMaxUsd: !isNaN(rawCustomMax) ? rawCustomMax : 500,
     customPointsPerUsd: customPpd,
-    clientBenefitPct: !isNaN(rawBenefit) ? Math.round(rawBenefit * 1000) / 100000 : 0.01,
-    pricePerPointMin: priceMin,
-    pricePerPointMax: priceMax,
     cardDenomMinUsd: isDenomMinInt && rawDenomMin % 5 === 0 ? rawDenomMin : 5,
     cardDenomMaxUsd: isDenomMaxInt && rawDenomMax % 5 === 0 ? rawDenomMax : 500,
   }
-
-  // Validación con validatePricing usando los ajustes candidatos
-  const pricingIssues = validatePricing({
-    settings: candidateSettings,
-    providers,
-    products,
-    standardPacks,
-    publicPacks,
-    clients,
-  })
 
   const f = current.pointsFactor ?? 1
 
@@ -273,10 +165,7 @@ export default function AdminAjustesPage() {
     return sp ? sp.points / (sp.usdCents / 100) : 100 * f
   })()
 
-  const pricingErrors = pricingIssues.filter((i) => i.severity === "error")
-  const pricingWarnings = pricingIssues.filter((i) => i.severity === "warning")
-
-  const canSave = errors.length === 0 && pricingErrors.length === 0
+  const canSave = errors.length === 0
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -288,22 +177,16 @@ export default function AdminAjustesPage() {
 
   const handleReset = () => {
     const factorVigente = current.pointsFactor ?? 1
-    setMinMarginPctInput((MOCK_SETTINGS.minMarginPct * 100).toString())
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
-    setBenefitInput(((MOCK_SETTINGS.clientBenefitPct ?? 0.01) * 100).toString())
     setRedeemSurchargeInput((((MOCK_SETTINGS.redeemSurchargePct ?? 0.03) * 100)).toString())
-    setMinPackHeadroomInput((((MOCK_SETTINGS.minPackHeadroomPct ?? 0.3) * 100)).toString())
     setMultiple(MOCK_SETTINGS.pointsMultiple)
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
     setCustomPpd((MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente)
     setCardDenomMinInput(String(MOCK_SETTINGS.cardDenomMinUsd ?? 5))
     setCardDenomMaxInput(String(MOCK_SETTINGS.cardDenomMaxUsd ?? 500))
-    setLimitUnit("ppd")
-    setLimitLoInput(fmtPpd(MOCK_SETTINGS.pricePerPointMax))
-    setLimitHiInput(fmtPpd(MOCK_SETTINGS.pricePerPointMin))
     setSettings({
       ...MOCK_SETTINGS,
       customPointsPerUsd: (MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente,
@@ -311,7 +194,6 @@ export default function AdminAjustesPage() {
       cardDenomMinUsd: MOCK_SETTINGS.cardDenomMinUsd ?? 5,
       cardDenomMaxUsd: MOCK_SETTINGS.cardDenomMaxUsd ?? 500,
     })
-    typedRef.current = null
     toast.info("Ajustes restablecidos a sus valores originales")
   }
 
@@ -335,20 +217,10 @@ export default function AdminAjustesPage() {
         publicPacks,
         standardPacks,
         clients,
-        providers,
-        products,
       },
       currentFactor,
       parsedFactor,
     )
-
-    const issues = validatePricing(rescaled)
-    const errs = issues.filter((i) => i.severity === "error")
-    if (errs.length > 0) {
-      setPassError(errs.map((i) => i.message).join("\n"))
-      setFactorBusy(false)
-      return
-    }
 
     setSettings(rescaled.settings)
     setPublicPacks(rescaled.publicPacks)
@@ -357,14 +229,6 @@ export default function AdminAjustesPage() {
 
     const newCustomPpd = rescaled.settings.customPointsPerUsd ?? 100 * parsedFactor
     setCustomPpd(newCustomPpd)
-    if (limitUnit === "price") {
-      setLimitLoInput(fmtPrice(rescaled.settings.pricePerPointMin))
-      setLimitHiInput(fmtPrice(rescaled.settings.pricePerPointMax))
-    } else {
-      setLimitLoInput(fmtPpd(rescaled.settings.pricePerPointMax))
-      setLimitHiInput(fmtPpd(rescaled.settings.pricePerPointMin))
-    }
-    typedRef.current = null
 
     setFactorBusy(false)
     setFactorDialogOpen(false)
@@ -400,7 +264,7 @@ export default function AdminAjustesPage() {
             <CardTitle className="text-lg">Factor de conversión</CardTitle>
           </div>
           <CardDescription>
-            Multiplica la conversión de dólares a puntos en toda la plataforma manteniendo las reglas de precios.
+            Multiplica la conversión de dólares a puntos en toda la plataforma.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -427,22 +291,10 @@ export default function AdminAjustesPage() {
             En producción, cambiar el factor exige convertir todos los saldos; lo hará el servidor. En este prototipo los saldos de ejemplo no cambian.
           </p>
 
-          {factorIssues.length > 0 && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Con este factor se rompen reglas de precios</AlertTitle>
-              <AlertDescription className="space-y-1 mt-2 text-xs">
-                {factorIssues.map((issue, i) => (
-                  <p key={i}>• {issue.message}</p>
-                ))}
-              </AlertDescription>
-            </Alert>
-          )}
-
           <div>
             <Button
               type="button"
-              disabled={!adminConfigured || !factorHasChanged || !isFactorValid || factorIssues.length > 0}
+              disabled={!adminConfigured || !factorHasChanged || !isFactorValid}
               onClick={() => {
                 setAdminPass("")
                 setPassError("")
@@ -508,29 +360,6 @@ export default function AdminAjustesPage() {
         <CardContent>
           <form onSubmit={handleSave} className="space-y-6">
             <div className="grid gap-6 sm:grid-cols-2">
-              {/* minMarginPct */}
-              <div className="space-y-2">
-                <Label htmlFor="minMargin">Margen mínimo (%)</Label>
-                <div className="relative">
-                  <Input
-                    id="minMargin"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="100"
-                    value={minMarginPctInput}
-                    onChange={(e) => setMinMarginPctInput(e.target.value)}
-                    required
-                  />
-                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">
-                    %
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Ningún precio puede dejar menos margen que este.
-                </p>
-              </div>
-
               {/* exchangeFeePct */}
               <div className="space-y-2">
                 <Label htmlFor="exchangeFee">Recargo por cambio de tarjeta vencida (%)</Label>
@@ -588,27 +417,6 @@ export default function AdminAjustesPage() {
                 </p>
               </div>
 
-              {/* Beneficio mínimo del Cliente */}
-              <div className="space-y-2">
-                <Label htmlFor="clientBenefit">Beneficio mínimo del Cliente (%)</Label>
-                <div className="relative">
-                  <Input
-                    id="clientBenefit"
-                    type="number"
-                    step="0.1"
-                    min="0"
-                    max="50"
-                    value={benefitInput}
-                    onChange={(e) => setBenefitInput(e.target.value)}
-                    required
-                  />
-                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Cada tramo de un Cliente debe dar al menos este % más de puntos por dólar que el Canjeador. Así quien recibe un bono ve que le rinde más (con 1 %, cada dólar del Cliente rinde al menos 1 % más puntos que el del Canjeador).
-                </p>
-              </div>
-
               {/* Recargo al canjear */}
               <div className="space-y-2">
                 <Label htmlFor="redeemSurcharge">Recargo al canjear (%)</Label>
@@ -627,105 +435,6 @@ export default function AdminAjustesPage() {
                 <p className="text-xs text-muted-foreground">
                   Se suma al valor facial: con 3 %, una tarjeta de $10 cuesta 1.030 pts del Canjeador. Sugerido: entre 2 y 5 %.
                 </p>
-              </div>
-
-              {/* Holgura del paquete más pequeño */}
-              <div className="space-y-2">
-                <Label htmlFor="minPackHeadroom">Holgura del paquete más pequeño (%)</Label>
-                <div className="relative">
-                  <Input
-                    id="minPackHeadroom"
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={minPackHeadroomInput}
-                    onChange={(e) => setMinPackHeadroomInput(e.target.value)}
-                    required
-                  />
-                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  El paquete más pequeño del Canjeador debe dar al menos este % más de puntos que la tarjeta más barata. Por defecto 30 %.
-                </p>
-              </div>
-
-              {/* Límites del precio por punto */}
-              <div className="space-y-3 rounded-lg border bg-muted/20 p-4 sm:col-span-2">
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="max-w-xl">
-                    <h4 className="text-sm font-semibold">Rango del precio por punto de los clientes (opcional)</h4>
-                    <p className="text-xs text-muted-foreground">
-                      Estos límites estrechan la barra de Clientes. Solo pueden achicar el rango que ya imponen las reglas del sistema (margen mínimo y &ldquo;el Canjeador paga más&rdquo;); nunca ampliarlo. Déjalos vacíos para usar solo las reglas.
-                    </p>
-                  </div>
-                  <div className="inline-flex rounded-md border bg-background p-0.5" role="group" aria-label="Unidad de los límites">
-                    {([
-                      ["ppd", "Puntos por dólar"],
-                      ["price", "Precio por punto"],
-                    ] as const).map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        aria-pressed={limitUnit === value}
-                        onClick={() => switchUnit(value)}
-                        className={
-                          "rounded px-3 py-1 text-xs font-medium transition-colors " +
-                          (limitUnit === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")
-                        }
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="limitLo">
-                      {limitUnit === "price" ? "Precio mínimo por punto (USD)" : "Mínimo de puntos por dólar"}
-                    </Label>
-                    <Input
-                      id="limitLo"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder={limitUnit === "price" ? "Ej. 0.00780" : "Ej. 111"}
-                      value={limitLoInput}
-                      onChange={(e) => {
-                        setLimitLoInput(e.target.value)
-                        typedRef.current = { unit: limitUnit, lo: e.target.value, hi: limitHiInput }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {typeof loQty === "number"
-                        ? limitUnit === "price"
-                          ? `Equivale a ${fmtEq(1 / loQty)} puntos por dólar como máximo.`
-                          : `Equivale a un precio máximo de $${(1 / loQty).toFixed(5)} por punto.`
-                        : "Sin límite."}
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="limitHi">
-                      {limitUnit === "price" ? "Precio máximo por punto (USD)" : "Máximo de puntos por dólar"}
-                    </Label>
-                    <Input
-                      id="limitHi"
-                      type="text"
-                      inputMode="decimal"
-                      placeholder={limitUnit === "price" ? "Ej. 0.00900" : "Ej. 128"}
-                      value={limitHiInput}
-                      onChange={(e) => {
-                        setLimitHiInput(e.target.value)
-                        typedRef.current = { unit: limitUnit, lo: limitLoInput, hi: e.target.value }
-                      }}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {typeof hiQty === "number"
-                        ? limitUnit === "price"
-                          ? `Equivale a ${fmtEq(1 / hiQty)} puntos por dólar como mínimo.`
-                          : `Equivale a un precio mínimo de $${(1 / hiQty).toFixed(5)} por punto.`
-                        : "Sin límite."}
-                    </p>
-                  </div>
-                </div>
               </div>
 
               {/* Compra a tu medida del Canjeador */}
@@ -855,31 +564,6 @@ export default function AdminAjustesPage() {
                 <AlertDescription className="space-y-1 mt-2 text-xs">
                   {errors.map((err, i) => (
                     <p key={i}>• {err}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Errores de pricing rules */}
-            {pricingErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Estos ajustes rompen las reglas de precios del sistema</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2 text-xs">
-                  {pricingErrors.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {pricingWarnings.length > 0 && (
-              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="font-semibold text-amber-900">Avisos del sistema de precios</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2 text-xs text-amber-800">
-                  {pricingWarnings.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
                   ))}
                 </AlertDescription>
               </Alert>

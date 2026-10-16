@@ -16,32 +16,28 @@ import {
 import { Slider } from "@/components/ui/slider"
 import EditableNumber from "@/components/panel/editable-number"
 import { formatPts } from "@/lib/domain/format"
-import type { PointsPack, PricingIssue } from "@/lib/domain/types"
+import type { PointsPack } from "@/lib/domain/types"
 
 const LOW = 0.6 // se prueban entre 60 % y 140 % de puntos por dólar base
 const HIGH = 1.4
 
 /**
  * Editor de paquetes de puntos (USD → puntos).
- * La barra de cada paquete solo recorre los valores de puntos que cumplen TODAS las reglas del sistema
- * (se prueba cada valor con `validate`, sin fórmulas propias).
+ * La barra de cada paquete recorre todos los pasos de puntos entre el 60 % y el 140 % de la base.
  */
 export default function PacksEditor({
   open,
   onOpenChange,
   packs,
-  validate,
   onSave,
   title = "Paquetes del Canjeador",
-  description = "Lo que el Canjeador compra por su cuenta (USD → puntos). Cambiar un paquete mueve el punto de referencia y el precio en puntos de todas las tarjetas, por eso cada barra solo permite valores que cumplen las reglas.",
+  description = "Lo que el Canjeador compra por su cuenta (USD → puntos). Cambiar un paquete mueve el punto de referencia y el precio en puntos de todas las tarjetas.",
   saveLabel = "Guardar paquetes",
   pointsPerUsdBase = 100,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   packs: PointsPack[]
-  /** Devuelve los errores de reglas con estos paquetes aplicados */
-  validate: (packs: PointsPack[]) => PricingIssue[]
   onSave: (packs: PointsPack[]) => void
   title?: string
   description?: string
@@ -57,30 +53,25 @@ export default function PacksEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const key = JSON.stringify(draft.map((p) => [p.id, p.usdCents, p.points]))
-
-  // Puntos válidos de cada paquete, dados los demás paquetes tal como están
+  // Puntos válidos de cada paquete (todos los pasos entre 60 % y 140 %)
   const validLists = useMemo(() => {
     if (!open) return [] as (number[] | null)[]
-    return draft.map((pack, idx) => {
+    return draft.map((pack) => {
       const usd = pack.usdCents / 100
       if (usd <= 0) return null
       const list: number[] = []
       const from = Math.ceil((usd * pointsPerUsdBase * LOW) / STEP) * STEP
       const to = Math.floor((usd * pointsPerUsdBase * HIGH) / STEP) * STEP
       for (let pts = from; pts <= to; pts += STEP) {
-        const test = draft.map((p, i) => (i === idx ? { ...p, points: pts } : p))
-        if (validate(test).length === 0) list.push(pts)
+        list.push(pts)
       }
       return list.length ? list : null
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, key, validate, pointsPerUsdBase, STEP])
+  }, [open, draft, pointsPerUsdBase, STEP])
 
-  const issues = validate(draft)
   const usdSet = new Set(draft.map((p) => p.usdCents))
   const duplicated = usdSet.size !== draft.length
-  const canSave = draft.length > 0 && issues.length === 0 && !duplicated && draft.every((p) => p.usdCents > 0 && p.points > 0)
+  const canSave = draft.length > 0 && !duplicated && draft.every((p) => p.usdCents > 0 && p.points > 0)
 
   const setPack = (idx: number, patch: Partial<PointsPack>) =>
     setDraft((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)))
@@ -173,7 +164,7 @@ export default function PacksEditor({
                     {!isValid && (
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <p className="text-[11px] text-destructive">
-                          El valor actual no cumple las reglas. Mueve la barra o usa el valor válido más cercano.
+                          El valor actual está fuera del rango de la barra. Mueve la barra o usa el valor más cercano.
                         </p>
                         <Button type="button" size="sm" variant="outline" onClick={() => setPack(idx, { points: list[nearest] })}>
                           Usar {formatPts(list[nearest])} pts
@@ -183,7 +174,7 @@ export default function PacksEditor({
                   </>
                 ) : (
                   <p className="text-[11px] text-destructive">
-                    Con los demás paquetes y datos actuales no existe un valor de puntos que cumpla las reglas para este paquete. Revisa el monto o los otros paquetes.
+                    El monto debe ser mayor a 0 para calcular los puntos de la barra.
                   </p>
                 )}
               </div>
@@ -194,16 +185,12 @@ export default function PacksEditor({
           </Button>
         </div>
 
-        {(issues.length > 0 || duplicated) && (
+        {duplicated && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>No se puede guardar</AlertTitle>
             <AlertDescription className="mt-1 space-y-1 text-xs">
-              {duplicated && <p>• Hay dos paquetes con el mismo monto.</p>}
-              {issues.slice(0, 6).map((i, k) => (
-                <p key={k}>• {i.message}</p>
-              ))}
-              {issues.length > 6 && <p>• … y {issues.length - 6} más.</p>}
+              <p>• Hay dos paquetes con el mismo monto.</p>
             </AlertDescription>
           </Alert>
         )}

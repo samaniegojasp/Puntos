@@ -1,20 +1,13 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import {
-  AlertCircle,
-  AlertTriangle,
-  CheckCircle2,
   Edit2,
-  Info,
   Package,
-  RotateCcw,
-  ShieldAlert,
   Tag,
 } from "lucide-react"
 import { toast } from "sonner"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -44,12 +37,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  MOCK_CLIENTS_ADMIN,
-  MOCK_PRODUCTS,
-  MOCK_PROVIDERS,
-  MOCK_PUBLIC_PACKS,
-} from "@/lib/mock/data"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import {
   centsPerPoint,
@@ -60,13 +47,11 @@ import {
   productPriceCents,
   productTotalCostCents,
   referenceCentsPerPoint,
-  validatePricing,
 } from "@/lib/domain/pricing"
 import EditableNumber from "@/components/panel/editable-number"
 import PacksEditor from "@/components/panel/packs-editor"
 import { Slider } from "@/components/ui/slider"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { rescaleForFactor } from "@/lib/domain/points-factor"
 import type { PointsPack, Product, Provider } from "@/lib/domain/types"
 
 export default function AdminPreciosPage() {
@@ -79,9 +64,6 @@ export default function AdminPreciosPage() {
   const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")
   const [packsDialogOpen, setPacksDialogOpen] = useState(false)
   const [standardDialogOpen, setStandardDialogOpen] = useState(false)
-
-  // Estado del caso con error
-  const [isErrorCaseActive, setIsErrorCaseActive] = useState(false)
 
   // Modal para editar producto
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -106,37 +88,6 @@ export default function AdminPreciosPage() {
       active: true,
     }
 
-  // Evaluación global de reglas de precios
-  const currentIssues = validatePricing({
-    settings,
-    providers,
-    products,
-    standardPacks,
-    publicPacks,
-    clients,
-  })
-
-  // Manejo del botón "Probar un caso con error"
-  const handleToggleErrorCase = () => {
-    const f = settings.pointsFactor ?? 1
-    if (!isErrorCaseActive) {
-      setPublicPacks((prev) => [
-        { ...prev[0], points: Math.round((prev[0].usdCents / 100) * 130 * f) },
-        ...prev.slice(1),
-      ])
-      setIsErrorCaseActive(true)
-      toast.info("Caso de error activado: el paquete más pequeño del Canjeador da más puntos por dólar que los Clientes")
-    } else {
-      const rescaled = rescaleForFactor(
-        { settings, publicPacks: MOCK_PUBLIC_PACKS, standardPacks, clients },
-        1,
-        f,
-      )
-      setPublicPacks(rescaled.publicPacks)
-      setIsErrorCaseActive(false)
-      toast.success("Catálogo de paquetes restaurado al estado original")
-    }
-  }
 
   // Modal de edición de producto
   const handleOpenEditProduct = (prod: Product) => {
@@ -168,19 +119,6 @@ export default function AdminPreciosPage() {
     ? products.map((p) => (p.id === editingProduct.id ? candidateProduct : p))
     : products
 
-  const dialogIssues = validatePricing({
-    settings,
-    providers,
-    products: simulatedProducts,
-    standardPacks,
-    publicPacks,
-    clients,
-  })
-
-  const dialogErrors = dialogIssues.filter((i) => i.severity === "error")
-  const dialogWarnings = dialogIssues.filter((i) => i.severity === "warning")
-  const canSaveProduct = dialogErrors.length === 0
-
   // Vista previa de lo que producen los cambios (y lo que hay guardado hoy)
   const preview = editingProduct
     ? (() => {
@@ -202,31 +140,12 @@ export default function AdminPreciosPage() {
 
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!editingProduct || !canSaveProduct) return
+    if (!editingProduct) return
 
-    // Se guarda con su estado original (activo/inactivo); la validación sí lo trató como activo
     setProducts(simulatedProducts.map((p) => (p.id === editingProduct.id ? { ...p, active: editingProduct.active } : p)))
     toast.success(`Parámetros de ${editingProduct.storeName} actualizados`)
     setDialogOpen(false)
   }
-
-  // Errores de reglas con un conjunto de paquetes del Canjeador dado (para el editor de paquetes)
-  const validatePublicPacks = useCallback(
-    (packs: PointsPack[]) =>
-      validatePricing({ settings, providers, products, standardPacks, publicPacks: packs, clients }).filter(
-        (i) => i.severity === "error",
-      ),
-    [settings, providers, products, standardPacks, clients],
-  )
-
-  // Errores de reglas con un conjunto de paquetes estándar dado (para el editor de paquetes estándar)
-  const validateStandardPacks = useCallback(
-    (packs: PointsPack[]) =>
-      validatePricing({ settings, providers, products, standardPacks: packs, publicPacks, clients }).filter(
-        (i) => i.severity === "error",
-      ),
-    [settings, providers, products, publicPacks, clients],
-  )
 
   // Obtener lista de paquetes según el selector
   let activeDisplayPacks: PointsPack[] = standardPacks
@@ -258,81 +177,15 @@ export default function AdminPreciosPage() {
   return (
     <div className="space-y-8">
       {/* Encabezado y acciones de prueba */}
+      {/* Encabezado */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Precios y fórmulas</h2>
           <p className="text-sm text-muted-foreground">
-            Cálculo de costos, precios en dólares, puntos y auditoría de reglas de negocio
+            Costos, precios en dólares, puntos y márgenes
           </p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant={isErrorCaseActive ? "destructive" : "outline"}
-            onClick={handleToggleErrorCase}
-          >
-            {isErrorCaseActive ? (
-              <>
-                <RotateCcw className="mr-2 h-4 w-4" /> Volver al estado original
-              </>
-            ) : (
-              <>
-                <ShieldAlert className="mr-2 h-4 w-4" /> Probar un caso con error
-              </>
-            )}
-          </Button>
-        </div>
       </div>
-
-      {/* 3. Panel "Reglas del sistema" */}
-      <Card
-        className={
-          currentIssues.length === 0
-            ? "border-emerald-200 bg-emerald-50/40"
-            : currentIssues.some((i) => i.severity === "error")
-            ? "border-destructive/30 bg-destructive/5"
-            : "border-amber-200 bg-amber-50/40"
-        }
-      >
-        <CardHeader className="pb-3">
-          <div className="flex items-center gap-2">
-            {currentIssues.length === 0 ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            ) : (
-              <AlertCircle className="h-5 w-5 text-destructive" />
-            )}
-            <CardTitle className="text-lg">Reglas del sistema de precios</CardTitle>
-          </div>
-          <CardDescription>
-            Auditoría en tiempo real de márgenes mínimos, consistencia de tramos y holgura del paquete más pequeño
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {currentIssues.length === 0 ? (
-            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-              <CheckCircle2 className="h-4 w-4 shrink-0" /> Todas las reglas se cumplen
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {currentIssues.map((issue, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-start gap-2 rounded-md p-2.5 text-xs ${
-                    issue.severity === "error"
-                      ? "bg-destructive/10 text-destructive font-medium"
-                      : "bg-amber-100/60 text-amber-900"
-                  }`}
-                >
-                  <span className="font-bold shrink-0 uppercase tracking-wider">
-                    Regla {issue.rule} [{issue.severity}]:
-                  </span>
-                  <span>{issue.message}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* 1. Tabla de Productos */}
       <Card>
@@ -406,11 +259,7 @@ export default function AdminPreciosPage() {
 
                       {/* Margen tramo $10 */}
                       <TableCell
-                        className={`text-right font-mono text-xs ${
-                          m10.marginPct < settings.minMarginPct
-                            ? "text-destructive font-bold"
-                            : "text-muted-foreground"
-                        }`}
+                        className="text-right font-mono text-xs text-muted-foreground"
                         title="Margen con paquete de $10"
                       >
                         {formatPct(m10.marginPct)}
@@ -418,11 +267,7 @@ export default function AdminPreciosPage() {
 
                       {/* Margen tramo $50 */}
                       <TableCell
-                        className={`text-right font-mono text-xs ${
-                          m50.marginPct < settings.minMarginPct
-                            ? "text-destructive font-bold"
-                            : "text-muted-foreground"
-                        }`}
+                        className="text-right font-mono text-xs text-muted-foreground"
                         title="Margen con paquete de $50"
                       >
                         {formatPct(m50.marginPct)}
@@ -430,11 +275,7 @@ export default function AdminPreciosPage() {
 
                       {/* Margen tramo $100 */}
                       <TableCell
-                        className={`text-right font-mono text-xs ${
-                          m100.marginPct < settings.minMarginPct
-                            ? "text-destructive font-bold"
-                            : "text-muted-foreground"
-                        }`}
+                        className="text-right font-mono text-xs text-muted-foreground"
                         title="Margen con paquete de $100"
                       >
                         {formatPct(m100.marginPct)}
@@ -558,11 +399,9 @@ export default function AdminPreciosPage() {
         open={packsDialogOpen}
         onOpenChange={setPacksDialogOpen}
         packs={publicPacks}
-        validate={validatePublicPacks}
         pointsPerUsdBase={100 * (settings.pointsFactor ?? 1)}
         onSave={(next) => {
           setPublicPacks(next)
-          setIsErrorCaseActive(false)
           toast.success("Paquetes del Canjeador actualizados")
         }}
       />
@@ -571,9 +410,8 @@ export default function AdminPreciosPage() {
         open={standardDialogOpen}
         onOpenChange={setStandardDialogOpen}
         title="Paquetes estándar (Clientes)"
-        description="Lo que paga un Cliente sin tabla propia (USD → puntos). Cada barra solo permite valores que cumplen las reglas: el Canjeador debe pagar más por punto, el margen mínimo y el beneficio mínimo del Cliente."
+        description="Lo que paga un Cliente sin tabla propia (USD → puntos)."
         packs={standardPacks}
-        validate={validateStandardPacks}
         pointsPerUsdBase={100 * (settings.pointsFactor ?? 1)}
         onSave={(next) => {
           setStandardPacks(next)
@@ -678,12 +516,7 @@ export default function AdminPreciosPage() {
                     <div key={m.usd} className="contents">
                       <span className="text-muted-foreground">Margen en tramo de {formatUsd(m.usd)}</span>
                       <span className="font-mono">{formatPct(preview.now.margins[i].marginPct)}</span>
-                      <span
-                        className={
-                          "font-mono font-semibold " +
-                          (m.marginPct < settings.minMarginPct ? "text-destructive" : "")
-                        }
-                      >
+                      <span className="font-mono font-semibold">
                         {formatPct(m.marginPct)}
                       </span>
                     </div>
@@ -697,35 +530,11 @@ export default function AdminPreciosPage() {
               </div>
             )}
 
-            {dialogErrors.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No se puede guardar</AlertTitle>
-                <AlertDescription className="space-y-1 mt-1 text-xs">
-                  {dialogErrors.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {dialogWarnings.length > 0 && (
-              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="text-amber-900 font-semibold">Avisos</AlertTitle>
-                <AlertDescription className="space-y-1 mt-1 text-xs text-amber-800">
-                  {dialogWarnings.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={!canSaveProduct}>
+              <Button type="submit">
                 Guardar cambios
               </Button>
             </DialogFooter>

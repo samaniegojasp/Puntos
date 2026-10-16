@@ -47,10 +47,6 @@ import {
 import {
   type CardRequest,
   type CardRequestStatus,
-  type PricingContext,
-  incompatibleDenoms,
-  pricingErrorsFor,
-  providerSafeMessage,
   requestToProducts,
   slugify,
   uniqueStoreId,
@@ -141,15 +137,6 @@ export default function AdminSolicitudesPage() {
       active: true,
     }
 
-  const pricingCtx: PricingContext = {
-    settings,
-    providers,
-    products,
-    standardPacks,
-    publicPacks,
-    clients,
-  }
-
   // Los borradores no se muestran en administración: son privados del Proveedor
   const nonDraftRequests = useMemo(
     () => cardRequests.filter((r) => r.status !== "draft"),
@@ -188,19 +175,7 @@ export default function AdminSolicitudesPage() {
     return allStores.some((s) => normalize(s.name) === target)
   }, [selectedRequest, allStores])
 
-  // Errores de reglas de precios con los valores marcados
-  const pricingIssues = useMemo(() => {
-    if (!selectedRequest || selectedDenoms.length === 0) return []
-    const testProducts = requestToProducts(
-      selectedRequest,
-      selectedDenoms,
-      selectedRequest.providerId
-    )
-    return pricingErrorsFor(pricingCtx, [...products, ...testProducts])
-  }, [selectedRequest, selectedDenoms, pricingCtx, products])
-
-  const cannotApprove =
-    selectedDenoms.length === 0 || nameExistsInCatalog || pricingIssues.length > 0
+  const cannotApprove = selectedDenoms.length === 0 || nameExistsInCatalog
 
   function handleApprove() {
     if (!selectedRequest || cannotApprove) return
@@ -258,9 +233,7 @@ export default function AdminSolicitudesPage() {
 
   function handleStartReject() {
     if (!selectedRequest) return
-    const incompat = incompatibleDenoms(pricingCtx, selectedRequest, selectedRequest.providerId)
-    const safeMsg = providerSafeMessage(incompat)
-    setRejectReasonInput(safeMsg ?? "")
+    setRejectReasonInput("")
     setIsRejecting(true)
   }
 
@@ -640,15 +613,10 @@ export default function AdminSolicitudesPage() {
                                     </TableCell>
                                     {tablesWithSmallest.map((t) => {
                                       const m = marginAtPack(pts, t.smallestPack, costCents)
-                                      const isBelow = m.marginPct < settings.minMarginPct
                                       return (
                                         <TableCell
                                           key={t.who}
-                                          className={`text-right font-mono text-xs ${
-                                            isBelow
-                                              ? "font-bold text-destructive"
-                                              : "text-muted-foreground"
-                                          }`}
+                                          className="text-right font-mono text-xs text-muted-foreground"
                                           title={`Margen en ${t.who}: ${formatPct(m.marginPct)}`}
                                         >
                                           {formatPct(m.marginPct)}
@@ -661,26 +629,6 @@ export default function AdminSolicitudesPage() {
                           </TableBody>
                         </Table>
                       </div>
-                    </div>
-                  )}
-
-                  {/* Evaluación de reglas de precios */}
-                  {pricingIssues.length > 0 ? (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Esta aprobación rompe reglas de precios</AlertTitle>
-                      <AlertDescription>
-                        <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
-                          {pricingIssues.map((issue, idx) => (
-                            <li key={idx}>{issue.message}</li>
-                          ))}
-                        </ul>
-                      </AlertDescription>
-                    </Alert>
-                  ) : (
-                    <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-800 dark:text-emerald-300">
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-                      <span>Cumple todas las reglas de precios</span>
                     </div>
                   )}
 

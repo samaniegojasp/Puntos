@@ -1,10 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
-import { AlertCircle, AlertTriangle, Check, Edit2, Info, Store } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Check, Edit2, Info, Store } from "lucide-react"
 import { toast } from "sonner"
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -28,9 +27,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  MOCK_PUBLIC_PACKS,
-} from "@/lib/mock/data"
 import { formatDate, formatPct, formatPts, formatUsd } from "@/lib/domain/format"
 import {
   marginAtPack,
@@ -40,7 +36,6 @@ import {
   productPriceCents,
   productTotalCostCents,
   referenceCentsPerPoint,
-  validatePricing,
 } from "@/lib/domain/pricing"
 import EditableNumber from "@/components/panel/editable-number"
 import { Slider } from "@/components/ui/slider"
@@ -48,7 +43,7 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
-  const { settings, providers, setProviders, products, clients, publicPacks, standardPacks } = useAdminSettings()
+  const { settings, providers, setProviders, products, publicPacks, standardPacks } = useAdminSettings()
   const [loading, setLoading] = useState(true)
 
   // Diálogo de edición
@@ -92,67 +87,7 @@ export default function AdminProveedoresPage() {
         active,
       }
 
-  // Simulación para validatePricing
-  const simulatedProviders = editingProvider
-    ? providers.map((p) => (p.id === editingProvider.id ? candidateProvider : p))
-    : [...providers, candidateProvider]
-
-  // Los productos de este proveedor se validan como activos aunque hoy estén ocultos
-  const validationProducts = products.map((p) =>
-    editingProvider && p.providerId === editingProvider.id ? { ...p, active: true } : p,
-  )
-
-  const issues = validatePricing({
-    settings,
-    providers: simulatedProviders,
-    products: validationProducts,
-    standardPacks,
-    publicPacks,
-    clients: clients,
-  })
-
-  // Descuentos válidos para este proveedor, calculados con las mismas reglas (sin fórmulas propias).
-  // Se prueba cada valor (de 0,1 en 0,1 %) porque el redondeo de los puntos a múltiplos de 100 hace que el margen
-  // no suba o baje de forma pareja: pueden existir valores sueltos inválidos dentro del rango. La barra solo recorre los válidos.
-  const DISCOUNT_UNIT = 1000 // décimas de punto porcentual (0,1 %)
-  const DISCOUNT_CAP_UNITS = 500 // tope de la demo: ningún descuento por encima de 50 %
-  const providerId = editingProvider?.id
-  const validDiscounts = useMemo(() => {
-    if (!providerId) return null
-    const mineProducts = products.filter((p) => p.providerId === providerId)
-    if (!mineProducts.length) return null
-    const tags = mineProducts.map((p) => `${p.storeName} $${(p.faceCents / 100).toFixed(2)}`)
-    // Los productos del proveedor se validan como activos aunque hoy estén ocultos
-    const asActive = products.map((p) => (p.providerId === providerId ? { ...p, active: true } : p))
-    const list: number[] = []
-    for (let u = 0; u <= DISCOUNT_CAP_UNITS; u++) {
-      const errs = validatePricing({
-        settings,
-        providers: providers.map((p) => (p.id === providerId ? { ...p, discountPct: u / DISCOUNT_UNIT } : p)),
-        products: asActive,
-        standardPacks,
-        publicPacks,
-        clients,
-      }).filter((i) => i.severity === "error" && tags.some((t) => i.message.includes(t)))
-      if (errs.length === 0) list.push(u)
-    }
-    return list.length ? list : null
-  }, [providerId, products, providers, clients, settings, publicPacks, standardPacks])
-
-  // Posición de la barra: índice del valor válido más cercano al actual
-  const discountUnit = Math.round(parsedDiscountPct * DISCOUNT_UNIT)
-  const discountIndex = validDiscounts
-    ? validDiscounts.reduce((best, u, i) => (Math.abs(u - discountUnit) < Math.abs(validDiscounts[best] - discountUnit) ? i : best), 0)
-    : 0
-  const discountIsValid = validDiscounts ? validDiscounts.includes(discountUnit) : false
-  const discountHasGaps = validDiscounts
-    ? validDiscounts[validDiscounts.length - 1] - validDiscounts[0] + 1 !== validDiscounts.length
-    : false
-
-  const errorIssues = issues.filter((i) => i.severity === "error")
-  const warningIssues = issues.filter((i) => i.severity === "warning")
   const hasErrors =
-    errorIssues.length > 0 ||
     parsedDiscountPct < 0 ||
     parsedDiscountPct > 1 ||
     parsedDays <= 0
@@ -292,49 +227,21 @@ export default function AdminProveedoresPage() {
                     onCommit={(v) => setDiscountPctInput(String(Math.round(v * 100) / 100))}
                   />
                 </div>
-                {validDiscounts ? (
-                  <>
-                    <Slider
-                      id="discountPct"
-                      min={0}
-                      max={Math.max(validDiscounts.length - 1, 0)}
-                      step={1}
-                      value={[discountIndex]}
-                      onValueChange={(v) => setDiscountPctInput(String(validDiscounts[v[0]] / 10))}
-                      aria-label="Descuento sobre valor facial"
-                    />
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Mínimo {new Intl.NumberFormat("es-EC").format(validDiscounts[0] / 10)} %</span>
-                      <span>Máximo {new Intl.NumberFormat("es-EC").format(validDiscounts[validDiscounts.length - 1] / 10)} %</span>
-                    </div>
-                    {!discountIsValid && (
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-[11px] text-destructive">
-                          El valor actual no cumple las reglas. Mueve la barra o usa el válido más cercano.
-                        </p>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setDiscountPctInput(String(validDiscounts[discountIndex] / 10))}
-                        >
-                          Usar {new Intl.NumberFormat("es-EC").format(validDiscounts[discountIndex] / 10)} %
-                        </Button>
-                      </div>
-                    )}
-                    {discountHasGaps && (
-                      <p className="text-[11px] text-muted-foreground">
-                        La barra salta algunos valores del medio que, por el redondeo de puntos, dejarían a un producto bajo el margen mínimo.
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-[11px] text-destructive">
-                    Con los productos y paquetes actuales no existe un descuento que cumpla las reglas para este proveedor.
-                  </p>
-                )}
+                <Slider
+                  id="discountPct"
+                  min={0}
+                  max={50}
+                  step={0.5}
+                  value={[Math.min(Math.max(parsedDiscountPct * 100, 0), 50)]}
+                  onValueChange={(v) => setDiscountPctInput(String(v[0]))}
+                  aria-label="Descuento sobre valor facial"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>Mínimo 0 %</span>
+                  <span>Máximo 50 %</span>
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial. Los límites salen de las reglas: el margen mínimo en cada tabla de paquetes.
+                  Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial.
                 </p>
               </div>
 
@@ -413,8 +320,6 @@ export default function AdminProveedoresPage() {
                         const price = productPriceCents(prod, settings)
                         const pts = productPoints(prod, settings, refCents)
                         const margin = marginAtPack(pts, std10Pack, totalCost)
-                        const isMarginLow = margin.marginPct < settings.minMarginPct
-
                         return (
                           <TableRow key={prod.id}>
                             <TableCell className="font-medium text-xs">
@@ -429,11 +334,7 @@ export default function AdminProveedoresPage() {
                             <TableCell className="text-right font-mono text-xs text-primary font-bold">
                               {formatPts(pts)} pts
                             </TableCell>
-                            <TableCell
-                              className={`text-right font-mono text-xs font-semibold ${
-                                isMarginLow ? "text-destructive font-bold" : "text-emerald-700"
-                              }`}
-                            >
+                            <TableCell className="text-right font-mono text-xs font-semibold text-muted-foreground">
                               {formatPct(margin.marginPct)}
                             </TableCell>
                           </TableRow>
@@ -443,33 +344,6 @@ export default function AdminProveedoresPage() {
                   </Table>
                 </div>
               </div>
-            )}
-
-            {/* Avisos de validatePricing */}
-            {errorIssues.length > 0 && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Problemas que bloquean el guardado (Reglas del sistema)</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2">
-                  {errorIssues.map((issue, i) => (
-                    <p key={i} className="text-xs">
-                      • {issue.message}
-                    </p>
-                  ))}
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {warningIssues.length > 0 && (
-              <Alert className="border-amber-200 bg-amber-50 text-amber-900">
-                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                <AlertTitle className="font-semibold text-amber-900">Avisos del sistema</AlertTitle>
-                <AlertDescription className="space-y-1 mt-2 text-xs text-amber-800">
-                  {warningIssues.map((issue, i) => (
-                    <p key={i}>• {issue.message}</p>
-                  ))}
-                </AlertDescription>
-              </Alert>
             )}
 
             <DialogFooter>

@@ -244,7 +244,6 @@ export type ClientAdminRow = ClientAccount & {
 }
 
 export type AdminSettings = {
-  minMarginPct: number
   exchangeFeePct: number
   exchangeWindowDays: number
   pendingGrantDays: number
@@ -254,13 +253,6 @@ export type AdminSettings = {
   pointsFactor?: number
   /** Recargo sobre el valor facial al canjear (0.03 = 3 %). Por defecto 3 %. */
   redeemSurchargePct?: number
-  /** El paquete más pequeño del Canjeador debe dar al menos este % más de puntos que la tarjeta activa más barata (0.3 = 30 %). */
-  minPackHeadroomPct?: number
-  /** Límites opcionales del precio por punto (USD) de un cliente. Solo pueden estrechar lo que ya imponen las reglas 2 y 3. */
-  pricePerPointMin?: number
-  pricePerPointMax?: number
-  /** Beneficio mínimo del Cliente sobre el punto de referencia (0.01 = 1 %). Por defecto 1 %. */
-  clientBenefitPct?: number
   /** Compra a tu medida del Canjeador (dólares enteros). Por defecto $1 a $500 y 100 pts por $1. */
   customMinUsd?: number
   customMaxUsd?: number
@@ -278,12 +270,4 @@ export type UserRow = {
   docMasked: string
   createdAt: string
   blocked: boolean
-}
-
-export type PricingIssue = {
-  rule: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8
-  /** Regla 6: qué límite se rompe (precio por debajo del mínimo o por encima del máximo) */
-  limit?: "min" | "max"
-  severity: "error" | "warning"
-  message: string
 }

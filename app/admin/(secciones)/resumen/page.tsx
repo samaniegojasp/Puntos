@@ -11,7 +11,6 @@ import { MOCK_PUBLIC_PACKS, MOCK_SETTLEMENTS, MOCK_USERS } from "@/lib/mock/data
 import { MOCK_ADMIN_MONTHS, MOCK_ADMIN_SUMMARY, type MonthPoint } from "@/lib/mock/admin-kpis"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatPct, formatPts, formatUsd } from "@/lib/domain/format"
-import { validatePricing } from "@/lib/domain/pricing"
 import { cn } from "@/lib/utils"
 
 // Colores de las series, validados con el validador de paletas (claro y oscuro). La identidad nunca depende solo del color:
@@ -206,7 +205,7 @@ const signed = (v: number) => `${v >= 0 ? "+" : "−"}${formatPct(Math.abs(v))}`
 
 export default function AdminResumenPage() {
   const [loading, setLoading] = useState(true)
-  const { settings, providers, products, clients, publicPacks, standardPacks } = useAdminSettings()
+  const { clients } = useAdminSettings()
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -239,24 +238,11 @@ export default function AdminResumenPage() {
   const settlementsDueCents = settlementsDue.reduce((sum, s) => sum + s.amountCents, 0)
 
   // Alertas calculadas con los datos vivos del panel
-  const pricingErrors = validatePricing({
-    settings,
-    providers,
-    products,
-    standardPacks,
-    publicPacks,
-    clients,
-  }).filter((i) => i.severity === "error")
   const clientsEmpty = clients.filter((c) => c.active && c.bagPoints === 0)
   const clientsLow = clients.filter((c) => c.active && c.bagPoints > 0 && c.bagPoints < 5000)
   const blockedUsers = MOCK_USERS.filter((u) => u.blocked)
 
   const alerts: { text: string; href: string }[] = []
-  if (pricingErrors.length)
-    alerts.push({
-      text: `${pricingErrors.length} ${pricingErrors.length === 1 ? "regla de precios incumplida" : "reglas de precios incumplidas"}`,
-      href: "/admin/precios",
-    })
   if (clientsEmpty.length)
     alerts.push({ text: `${clientsEmpty.length} cliente(s) activo(s) con la bolsa en cero: ${clientsEmpty.map((c) => c.name).join(", ")}`, href: "/admin/clientes" })
   if (clientsLow.length)

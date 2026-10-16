@@ -28,8 +28,6 @@ import { formatDate } from "@/lib/domain/format"
 import {
   type CardRequest,
   type CardRequestStatus,
-  incompatibleDenoms,
-  providerSafeMessage,
   validateCardRequestDraft,
 } from "@/lib/domain/card-requests"
 import { useAdminSettings, useCurrentProvider } from "@/lib/mock/admin-settings"
@@ -61,11 +59,6 @@ export default function ProveedorCatalogoPage() {
     cardRequests,
     setCardRequests,
     settings,
-    providers,
-    products,
-    standardPacks,
-    publicPacks,
-    clients,
   } = useAdminSettings()
   const { allStores } = useCatalog()
 
@@ -73,12 +66,10 @@ export default function ProveedorCatalogoPage() {
   const [editingRequest, setEditingRequest] = useState<CardRequest | null>(null)
   const [draft, setDraft] = useState<RequestDraft>(EMPTY_DRAFT)
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [serverError, setServerError] = useState<string | null>(null)
 
   const min = settings.cardDenomMinUsd ?? 5
   const max = settings.cardDenomMaxUsd ?? 500
   const categories = Array.from(new Set(allStores.map((s) => s.category)))
-  const pricingCtx = { settings, providers, products, standardPacks, publicPacks, clients }
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -95,7 +86,6 @@ export default function ProveedorCatalogoPage() {
     setEditingRequest(null)
     setDraft({ ...EMPTY_DRAFT, denoms: [10, 25, 50] })
     setErrors({})
-    setServerError(null)
     setDialogOpen(true)
   }
 
@@ -113,7 +103,6 @@ export default function ProveedorCatalogoPage() {
       denoms: [...req.denoms],
     })
     setErrors({})
-    setServerError(null)
     setDialogOpen(true)
   }
 
@@ -132,16 +121,6 @@ export default function ProveedorCatalogoPage() {
     if (Object.keys(errs).length > 0) {
       openEditDialog(req)
       setErrors(errs)
-      return
-    }
-
-    const testReq = { name: req.name, denoms: req.denoms }
-    const incompat = incompatibleDenoms(pricingCtx, testReq, providerId)
-    const safeMsg = providerSafeMessage(incompat)
-
-    if (safeMsg) {
-      openEditDialog(req)
-      setServerError(safeMsg)
       return
     }
 
@@ -229,56 +208,7 @@ export default function ProveedorCatalogoPage() {
 
     const now = new Date().toISOString()
     const sortedDenoms = [...draft.denoms].sort((a, b) => a - b)
-    const testReq = {
-      name: draft.name.trim(),
-      denoms: sortedDenoms,
-    }
-    const incompat = incompatibleDenoms(pricingCtx, testReq, providerId)
-    const safeMsg = providerSafeMessage(incompat)
 
-    if (safeMsg) {
-      setServerError(safeMsg)
-      // Guarda como borrador si falla la compatibilidad
-      if (editingRequest) {
-        setCardRequests((prev) =>
-          prev.map((r) =>
-            r.id === editingRequest.id
-              ? {
-                  ...r,
-                  name: draft.name.trim(),
-                  category: draft.category.trim(),
-                  description: draft.description.trim(),
-                  theme: draft.theme,
-                  colors: draft.colors,
-                  logo: draft.logo,
-                  image: draft.image,
-                  denoms: sortedDenoms,
-                  status: "draft",
-                }
-              : r
-          )
-        )
-      } else {
-        const newReq: CardRequest = {
-          id: `cr-${Date.now()}`,
-          providerId,
-          name: draft.name.trim(),
-          category: draft.category.trim(),
-          description: draft.description.trim(),
-          theme: draft.theme,
-          colors: draft.colors,
-          logo: draft.logo,
-          image: draft.image,
-          denoms: sortedDenoms,
-          status: "draft",
-          createdAt: now,
-        }
-        setCardRequests((prev) => [...prev, newReq])
-      }
-      return
-    }
-
-    setServerError(null)
     if (!window.confirm("Al enviarla, Regala la revisará. No podrás editarla mientras esté en revisión.")) {
       return
     }
@@ -572,13 +502,6 @@ export default function ProveedorCatalogoPage() {
               </div>
             </div>
 
-            {/* Error seguro del servidor / reglas */}
-            {serverError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>{serverError}</AlertDescription>
-              </Alert>
-            )}
 
             {/* Nombre */}
             <div className="space-y-2">
