@@ -60,6 +60,7 @@ Reglas no negociables:
 ### Proveedor (`/proveedor`)
 - **KPIs de su negocio:** tarjetas emitidas y por denominación, valor facial, tarjetas vivas y saldo pendiente en ellas, consumos por periodo, **liquidación** pendiente y pagada, tarjetas por vencer.
 - **Caja:** buscar por código o QR → **saldo exacto** → registrar consumo (parcial o total).
+- **Catálogo de tarjetas:** crea tarjetas (nombre, categoría, descripción, valores múltiplos de 5, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprueba en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor, y se bloquea si rompe reglas de precios. El Proveedor nunca ve reglas ni cálculos: solo qué valores no son compatibles y el motivo que escribimos.
 - **Condiciones acordadas** (solo lectura): descuento sobre valor facial, monto que se le paga por cada tarjeta, caducidad de sus tarjetas, forma de liquidación. Solo Nosotros las cambia; cada cambio queda con fecha y solo aplica a tarjetas emitidas después.
 - Exportación CSV de toda su información.
 - **Privacidad:** ve código, valor, saldo, fechas y un identificador reducido del canjeador (nombre abreviado + últimos 4 dígitos del documento). Nunca documento completo ni correo.

@@ -136,8 +136,9 @@ Pruebas: archivo con un error no se envía; saldo insuficiente bloquea; el mismo
 
 ## FASE B8 — Panel del Proveedor [NÚCLEO + UI]
 - [NÚCLEO] `app/api/provider/cards/lookup` y `consume` con `idempotency_key`, KPIs, exportes CSV protegidos contra inyección de fórmulas, RLS por `provider_id`, correo al Canjeador por cada consumo.
-- [UI] `/proveedor`: KPIs, **Caja** (buscar por código o QR → saldo exacto → consumir parcial o total), condiciones acordadas en solo lectura, tarjetas por vencer, exportes.
-Pruebas: un Proveedor no ve datos de otro; ve solo últimos 4 del documento; un consumo repetido con la misma clave no descuenta dos veces; no puede consumir más que el saldo ni una tarjeta caducada o cambiada.
+- [NÚCLEO] Tabla `card_requests` (`id`, `provider_id`, `name`, `category`, `description`, `theme`, `colors`, `logo_path`, `image_path`, `denoms int[]`, `status`, `reject_reason`, `reviewed_by`, `reviewed_at`, `approved_store_id`); políticas RLS (el Proveedor ve y edita solo las suyas en `draft`/`rejected`; Nosotros vemos todas); función `approve_card_request(request_id, denoms)` que crea tienda y productos en una transacción y **vuelve a validar los precios en el servidor**.
+- [UI] `/proveedor`: KPIs, **Caja** (buscar por código o QR → saldo exacto → consumir parcial o total), **Catálogo** (crear tarjetas, borradores y envío a revisión), condiciones acordadas en solo lectura, tarjetas por vencer, exportes. Admin: `/admin/solicitudes` para revisar, aprobar (publicando en catálogo y productos) o rechazar con motivo.
+Pruebas: un Proveedor no ve datos de otro; ve solo últimos 4 del documento; un consumo repetido con la misma clave no descuenta dos veces; no puede consumir más que el saldo ni una tarjeta caducada o cambiada; la aprobación bloquea si rompe reglas de precios.
 
 ## FASE B9 — Liquidación y caducidad [NÚCLEO + UI]
 - [NÚCLEO] `settle_period`, `provider_settlements`, `pg_cron` para marcar `expired`.

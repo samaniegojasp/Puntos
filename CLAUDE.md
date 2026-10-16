@@ -29,6 +29,7 @@ Código clave:
 - El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño. El bono (%) lo edita el Cliente; el precio del punto lo fija Nosotros.
 - Reparto por Excel: todo o nada, irreversible, idempotente, sin enumeración de documentos al revisar. El Cliente SÍ ve usados/disponibles por documento en "Lo repartido" (decisión del dueño).
 - **Planilla de reparto:** .xlsx con N filas (1 a 1.000): tipo de documento (lista desplegable), número de documento, correo electrónico, valor de comisión ($) y referencia. Los puntos se calculan en la web: `floor(comisión ÷ precio del punto del tramo más pequeño del Cliente)`. La revisión muestra puntos por persona, total, saldo y faltante, y permite comprar el faltante exacto en dólares enteros. El servidor siempre vuelve a validar cada fila. El Cliente nunca ve el precio por punto, solo USD → puntos.
+- **Catálogo del Proveedor:** el Proveedor crea tarjetas (nombre, categoría, descripción, valores, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprobamos en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor, y se bloquea si rompe reglas de precios. El Proveedor nunca ve reglas ni cálculos: solo qué valores no son compatibles y el motivo que escribimos.
 - **Compra a tu medida:** solo la ven y usan Cliente y Nosotros en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos, se le propone el paquete más pequeño que cubra lo que falta.
 - Edad: siempre "declaración", nunca "verificamos".
 

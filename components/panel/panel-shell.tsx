@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { FlaskConical } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-export type PanelTab = { href: string; label: string }
+export type PanelTab = { href: string; label: string; badge?: number }
 
 /** Marco común de los paneles: título, pestañas (rutas) y aviso de prototipo. */
 export default function PanelShell({
@@ -43,13 +43,18 @@ export default function PanelShell({
                 href={t.href}
                 aria-current={active?.href === t.href ? "page" : undefined}
                 className={cn(
-                  "inline-block border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                  "inline-flex items-center gap-1.5 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
                   active?.href === t.href
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground",
                 )}
               >
-                {t.label}
+                <span>{t.label}</span>
+                {typeof t.badge === "number" && t.badge > 0 && (
+                  <span className="rounded-full bg-primary text-primary-foreground text-[10px] px-1.5">
+                    {t.badge}
+                  </span>
+                )}
               </Link>
             </li>
           ))}
