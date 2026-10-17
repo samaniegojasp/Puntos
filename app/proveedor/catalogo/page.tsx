@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { AlertCircle, CheckCircle2, Clock, Eye, FileEdit, FileText, Plus, Send, Trash2, XCircle } from "lucide-react"
+import { CheckCircle2, Clock, Eye, FileEdit, FileText, Plus, Send, Trash2, XCircle } from "lucide-react"
 import { toast } from "sonner"
 
-import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"

@@ -15,7 +15,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
@@ -27,10 +26,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatDate, formatPct, formatPts, formatUsd } from "@/lib/domain/format"
+import { formatPct, formatPts, formatUsd } from "@/lib/domain/format"
 import {
   marginAtPack,
-  pointsPrice,
   productCostCents,
   productPoints,
   productPriceCents,

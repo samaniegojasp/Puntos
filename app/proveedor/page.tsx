@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { AlertCircle, ArrowRight, CreditCard, DollarSign, FileText, ShoppingCart } from "lucide-react"
+import { ArrowRight, CreditCard, DollarSign, FileText, ShoppingCart } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"

@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { AlertCircle, Check, RefreshCw, RotateCcw, Settings, Sliders } from "lucide-react"
+import { useEffect, useState } from "react"
+import { AlertCircle, Check, RefreshCw, RotateCcw, Sliders } from "lucide-react"
 import { toast } from "sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -23,9 +23,9 @@ import {
 import {
   MOCK_SETTINGS,
 } from "@/lib/mock/data"
-import { formatPct, formatPts } from "@/lib/domain/format"
+import { formatPts } from "@/lib/domain/format"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
-import { pointsPrice, productPoints, productPriceCents, referenceCentsPerPoint } from "@/lib/domain/pricing"
+import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import { rescaleForFactor } from "@/lib/domain/points-factor"
 import { adminConfigured, verifyAdmin } from "@/lib/admin-auth"
 import type { AdminSettings } from "@/lib/domain/types"
@@ -35,7 +35,6 @@ export default function AdminAjustesPage() {
   const {
     settings: current,
     setSettings,
-    providers,
     products,
     clients,
     setClients,

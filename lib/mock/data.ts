@@ -205,6 +205,9 @@ export const MOCK_PRODUCTS: Product[] = [
   prod("pr-6", "kywi", "Kywi", "p-kywi", 20),
   prod("pr-7", "jugueton", "Juguetón", "p-jugueton", 15),
   prod("pr-8", "deprati", "De Prati", "p-deprati", 25, false),
+  prod("pr-9", "megamaxi", "Megamaxi", "p-supermaxi", 25),
+  prod("pr-10", "megamaxi", "Megamaxi", "p-supermaxi", 50),
+  prod("pr-11", "megamaxi", "Megamaxi", "p-supermaxi", 100),
 ]
 
 export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [

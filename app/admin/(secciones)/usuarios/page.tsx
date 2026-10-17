@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from "react"
 import {
-  AlertCircle,
   Building2,
-  Check,
   Search,
-  Shield,
   ShieldAlert,
   Store,
   UserCheck,

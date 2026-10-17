@@ -108,7 +108,6 @@ export default function AdminSolicitudesPage() {
     setCardRequests,
     settings,
     providers,
-    products,
     setProducts,
     standardPacks,
     publicPacks,

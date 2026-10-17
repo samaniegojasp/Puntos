@@ -60,7 +60,7 @@ Reglas no negociables:
 ### Proveedor (`/proveedor`)
 - **KPIs de su negocio:** tarjetas emitidas y por denominación, valor facial, tarjetas vivas y saldo pendiente en ellas, consumos por periodo, **liquidación** pendiente y pagada, tarjetas por vencer.
 - **Caja:** buscar por código o QR → **saldo exacto** → registrar consumo (parcial o total).
-- **Catálogo de tarjetas:** crea tarjetas (nombre, categoría, descripción, valores múltiplos de 5, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprueba en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor, y se bloquea si rompe reglas de precios. El Proveedor nunca ve reglas ni cálculos: solo qué valores no son compatibles y el motivo que escribimos.
+- **Catálogo de tarjetas:** crea tarjetas (nombre, categoría, descripción, valores múltiplos de 5, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprueba en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor, y ya no se bloquea por reglas de precios. El Proveedor nunca ve costos, márgenes ni cálculos: si se rechaza, solo ve el motivo que escribimos.
 - **Condiciones acordadas** (solo lectura): descuento sobre valor facial, monto que se le paga por cada tarjeta, caducidad de sus tarjetas, forma de liquidación. Solo Nosotros las cambia; cada cambio queda con fecha y solo aplica a tarjetas emitidas después.
 - Exportación CSV de toda su información.
 - **Privacidad:** ve código, valor, saldo, fechas y un identificador reducido del canjeador (nombre abreviado + últimos 4 dígitos del documento). Nunca documento completo ni correo.
@@ -163,6 +163,8 @@ Ejemplo **ilustrativo** (los números reales dependen del descuento de cada Prov
 Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el margen por producto y por precio, y **bloquea** un precio que baje del `min_margin_pct` global salvo confirmación explícita con nota.
 
 ### 5.3 Reglas que el sistema valida al guardar
+> **REEMPLAZADO (2026-10-16):** estas reglas se eliminaron. Ver `CLAUDE.md` ("Modelo de precios"): cada tarjeta tiene dos precios editables (Canjeador General y Canjeador de Cliente) y los puntos salen del precio General. Se conserva el texto como historial.
+
 1. **Piso de $10:** para cada paquete (estándar **y del Canjeador**) y cada tarjeta con `face_usd ≤ USD del paquete`, los puntos del paquete deben alcanzar la tarjeta. Si no, no se guarda.
 2. **Canjeador > Cliente:** el precio por punto del Canjeador (`pv_public`) debe ser **mayor** que el de cualquier Cliente, tramo por tramo. Con el modelo de octubre 2026 la tarjeta de $10 cuesta 1 000 pts y el Canjeador la alcanza con su paquete de $10 (regla 1 aplicada también a sus paquetes).
 3. **Margen mínimo:** `puntos × usd_per_point ≥ cost_usd × (1 + min_margin_pct)` para el precio negociado de cada Cliente.
@@ -171,7 +173,7 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 7. **Beneficio mínimo del Cliente** (`client_benefit_pct`, por defecto 1 %): cada tramo de cada tabla de Cliente debe dar al menos ese % más de puntos por dólar que el punto de referencia (el del Canjeador). Es lo que hace que una tarjeta de 1 000 pts "cueste" unos 990 para quien recibe el bono de un Cliente.
 
 ### 5.4 Negociar por Cliente
-**Regla 6 (opcional, decisión del dueño):** Nosotros puede fijar un precio mínimo y/o máximo por punto para los clientes (Ajustes). Solo estrecha lo que permiten las reglas 2 y 3. El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño; el de uno estándar es un valor de referencia que se usa para convertir bono en puntos.
+**Regla 6 (opcional, decisión del dueño):** Nosotros puede fijar un precio mínimo y/o máximo por punto para los clientes (Ajustes). Solo estrecha lo que permiten las reglas 2 y 3. El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño; el de uno estándar es un valor de referencia que se usa para convertir bono en puntos. (Reemplazado: ahora los puntos por dólar de un Cliente se acotan entre el Canjeador General y un máximo calculado con el Porcentaje mínimo de ganancia; ver `CLAUDE.md`.)
 
 **Caducidad por tarjeta:** `providers.card_valid_days` es el valor por defecto; cada producto puede tener el suyo (`products.card_valid_days`, opcional) y, si existe, manda. La tarjeta emitida guarda su `expires_at` al emitirse: un cambio posterior no afecta a las ya emitidas.
 
@@ -217,7 +219,7 @@ Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus
 | `provider_settlements` | `provider_id`, periodo, nº de consumos, monto USD, estado, referencia de factura |
 | `audit_log` | quién, qué, antes, después, cuándo |
 
-Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `validate_grant_batch(batch_id)`, `submit_grant_batch(batch_id, key)` (solo el Cliente dueño), `redeem` (reescrita con lotes y tarjeta), `consume_card(card, amount_cents, key)` (solo Proveedor dueño), `exchange_expired_card(card)` (solo el dueño de la tarjeta), `settle_period(provider_id, from, to)`, `validate_pricing()` (reglas de 5.3).
+Funciones SQL nuevas: `price_points(product_id)`, `buy_points(pack, buyer)`, `validate_grant_batch(batch_id)`, `submit_grant_batch(batch_id, key)` (solo el Cliente dueño), `redeem` (reescrita con lotes y tarjeta), `consume_card(card, amount_cents, key)` (solo Proveedor dueño), `exchange_expired_card(card)` (solo el dueño de la tarjeta), `settle_period(provider_id, from, to)`, `validate_pricing()` (reglas de 5.3) (ya no se implementa; ver nota en 5.3).
 
 ---
 

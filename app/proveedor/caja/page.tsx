@@ -1,7 +1,7 @@
 "use client"
 
 import { useRef, useState } from "react"
-import { AlertCircle, AlertTriangle, Calendar, Check, CreditCard, QrCode, Search, User } from "lucide-react"
+import { AlertCircle, AlertTriangle, Calendar, Check, QrCode, Search, User } from "lucide-react"
 import { toast } from "sonner"
 
 import {

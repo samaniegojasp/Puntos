@@ -42,8 +42,6 @@ import {
   cardMargin,
   centsPerPoint,
   clientReferenceCentsPerPoint,
-  marginAtPack,
-  pointsPrice,
   productClientPriceCents,
   productCostCents,
   productPoints,
@@ -265,7 +263,7 @@ export default function AdminPreciosPage() {
                             )}
                             <EditableNumber
                               label={`Precio General de ${prod.storeName} $${prod.faceCents / 100}`}
-                              display={(priceGen / 100).toFixed(2)}
+                              display={new Intl.NumberFormat("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceGen / 100)}
                               initial={(priceGen / 100).toFixed(2)}
                               suffix="USD"
                               decimals
@@ -312,7 +310,7 @@ export default function AdminPreciosPage() {
                             )}
                             <EditableNumber
                               label={`Precio de Cliente de ${prod.storeName} $${prod.faceCents / 100}`}
-                              display={(priceCli / 100).toFixed(2)}
+                              display={new Intl.NumberFormat("es-EC", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(priceCli / 100)}
                               initial={(priceCli / 100).toFixed(2)}
                               suffix="USD"
                               decimals

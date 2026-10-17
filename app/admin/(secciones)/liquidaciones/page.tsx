@@ -7,8 +7,6 @@ import {
   DollarSign,
   Download,
   FileCheck,
-  FileText,
-  Filter,
 } from "lucide-react"
 import { toast } from "sonner"
 

@@ -41,3 +41,7 @@ Código clave:
 2. Pasarela de pago: Payphone primero (Deuna como segunda opción); correo transaccional: servicio por definir, dominio propio antes de producción.
 3. Pregunta abierta de negocio: con tramos de precios distintos, ¿qué precio convierte el bono en puntos?
 4. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
+5. Diseño pendiente: el precio de Cliente por tarjeta aún no alimenta las tablas de paquetes de los Clientes ni el reparto por planilla.
+6. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.030 pts): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
+7. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
+8. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.

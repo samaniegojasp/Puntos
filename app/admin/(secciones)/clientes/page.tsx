@@ -35,7 +35,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
+import { formatPct, formatPts, formatUsdPerPoint } from "@/lib/domain/format"
 import EditableNumber from "@/components/panel/editable-number"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { clientPpdLimits } from "@/lib/domain/pricing"
