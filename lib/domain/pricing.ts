@@ -3,6 +3,7 @@
 
 import type {
   AdminSettings,
+  ClientAdminRow,
   ExchangePreview,
   GiftCard,
   PointsPack,
@@ -15,26 +16,57 @@ export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 
 /**
  * Precio de referencia del punto: precio del punto del paquete más pequeño del Canjeador;
- * las tarjetas cuestan valor facial + recargo a ese precio.
+ * las tarjetas cuestan valor facial + recargo (0 % por defecto) a ese precio.
  */
 export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
   centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
 
 /**
- * Precio de referencia del punto para Clientes: precio del punto del paquete estándar de menor monto.
+ * Precio de referencia del punto para Clientes: el menor ¢/punto entre los paquetes
+ * estándar y los paquetes propios de cada Cliente **activo** con tabla propia.
+ * Devuelve el de menor centsPerPoint (= más puntos por dólar = más descuento).
  */
-export const clientReferenceCentsPerPoint = (standardPacks: PointsPack[]) =>
-  centsPerPoint([...standardPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
+export function bestClientCentsPerPoint(input: {
+  standardPacks: PointsPack[]
+  clients: ClientAdminRow[]
+}): { centsPerPoint: number; label: string } {
+  let best = Infinity
+  let label = "—"
+
+  // Candidatos de la tabla estándar
+  for (const pack of input.standardPacks) {
+    const cpp = pack.usdCents / pack.points
+    if (cpp < best) {
+      best = cpp
+      label = "Tabla estándar"
+    }
+  }
+
+  // Candidatos de los Clientes activos con tabla propia
+  for (const client of input.clients) {
+    if (!client.active || client.packMode !== "custom") continue
+    for (const pack of client.customPacks) {
+      const cpp = pack.usdCents / pack.points
+      if (cpp < best) {
+        best = cpp
+        label = client.name
+      }
+    }
+  }
+
+  if (best === Infinity) return { centsPerPoint: 1, label: "—" }
+  return { centsPerPoint: best, label }
+}
 
 /** Costo que se le paga al Proveedor por la tarjeta. */
 export const productCostCents = (p: Product, provider: Pick<Provider, "discountPct">) =>
   p.costCentsOverride ?? Math.round(p.faceCents * (1 - provider.discountPct))
 
-/** Precio en dólares que paga el Canjeador por la tarjeta: precio General fijado o valor facial + recargo. */
+/** Precio en dólares que paga el Canjeador por la tarjeta: precio General fijado o valor facial + recargo (0 % por defecto). */
 export const productPriceCents = (
   p: Pick<Product, "faceCents" | "priceGeneralCents">,
   settings: Pick<AdminSettings, "redeemSurchargePct">
-) => p.priceGeneralCents ?? Math.round(p.faceCents * (1 + (settings.redeemSurchargePct ?? 0.03)))
+) => p.priceGeneralCents ?? Math.round(p.faceCents * (1 + (settings.redeemSurchargePct ?? 0)))
 
 /** Precio en centavos de USD que ingresa cuando se canjea con puntos de Cliente. */
 export const productClientPriceCents = (

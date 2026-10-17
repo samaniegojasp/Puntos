@@ -26,7 +26,7 @@ Código clave:
 
 ## Decisiones de negocio vigentes
 - **Confidencialidad (regla 13):** solo "Nosotros" ve precio por punto, márgenes y costos del proveedor. Canjeador, Cliente y Proveedor ven "USD → puntos".
-- **Modelo de precios (oct 2026):** Sin reglas de validación de precios (eliminadas el 2026-10-16). Cada tarjeta tiene dos precios en USD que edita Nosotros en Precios: Canjeador General y Canjeador de Cliente. Los puntos de la tarjeta salen del precio General al punto de referencia (paquete más pequeño del Canjeador), redondeados hacia arriba al múltiplo de puntos; el precio de Cliente solo cambia ingreso y margen. Recargo global = valor por defecto del precio General.
+- **Modelo de precios (oct 2026):** Sin reglas de validación de precios (eliminadas el 2026-10-16). Cada tarjeta tiene dos precios en USD que edita Nosotros en Precios: Canjeador General y Canjeador de Cliente. Los puntos de la tarjeta salen del precio General al punto de referencia (paquete más pequeño del Canjeador), redondeados hacia arriba al múltiplo de puntos; el precio de Cliente solo cambia ingreso y margen. El precio General por defecto es el valor visual de la tarjeta (recargo 0 %; el recargo y los precios siguen siendo editables). El precio de Cliente automático usa el mejor precio por punto de un Cliente activo (el de más descuento), así el margen de Cliente es el caso más ajustado.
 - `PLAN-ROLES.md` §5.3 (reglas 1–8) quedó reemplazado por esta decisión.
 - El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño. El bono (%) lo edita el Cliente; el precio del punto lo fija Nosotros.
 - **Límites de puntos por dólar de un Cliente (Admin → Clientes):** mínimo = puntos por dólar del Canjeador General; máximo = `P ÷ (C × (1 + m))` de la tarjeta más exigente, con `m` = 'Porcentaje mínimo de ganancia' (Ajustes, 2 % por defecto, sobre el costo). Solo acota barras y valores escritos; no bloquea.
@@ -42,6 +42,6 @@ Código clave:
 3. Pregunta abierta de negocio: con tramos de precios distintos, ¿qué precio convierte el bono en puntos?
 4. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
 5. Diseño pendiente: el precio de Cliente por tarjeta aún no alimenta las tablas de paquetes de los Clientes ni el reparto por planilla.
-6. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.030 pts): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
+6. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.000 pts con 0 % de recargo): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
 7. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
 8. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.

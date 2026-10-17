@@ -39,9 +39,9 @@ import {
 } from "@/components/ui/table"
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import {
+  bestClientCentsPerPoint,
   cardMargin,
   centsPerPoint,
-  clientReferenceCentsPerPoint,
   productClientPriceCents,
   productCostCents,
   productPoints,
@@ -80,7 +80,8 @@ export default function AdminPreciosPage() {
 
   // Referencia común para cálculos de puntos
   const refCents = referenceCentsPerPoint(publicPacks)
-  const clientRefCents = clientReferenceCentsPerPoint(standardPacks)
+  const bestClient = bestClientCentsPerPoint({ standardPacks, clients })
+  const clientRefCents = bestClient.centsPerPoint
   const providerOf = (id: string): Provider =>
     providers.find((x) => x.id === id) ?? {
       id,
@@ -204,6 +205,11 @@ export default function AdminPreciosPage() {
           <CardDescription>
             Detalle de costo proveedor, transporte, margen comercial, precio de venta y puntos de canje
           </CardDescription>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Precio de Cliente automático: con el mejor precio por punto de un Cliente activo ({bestClient.label},{" "}
+            {new Intl.NumberFormat("es-EC", { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(100 / bestClient.centsPerPoint)} pts/$).
+            Se ve solo en administración.
+          </p>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">

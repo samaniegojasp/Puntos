@@ -236,7 +236,7 @@ export type Product = {
   active: boolean
   /** Caducidad propia de esta tarjeta (días). Si no existe, se usa la del Proveedor. */
   cardValidDays?: number
-  /** Precio fijado a mano para el Canjeador General (centavos de USD). Si no existe, vale valor facial × (1 + recargo). */
+  /** Precio fijado a mano para el Canjeador General (centavos de USD). Si no existe, vale valor facial × (1 + recargo), con recargo 0 % por defecto. */
   priceGeneralCents?: number
   /** Precio fijado a mano para el Canjeador de Cliente (centavos de USD). Si no existe, se calcula. */
   priceClientCents?: number
@@ -255,7 +255,7 @@ export type AdminSettings = {
   pointsMultiple: number
   /** Multiplica la conversión USD → puntos (entero ≥ 1). Por defecto 1. */
   pointsFactor?: number
-  /** Recargo sobre el valor facial al canjear (0.03 = 3 %). Por defecto 3 %. */
+  /** Recargo sobre el valor facial al canjear (0.03 = 3 %). Por defecto 0 %. */
   redeemSurchargePct?: number
   /** Compra a tu medida del Canjeador (dólares enteros). Por defecto $1 a $500 y 100 pts por $1. */
   customMinUsd?: number

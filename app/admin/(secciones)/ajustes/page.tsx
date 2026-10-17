@@ -81,7 +81,7 @@ export default function AdminAjustesPage() {
   const [customMinInput, setCustomMinInput] = useState(String(current.customMinUsd ?? 1))
   const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
   const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
-  const [redeemSurchargeInput, setRedeemSurchargeInput] = useState((((current.redeemSurchargePct ?? 0.03) * 100)).toString())
+  const [redeemSurchargeInput, setRedeemSurchargeInput] = useState((((current.redeemSurchargePct ?? 0) * 100)).toString())
   const [minMarginPctInput, setMinMarginPctInput] = useState((((current.minMarginPct ?? 0.02) * 100)).toString())
   const [cardDenomMinInput, setCardDenomMinInput] = useState(String(current.cardDenomMinUsd ?? 5))
   const [cardDenomMaxInput, setCardDenomMaxInput] = useState(String(current.cardDenomMaxUsd ?? 500))
@@ -147,7 +147,7 @@ export default function AdminAjustesPage() {
   const parsedExchangeFeeFraction = !isNaN(rawExchangeFee) ? Math.round(rawExchangeFee * 1000) / 100000 : 0.1
   const parsedWindowDays = !isNaN(rawWindowDays) ? Math.max(0, rawWindowDays) : 30
   const parsedGrantDays = !isNaN(rawGrantDays) ? Math.max(1, rawGrantDays) : 90
-  const parsedRedeemSurcharge = !isNaN(rawRedeemSurcharge) ? Math.round(rawRedeemSurcharge * 1000) / 100000 : 0.03
+  const parsedRedeemSurcharge = !isNaN(rawRedeemSurcharge) ? Math.round(rawRedeemSurcharge * 1000) / 100000 : 0
   const parsedMinMargin = !isNaN(rawMinMargin) ? Math.round(rawMinMargin * 1000) / 100000 : 0.02
 
   const candidateSettings: AdminSettings = {
@@ -182,7 +182,7 @@ export default function AdminAjustesPage() {
     setExchangeFeePctInput((MOCK_SETTINGS.exchangeFeePct * 100).toString())
     setExchangeWindowDaysInput(MOCK_SETTINGS.exchangeWindowDays.toString())
     setPendingGrantDaysInput(MOCK_SETTINGS.pendingGrantDays.toString())
-    setRedeemSurchargeInput((((MOCK_SETTINGS.redeemSurchargePct ?? 0.03) * 100)).toString())
+    setRedeemSurchargeInput((((MOCK_SETTINGS.redeemSurchargePct ?? 0) * 100)).toString())
     setMultiple(MOCK_SETTINGS.pointsMultiple)
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
@@ -437,7 +437,7 @@ export default function AdminAjustesPage() {
                   <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Se suma al valor facial: con 3 %, una tarjeta de $10 cuesta 1.030 pts del Canjeador. Sugerido: entre 2 y 5 %.
+                  Se suma al valor facial: con 0 %, una tarjeta de $10 cuesta 1.000 pts del Canjeador (su valor visual); con 3 %, 1.030 pts.
                 </p>
               </div>
 
