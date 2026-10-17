@@ -1,6 +1,6 @@
 # Regala — resumen del estado actual de la página (para Gemini)
 
-Fecha del resumen: 2026-10-16. Rama: `claude/pet-store-gift-cards-refactor-n3h79x` (último commit `8cd3657`). `main` es la demo desplegada: https://puntos-three.vercel.app
+Fecha del resumen: 2026-10-16 (actualizado tras quitar las reglas de precios y añadir los dos precios por tarjeta). Rama: `claude/pet-store-gift-cards-refactor-n3h79x` (último commit `d65ed04`). `main` es la demo desplegada: https://puntos-three.vercel.app
 
 ## 1. Qué es
 Plataforma de gift cards de Ecuador (Supermaxi, Megamaxi, Fybeca, Marathon Sports, Kywi, Juguetón, De Prati) con una moneda virtual llamada **Puntos**. Las empresas (Clientes) compran puntos y los reparten a personas (Canjeadores) como comisión/incentivo; los Canjeadores los canjean por tarjetas de regalo de los comercios (Proveedores).
@@ -24,22 +24,19 @@ Un único rol por perfil: **canjeador, cliente, proveedor, admin ("Nosotros")**.
 | Editor de catálogo | `/admin` (protegido por clave `NEXT_PUBLIC_ADMIN_HASH`) | quien tenga la clave |
 
 ## 4. Modelo de precios (núcleo del negocio)
-- Punto de referencia: el paquete más pequeño del Canjeador ($15 = 1.500 pts).
-- **Precio en puntos de una tarjeta = valor facial × (1 + recargo)**. Recargo global editable en Ajustes (3 % por defecto; una tarjeta de $10 = 1.030 pts). Se redondea hacia arriba al múltiplo de puntos configurado (10 por defecto; 10/50/100).
-- **Factor de conversión** (Ajustes, entero, exige contraseña de admin): multiplica todos los valores en puntos.
-- Reglas de validación 1–8 (`lib/domain/pricing.ts`):
-  1. El paquete más pequeño del Canjeador da ≥ 30 % (editable) más puntos que la tarjeta más barata.
-  2. El Canjeador paga más por punto que cualquier Cliente.
-  3. Margen mínimo (incluye paquetes del Canjeador; costo + transporte).
-  4. Recargo ≥ 0.
-  5. Puntos múltiplos de 10/50/100.
-  6. Límites opcionales de precio por punto.
-  7. Beneficio mínimo del Cliente (1 %).
-  8. La compra "a tu medida" no puede ser más barata que el paquete más pequeño.
+- **Ya no existen reglas de validación de precios** (se eliminaron el 2026-10-16 porque se volvieron demasiado complejas). Nada bloquea ni avisa por márgenes al guardar precios, paquetes, Clientes, Proveedores ni al aprobar tarjetas. Las antiguas reglas 1–8 de `PLAN-ROLES.md` §5.3 quedaron reemplazadas por este modelo simple.
+- **Punto de referencia:** el paquete público más pequeño del Canjeador ($15 = 1.500 pts, es decir 100 pts por dólar).
+- **Dos precios por tarjeta**, que "Nosotros" edita en Admin → Precios (celdas editables, con botón "Restablecer" para volver al valor automático):
+  - **Canjeador General** (USD): lo que paga quien compra puntos por su cuenta. Por defecto = valor facial × (1 + recargo); el recargo es global en Ajustes (3 % por defecto; una tarjeta de $10 = 1.030 pts).
+  - **Canjeador de Cliente** (USD): lo que ingresa Regala cuando se canjea con puntos que vienen de un Cliente (la empresa los compró más baratos). Por defecto = puntos de la tarjeta × precio del punto del paquete estándar más pequeño.
+- **Los puntos de la tarjeta salen del precio General** (al punto de referencia, redondeados hacia arriba al múltiplo de puntos de Ajustes: 10 por defecto, o 50/100). La tarjeta cuesta los **mismos puntos para todos**; el precio de Cliente solo cambia el ingreso y el margen. La tienda, el carrito y el pago reflejan el precio General editado.
+- Margen de cada caso = precio − (costo al proveedor + transporte), mostrado en USD y como % sobre el costo.
+- **Factor de conversión** (Ajustes, entero, exige contraseña de admin): multiplica todos los valores en puntos (paquetes y compra a tu medida se reescalan).
 - Los Proveedores tienen un descuento acordado de 5–12 % (datos de ejemplo).
-- El Cliente con tabla propia: su precio por punto se deriva de su tramo más pequeño.
+- **Límites de "Puntos por cada dólar" de un Cliente** (Admin → Clientes → Editar, tanto la barra superior como la de cada tramo propio): mínimo = pts/$ del Canjeador General (100 hoy); máximo = `P ÷ (C × (1 + m))` calculado para la tarjeta más exigente (la de menor puntos por dólar de costo, en la práctica la del proveedor con menor descuento), donde `P` = puntos de la tarjeta, `C` = costo total en USD y `m` = "Porcentaje mínimo de ganancia" (Ajustes, 2 % por defecto, sobre el costo). Con los datos de ejemplo da ≈106,6 pts/$ (limita Juguetón $15). Solo acota barras y valores escritos; no bloquea el guardado y muestra un aviso si un Cliente queda fuera del rango.
+- El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño.
 - **Confidencialidad:** solo "Nosotros" ve precio por punto, márgenes y costos. Canjeador, Cliente y Proveedor ven solo "USD → puntos".
-- **Compra a tu medida:** solo Cliente y admin en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos se le propone el paquete más pequeño que cubra el faltante.
+- **Compra a tu medida:** solo Cliente y admin en Recargar Puntos, a un precio de puntos por dólar que fija "Nosotros" en Ajustes (entre 50 y 200 × factor, sin tope ligado a los paquetes). El Canjeador compra paquetes fijos; si le faltan puntos se le propone el paquete más pequeño que cubra el faltante.
 - Saldo de bienvenida: 1.100 puntos (etiqueta de saldo ajustada).
 - Edad: siempre "declaración", nunca "verificamos".
 
@@ -54,15 +51,15 @@ Un único rol por perfil: **canjeador, cliente, proveedor, admin ("Nosotros")**.
 ## 6. Catálogo del Proveedor y aprobación
 - El Proveedor crea tarjetas en `/proveedor/catalogo`: nombre, categoría, descripción (≤120), valores en USD (1–6, múltiplos de 5, límites en Ajustes, con slider y botones +/−), diseño (tema o colores personalizados con paleta, logo centrado, herramienta opcional "Quitar fondo" por color plano, imagen).
 - Estados: borrador → enviada → aprobada / rechazada. Solo se edita borrador y rechazada.
-- Nosotros revisamos en `/admin/solicitudes`: aprobar crea la tienda en el catálogo y sus productos con el descuento del Proveedor; se bloquea si introduce errores nuevos de reglas de precios. Rechazar exige motivo (≤300 caracteres).
-- **El Proveedor nunca ve reglas ni cálculos**: solo qué valores no son compatibles y el motivo escrito por Nosotros.
+- Nosotros revisamos en `/admin/solicitudes`: aprobar crea la tienda en el catálogo y sus productos con el descuento del Proveedor (ya no se bloquea por reglas de precios; la pantalla muestra una vista previa de precios y márgenes solo para Nosotros). Rechazar exige un motivo escrito a mano (≤300 caracteres, que empieza vacío).
+- **El Proveedor nunca ve costos, márgenes ni cálculos**: si se rechaza, solo ve el motivo escrito por Nosotros.
 - En el prototipo el panel de Proveedor siempre entra como Fybeca (`p-fybeca`).
 
 ## 7. Panel de administración ("Nosotros")
-Resumen (KPIs), Clientes, Proveedores, Precios (paquetes y reglas), Usuarios, Liquidaciones, Solicitudes (con insignia de pendientes), Ajustes (recargo, factor con contraseña, regla de 30 %, múltiplo de puntos, límites de valores de tarjeta, etc.).
+Resumen (KPIs), Clientes (con los límites de puntos por dólar), Proveedores, Precios (tabla de tarjetas con los dos precios editables, puntos y márgenes; y tablas de paquetes), Usuarios, Liquidaciones, Solicitudes (con insignia de pendientes), Ajustes (recargo, factor con contraseña, porcentaje mínimo de ganancia, múltiplo de puntos, comisión y plazo de canje de tarjetas vencidas, compra a tu medida, límites de valores de tarjeta, etc.).
 
 ## 8. Código clave
-- Dominio: `lib/domain/{types,pricing,format,documento,csv,grants,grant-file,xlsx-template,card-requests,points-factor}.ts`.
+- Dominio: `lib/domain/{types,pricing,format,documento,csv,grants,grant-file,xlsx-template,card-requests,points-factor}.ts`. En `pricing.ts`: precio General y de Cliente por tarjeta, puntos, margen (`cardMargin`) y los límites de puntos por dólar de un Cliente (`clientPpdLimits`).
 - Estado de ejemplo: `lib/mock/{data,session,admin-settings,admin-kpis}`.
 - Componentes de panel: `components/panel/*` (shells por rol, `packs-editor`, `denoms-editor`, `card-design-editor`, `purchase-dialog`, `editable-number`, KpiCard).
 - Documentos de especificación: `PLAN-ROLES.md`, `PLAN-BACKEND.md` (fases B0–B12), `PLAN-FASE-D.md`, `CLAUDE.md`, y los `PLAN-HAIKU-*.md` (historial de cambios por parte).
@@ -70,6 +67,9 @@ Resumen (KPIs), Clientes, Proveedores, Precios (paquetes y reglas), Usuarios, Li
 ## 9. Limitaciones y pendientes conocidos
 - Sin backend: B0 (cuentas Supabase staging/prod) y B1+ (roles, RLS, `requireRole()`) pendientes. Pasarela: Payphone primero, Deuna segunda; correo transaccional por definir.
 - Estado del prototipo se pierde al recargar.
+- El precio de Cliente por tarjeta **todavía no alimenta** las tablas de paquetes de los Clientes ni el reparto por planilla, que siguen usando los tramos del Cliente. Unificarlos es el siguiente paso de diseño pendiente.
+- Al no haber reglas, es posible dejar márgenes negativos; los márgenes se ven en la tabla de Precios (sin alarmas).
+- Megamaxi no tiene producto propio en los datos de ejemplo (comparte proveedor con Supermaxi), por lo que no tiene precio editable en Precios.
 - Sin verificar: Administración → Catálogo (editor `/admin`) tras el refactor de componentes compartidos; la planilla xlsx en Excel real; un CSV con codificación antigua puede dañar tildes.
 - Pregunta de negocio abierta: con tramos de precios distintos, ¿qué precio convierte el bono (%) en puntos?
 - Temas legales/contables a cargo del dueño: saldos prepagados, caducidad, datos de terceros, facturación SRI.
