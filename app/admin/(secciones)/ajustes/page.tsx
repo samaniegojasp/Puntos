@@ -83,6 +83,7 @@ export default function AdminAjustesPage() {
   const [customMaxInput, setCustomMaxInput] = useState(String(current.customMaxUsd ?? 500))
   const [customPpd, setCustomPpd] = useState<number>(current.customPointsPerUsd ?? 100)
   const [redeemSurchargeInput, setRedeemSurchargeInput] = useState((((current.redeemSurchargePct ?? 0.03) * 100)).toString())
+  const [minMarginPctInput, setMinMarginPctInput] = useState((((current.minMarginPct ?? 0.02) * 100)).toString())
   const [cardDenomMinInput, setCardDenomMinInput] = useState(String(current.cardDenomMinUsd ?? 5))
   const [cardDenomMaxInput, setCardDenomMaxInput] = useState(String(current.cardDenomMaxUsd ?? 500))
 
@@ -96,6 +97,7 @@ export default function AdminAjustesPage() {
   const rawWindowDays = parseInt(exchangeWindowDaysInput, 10)
   const rawGrantDays = parseInt(pendingGrantDaysInput, 10)
   const rawRedeemSurcharge = parseFloat(redeemSurchargeInput.replace(",", "."))
+  const rawMinMargin = parseFloat(minMarginPctInput.replace(",", "."))
   const rawCustomMin = parseInt(customMinInput, 10)
   const rawCustomMax = parseInt(customMaxInput, 10)
 
@@ -116,6 +118,10 @@ export default function AdminAjustesPage() {
 
   if (isNaN(rawRedeemSurcharge) || rawRedeemSurcharge < 0) {
     errors.push("El recargo al canjear debe ser un porcentaje mayor o igual a 0 %.")
+  }
+
+  if (isNaN(rawMinMargin) || rawMinMargin < 0 || rawMinMargin > 100) {
+    errors.push("El porcentaje mínimo de ganancia debe ser un porcentaje entre 0 y 100 %.")
   }
 
   if (isNaN(rawGrantDays) || rawGrantDays < 1) {
@@ -143,6 +149,7 @@ export default function AdminAjustesPage() {
   const parsedWindowDays = !isNaN(rawWindowDays) ? Math.max(0, rawWindowDays) : 30
   const parsedGrantDays = !isNaN(rawGrantDays) ? Math.max(1, rawGrantDays) : 90
   const parsedRedeemSurcharge = !isNaN(rawRedeemSurcharge) ? Math.round(rawRedeemSurcharge * 1000) / 100000 : 0.03
+  const parsedMinMargin = !isNaN(rawMinMargin) ? Math.round(rawMinMargin * 1000) / 100000 : 0.02
 
   const candidateSettings: AdminSettings = {
     ...current,
@@ -150,6 +157,7 @@ export default function AdminAjustesPage() {
     exchangeWindowDays: parsedWindowDays,
     pendingGrantDays: parsedGrantDays,
     redeemSurchargePct: parsedRedeemSurcharge,
+    minMarginPct: parsedMinMargin,
     pointsMultiple: multiple,
     customMinUsd: !isNaN(rawCustomMin) ? rawCustomMin : 1,
     customMaxUsd: !isNaN(rawCustomMax) ? rawCustomMax : 500,
@@ -180,6 +188,7 @@ export default function AdminAjustesPage() {
     setCustomMinInput(String(MOCK_SETTINGS.customMinUsd ?? 1))
     setCustomMaxInput(String(MOCK_SETTINGS.customMaxUsd ?? 500))
     setCustomPpd((MOCK_SETTINGS.customPointsPerUsd ?? 100) * factorVigente)
+    setMinMarginPctInput((((MOCK_SETTINGS.minMarginPct ?? 0.02) * 100)).toString())
     setCardDenomMinInput(String(MOCK_SETTINGS.cardDenomMinUsd ?? 5))
     setCardDenomMaxInput(String(MOCK_SETTINGS.cardDenomMaxUsd ?? 500))
     setSettings({
@@ -188,6 +197,7 @@ export default function AdminAjustesPage() {
       pointsFactor: factorVigente,
       cardDenomMinUsd: MOCK_SETTINGS.cardDenomMinUsd ?? 5,
       cardDenomMaxUsd: MOCK_SETTINGS.cardDenomMaxUsd ?? 500,
+      minMarginPct: MOCK_SETTINGS.minMarginPct ?? 0.02,
     })
     toast.info("Ajustes restablecidos a sus valores originales")
   }
@@ -429,6 +439,27 @@ export default function AdminAjustesPage() {
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Se suma al valor facial: con 3 %, una tarjeta de $10 cuesta 1.030 pts del Canjeador. Sugerido: entre 2 y 5 %.
+                </p>
+              </div>
+
+              {/* Porcentaje mínimo de ganancia */}
+              <div className="space-y-2">
+                <Label htmlFor="minMargin">Porcentaje mínimo de ganancia (%)</Label>
+                <div className="relative">
+                  <Input
+                    id="minMargin"
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="100"
+                    value={minMarginPctInput}
+                    onChange={(e) => setMinMarginPctInput(e.target.value)}
+                    required
+                  />
+                  <span className="pointer-events-none absolute right-3 top-2.5 text-sm text-muted-foreground">%</span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Sobre el costo de la tarjeta. Define cuántos puntos por dólar se pueden dar como máximo a un Cliente.
                 </p>
               </div>
 

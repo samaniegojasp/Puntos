@@ -38,6 +38,7 @@ import {
 import { formatPct, formatPts, formatUsd, formatUsdPerPoint } from "@/lib/domain/format"
 import EditableNumber from "@/components/panel/editable-number"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
+import { clientPpdLimits } from "@/lib/domain/pricing"
 import type { ClientAdminRow, PointsPack } from "@/lib/domain/types"
 
 /** Puntos que recibe el cliente por cada dólar (inverso del precio por punto). */
@@ -45,8 +46,13 @@ const ptsPerUsd = (usdPerPoint: number) =>
   usdPerPoint > 0 ? new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(1 / usdPerPoint) : "—"
 
 export default function AdminClientesPage() {
-  const { settings, clients, setClients } = useAdminSettings()
+  const { settings, clients, setClients, products, providers, publicPacks } = useAdminSettings()
   const f = settings.pointsFactor ?? 1
+  const limits = clientPpdLimits({ settings, providers, products, publicPacks })
+  const mPct = (settings.minMarginPct ?? 0.02) * 100
+  const formatPpdValue = (val: number) =>
+    new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(val)
+
   const [loading, setLoading] = useState(true)
 
   // Estado del modal de cliente (creación / edición)
@@ -89,18 +95,23 @@ export default function AdminClientesPage() {
   }
 
   const POINTS_STEP = 50 * f
-  const packBoundsForUsd = (usdCents: number) => {
+  const pointsRangeForUsd = (usdCents: number) => {
+    if (usdCents <= 0) return null
     const usd = usdCents / 100
-    const min = Math.ceil((usd * 100 * f * 0.6) / POINTS_STEP) * POINTS_STEP
-    const max = Math.floor((usd * 100 * f * 1.4) / POINTS_STEP) * POINTS_STEP
+    const rawMin = Math.ceil((usd * limits.min) / POINTS_STEP) * POINTS_STEP
+    const rawMax = Math.floor((usd * limits.max) / POINTS_STEP) * POINTS_STEP
+    const min = rawMin
+    const max = rawMax < rawMin ? rawMin : rawMax
     return { min, max }
   }
 
   // Manejo de tramos propios
   const handleAddPack = () => {
     const fresh: PointsPack = { id: `pack-${Date.now()}`, usdCents: 10000, points: 10000 * f }
-    const b = packBoundsForUsd(fresh.usdCents)
-    fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
+    const b = pointsRangeForUsd(fresh.usdCents)
+    if (b) {
+      fresh.points = Math.max(POINTS_STEP, Math.round((b.min + b.max) / 2 / POINTS_STEP) * POINTS_STEP)
+    }
     setCustomPacks([...customPacks, fresh])
   }
 
@@ -113,8 +124,10 @@ export default function AdminClientesPage() {
     }
     const ptsPerDollar = cur.points / (cur.usdCents / 100)
     let pts = Math.max(POINTS_STEP, Math.round(((usdCents / 100) * ptsPerDollar) / POINTS_STEP) * POINTS_STEP)
-    const b = packBoundsForUsd(usdCents)
-    pts = Math.min(Math.max(pts, b.min), b.max)
+    const b = pointsRangeForUsd(usdCents)
+    if (b) {
+      pts = Math.min(Math.max(pts, b.min), b.max)
+    }
     setCustomPacks(customPacks.map((p, i) => (i === idx ? { ...p, usdCents, points: pts } : p)))
   }
 
@@ -154,20 +167,8 @@ export default function AdminClientesPage() {
   const pointsBounds = (idx: number): { min: number; max: number } | null => {
     const own = customPacks[idx]
     if (!own || own.usdCents <= 0) return null
-    return packBoundsForUsd(own.usdCents)
+    return pointsRangeForUsd(own.usdCents)
   }
-
-  // Rango del precio por punto: el de un tramo de referencia ($10 si no hay tramos propios).
-  const REF_USD_CENTS = 1000
-  const priceBounds = (() => {
-    const b =
-      baseIdx !== null && basePack
-        ? pointsBounds(baseIdx)
-        : { min: Math.ceil((10 * 100 * f * 0.6) / POINTS_STEP) * POINTS_STEP, max: Math.floor((10 * 100 * f * 1.4) / POINTS_STEP) * POINTS_STEP }
-    if (!b) return null
-    const usd = (baseIdx !== null && basePack ? basePack.usdCents : REF_USD_CENTS) / 100
-    return { min: usd / b.max, max: usd / b.min, pointsMin: b.min, pointsMax: b.max, usd }
-  })()
 
   const duplicatedPacks = new Set(customPacks.map((p) => p.usdCents)).size !== customPacks.length
   const invalidPacks =
@@ -353,11 +354,15 @@ export default function AdminClientesPage() {
                       suffix="pts/$"
                       decimals
                       onCommit={(v) => {
+                        const clampedV = Math.min(Math.max(v, limits.min), limits.max)
                         if (baseIdx !== null && basePack) {
                           // Puntos del tramo más pequeño = puntos por dólar × dólares del tramo
-                          handlePackChange(baseIdx, "points", Math.max(1, Math.round(v * (basePack.usdCents / 100))))
+                          const targetPts = Math.round(clampedV * (basePack.usdCents / 100))
+                          const b = pointsRangeForUsd(basePack.usdCents)
+                          const clampedPts = b ? Math.min(Math.max(targetPts, b.min), b.max) : targetPts
+                          handlePackChange(baseIdx, "points", Math.max(1, clampedPts))
                         } else {
-                          setUsdPerPoint(String(Number((1 / v).toPrecision(6))))
+                          setUsdPerPoint(String(Number((1 / clampedV).toPrecision(6))))
                         }
                       }}
                     />
@@ -366,50 +371,83 @@ export default function AdminClientesPage() {
                     </span>
                   </span>
                 </div>
-                {priceBounds ? (
-                  <>
-                    {baseIdx !== null && basePack ? (
-                      // Con tramo propio la barra mueve sus puntos directamente (pasos de 50): izquierda = menos puntos por dólar
-                      <Slider
-                        id="usdPerPoint"
-                        min={priceBounds.pointsMin}
-                        max={priceBounds.pointsMax}
-                        step={POINTS_STEP}
-                        value={[Math.min(Math.max(basePack.points, priceBounds.pointsMin), priceBounds.pointsMax)]}
-                        onValueChange={(v) => handlePackChange(baseIdx, "points", v[0])}
-                        aria-label="Puntos por cada dólar"
-                      />
-                    ) : (
-                      // Sin tramo propio la barra va directamente en puntos por dólar (pasos de 0,1): izquierda = menos puntos
-                      <Slider
-                        id="usdPerPoint"
-                        min={Math.ceil(10 / priceBounds.max)}
-                        max={Math.floor(10 / priceBounds.min)}
-                        step={1}
-                        value={[
-                          Math.min(
-                            Math.max(Math.round(10 / parsedUsdPerPoint), Math.ceil(10 / priceBounds.max)),
-                            Math.floor(10 / priceBounds.min),
-                          ),
-                        ]}
-                        onValueChange={(v) => v[0] > 0 && setUsdPerPoint((10 / v[0]).toFixed(5))}
-                        aria-label="Puntos por cada dólar"
-                      />
-                    )}
-                    <div className="flex justify-between text-[10px] text-muted-foreground">
-                      <span>Mínimo {ptsPerUsd(priceBounds.max)} pts/$</span>
-                      <span>Máximo {ptsPerUsd(priceBounds.min)} pts/$</span>
-                    </div>
-                    {(parsedUsdPerPoint < priceBounds.min - 1e-9 || parsedUsdPerPoint > priceBounds.max + 1e-9) && (
-                      <p className="text-[11px] text-destructive">
-                        El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
-                      </p>
-                    )}
-                  </>
+                {baseIdx !== null && basePack ? (
+                  // Con tramo propio la barra mueve sus puntos directamente (pasos de 50): izquierda = menos puntos por dólar
+                  (() => {
+                    const baseBounds = pointsRangeForUsd(basePack.usdCents)
+                    if (!baseBounds) {
+                      return (
+                        <p className="text-[11px] text-destructive">
+                          Indica un monto mayor a 0 para calcular la barra de puntos.
+                        </p>
+                      )
+                    }
+                    const isOutOfRange = basePack.points < baseBounds.min || basePack.points > baseBounds.max
+                    return (
+                      <>
+                        <Slider
+                          id="usdPerPoint"
+                          min={baseBounds.min}
+                          max={Math.max(baseBounds.min + POINTS_STEP, baseBounds.max)}
+                          step={POINTS_STEP}
+                          value={[Math.min(Math.max(basePack.points, baseBounds.min), Math.max(baseBounds.min + POINTS_STEP, baseBounds.max))]}
+                          onValueChange={(v) => handlePackChange(baseIdx, "points", v[0])}
+                          aria-label="Puntos por cada dólar"
+                        />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>Mínimo {formatPpdValue(limits.min)} pts/$ (Canjeador General)</span>
+                          <span>Máximo {formatPpdValue(limits.max)} pts/$ (ganancia mínima {formatPpdValue(mPct)} %)</span>
+                        </div>
+                        {limits.limitingLabel && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Tarjeta más exigente: {limits.limitingLabel}
+                          </p>
+                        )}
+                        {isOutOfRange && (
+                          <p className="text-[11px] text-destructive">
+                            El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                          </p>
+                        )}
+                      </>
+                    )
+                  })()
                 ) : (
-                  <p className="text-[11px] text-destructive">
-                    Indica un monto mayor a 0 para calcular la barra de puntos.
-                  </p>
+                  // Modo estándar: la barra va en puntos por dólar con referencia de $10 (pasos de 1 para $10 = 0,1 pts/$)
+                  (() => {
+                    const refUsd = 10
+                    const refMinPts = Math.round(refUsd * limits.min)
+                    const refMaxPts = Math.round(refUsd * limits.max)
+                    const currentPts = Math.round(refUsd / (parsedUsdPerPoint > 0 ? parsedUsdPerPoint : 0.01))
+                    const currentPpd = parsedUsdPerPoint > 0 ? 1 / parsedUsdPerPoint : 0
+                    const isOutOfRange = currentPpd < limits.min - 1e-4 || currentPpd > limits.max + 1e-4
+                    return (
+                      <>
+                        <Slider
+                          id="usdPerPoint"
+                          min={refMinPts}
+                          max={Math.max(refMinPts + 1, refMaxPts)}
+                          step={1}
+                          value={[Math.min(Math.max(currentPts, refMinPts), Math.max(refMinPts + 1, refMaxPts))]}
+                          onValueChange={(v) => v[0] > 0 && setUsdPerPoint((refUsd / v[0]).toFixed(6))}
+                          aria-label="Puntos por cada dólar"
+                        />
+                        <div className="flex justify-between text-[10px] text-muted-foreground">
+                          <span>Mínimo {formatPpdValue(limits.min)} pts/$ (Canjeador General)</span>
+                          <span>Máximo {formatPpdValue(limits.max)} pts/$ (ganancia mínima {formatPpdValue(mPct)} %)</span>
+                        </div>
+                        {limits.limitingLabel && (
+                          <p className="text-[10px] text-muted-foreground">
+                            Tarjeta más exigente: {limits.limitingLabel}
+                          </p>
+                        )}
+                        {isOutOfRange && (
+                          <p className="text-[11px] text-destructive">
+                            El valor actual está fuera del rango permitido. Mueve la barra para corregirlo.
+                          </p>
+                        )}
+                      </>
+                    )
+                  })()
                 )}
                 <p className="text-xs text-muted-foreground">
                   {baseIdx !== null
@@ -514,16 +552,19 @@ export default function AdminClientesPage() {
                                 display={formatPts(pack.points)}
                                 initial={String(pack.points)}
                                 suffix="pts"
-                                onCommit={(v) => handlePackChange(idx, "points", v)}
+                                onCommit={(v) => {
+                                  const clamped = bounds ? Math.min(Math.max(v, bounds.min), bounds.max) : Math.max(1, v)
+                                  handlePackChange(idx, "points", clamped)
+                                }}
                               />
                             </div>
                             {bounds ? (
                               <>
                                 <Slider
                                   min={bounds.min}
-                                  max={bounds.max}
+                                  max={Math.max(bounds.min + POINTS_STEP, bounds.max)}
                                   step={POINTS_STEP}
-                                  value={[Math.min(Math.max(pack.points, bounds.min), bounds.max)]}
+                                  value={[Math.min(Math.max(pack.points, bounds.min), Math.max(bounds.min + POINTS_STEP, bounds.max))]}
                                   onValueChange={(v) => handlePackChange(idx, "points", v[0])}
                                   aria-label="Puntos recibidos"
                                 />

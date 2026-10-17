@@ -91,3 +91,45 @@ export function exchangePreview(card: GiftCard, settings: AdminSettings, now: Da
   const pointsBack = Math.floor(gross * (1 - settings.exchangeFeePct))
   return { allowed: true, pointsBack, feePoints: gross - pointsBack, feePct: settings.exchangeFeePct }
 }
+
+export type ClientPpdLimits = {
+  min: number            // pts por dólar del Canjeador General (paquete público de menor monto)
+  max: number            // nunca menor que min
+  limitingLabel?: string // ej. "Juguetón $15"
+}
+
+export function clientPpdLimits(input: {
+  settings: Pick<AdminSettings, "redeemSurchargePct" | "pointsMultiple" | "minMarginPct">
+  providers: Provider[]
+  products: Product[]
+  publicPacks: PointsPack[]
+}): ClientPpdLimits {
+  const ref = referenceCentsPerPoint(input.publicPacks)
+  const min = 100 / ref
+  const m = input.settings.minMarginPct ?? 0.02
+
+  let lowestMaxCard = Infinity
+  let limitingLabel: string | undefined = undefined
+
+  for (const prod of input.products) {
+    if (!prod.active) continue
+    const provider = input.providers.find((pr) => pr.id === prod.providerId) ?? { discountPct: 0 }
+    const cost = productTotalCostCents(prod, provider)
+    if (cost <= 0) continue
+    const pts = productPoints(prod, input.settings, ref)
+    const maxCard = (pts * 100) / (cost * (1 + m))
+    if (maxCard < lowestMaxCard) {
+      lowestMaxCard = maxCard
+      limitingLabel = `${prod.storeName} $${prod.faceCents / 100}`
+    }
+  }
+
+  const max = lowestMaxCard === Infinity ? min * 1.4 : Math.max(min, lowestMaxCard)
+
+  return {
+    min,
+    max,
+    limitingLabel,
+  }
+}
+

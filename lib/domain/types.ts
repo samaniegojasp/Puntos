@@ -264,6 +264,8 @@ export type AdminSettings = {
   /** Valores de las tarjetas del catálogo (USD y múltiplos de 5). Por defecto 5 y 500. */
   cardDenomMinUsd?: number
   cardDenomMaxUsd?: number
+  /** Porcentaje mínimo de ganancia sobre el costo (0.02 = 2 %). Solo acota los puntos por dólar de un Cliente; no bloquea nada. Por defecto 2 %. */
+  minMarginPct?: number
 }
 
 export type UserRow = {
