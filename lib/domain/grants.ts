@@ -3,20 +3,13 @@
 
 import type { DocType, GrantBatch, GrantRow, PointsPack } from "./types"
 import { normalizeDocument, validateDocument } from "./documento"
+import { clientPacks } from "./pricing"
 
 export type BasePack = { usdCents: number; points: number }
 
-/** Tramo más pequeño del Cliente (propio si tiene tabla propia; si no, el estándar). */
-export function clientBasePack(
-  client: { packMode: "standard" | "custom"; customPacks: PointsPack[] },
-  standardPacks: PointsPack[],
-): BasePack {
-  const packs =
-    client.packMode === "custom" && client.customPacks.length > 0
-      ? client.customPacks
-      : standardPacks
-  const sorted = [...packs].sort((a, b) => a.usdCents - b.usdCents)
-  const first = sorted[0]
+/** Tramo más pequeño del Cliente: el del Canjeador General a la tarifa del Cliente. */
+export function clientBasePack(client: { usdPerPoint: number }, publicPacks: PointsPack[]): BasePack {
+  const first = clientPacks(client, publicPacks)[0]
   if (!first) {
     throw new Error("No hay paquetes disponibles para calcular el tramo base.")
   }

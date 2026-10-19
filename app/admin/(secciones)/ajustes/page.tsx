@@ -40,8 +40,6 @@ export default function AdminAjustesPage() {
     setClients,
     publicPacks,
     setPublicPacks,
-    standardPacks,
-    setStandardPacks,
   } = useAdminSettings()
 
   // Estado del factor de conversión
@@ -219,7 +217,6 @@ export default function AdminAjustesPage() {
       {
         settings: current,
         publicPacks,
-        standardPacks,
         clients,
       },
       currentFactor,
@@ -228,7 +225,6 @@ export default function AdminAjustesPage() {
 
     setSettings(rescaled.settings)
     setPublicPacks(rescaled.publicPacks)
-    setStandardPacks(rescaled.standardPacks)
     setClients(rescaled.clients)
 
     const newCustomPpd = rescaled.settings.customPointsPerUsd ?? 100 * parsedFactor

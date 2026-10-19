@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/table"
 import { formatPct, formatPts, formatUsd } from "@/lib/domain/format"
 import {
-  marginAtPack,
+  bestClientCentsPerPoint,
+  cardMargin,
+  productClientPriceCents,
   productCostCents,
   productPoints,
   productPriceCents,
@@ -41,7 +43,7 @@ import { useAdminSettings } from "@/lib/mock/admin-settings"
 import type { Provider } from "@/lib/domain/types"
 
 export default function AdminProveedoresPage() {
-  const { settings, providers, setProviders, products, publicPacks, standardPacks } = useAdminSettings()
+  const { settings, providers, setProviders, products, publicPacks, clients } = useAdminSettings()
   const [loading, setLoading] = useState(true)
 
   // Diálogo de edición
@@ -96,8 +98,7 @@ export default function AdminProveedoresPage() {
     : []
 
   const refCents = referenceCentsPerPoint(publicPacks)
-  const std10Pack =
-    standardPacks.find((p) => p.usdCents === 1000) ?? standardPacks[0]
+  const bestClient = bestClientCentsPerPoint({ publicPacks, clients })
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -308,7 +309,7 @@ export default function AdminProveedoresPage() {
                         <TableHead className="text-right">Costo nuevo</TableHead>
                         <TableHead className="text-right">Precio USD</TableHead>
                         <TableHead className="text-right">Puntos</TableHead>
-                        <TableHead className="text-right">Margen tramo $10</TableHead>
+                        <TableHead className="text-right">Margen Cliente</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -317,7 +318,7 @@ export default function AdminProveedoresPage() {
                         const totalCost = productTotalCostCents(prod, candidateProvider)
                         const price = productPriceCents(prod, settings)
                         const pts = productPoints(prod, settings, refCents)
-                        const margin = marginAtPack(pts, std10Pack, totalCost)
+                        const margin = cardMargin(productClientPriceCents(prod, pts, bestClient.centsPerPoint), totalCost)
                         return (
                           <TableRow key={prod.id}>
                             <TableCell className="font-medium text-xs">

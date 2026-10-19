@@ -7,18 +7,24 @@ import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatPts, formatUsd } from "@/lib/domain/format"
+import { clientPointsForUsd } from "@/lib/domain/pricing"
 import { useAdminSettings, useCurrentClient } from "@/lib/mock/admin-settings"
 import { PurchaseDialog } from "@/components/panel/purchase-dialog"
 import type { PointsPack } from "@/lib/domain/types"
 
 export default function ClienteComprarPage() {
   const [loading, setLoading] = useState(true)
-  const { standardPacks } = useAdminSettings()
-  const { client, bag, addToBag } = useCurrentClient()
+  const { settings } = useAdminSettings()
+  const { client, packs, bag, addToBag } = useCurrentClient()
+  const minUsd = settings.customMinUsd ?? 1
+  const maxUsd = settings.customMaxUsd ?? 500
   const [selectedPack, setSelectedPack] = useState<PointsPack | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
+  // "A medida": dólares enteros, con 100 como valor inicial (acotado al rango permitido)
+  const [customInput, setCustomInput] = useState(String(Math.min(maxUsd, Math.max(minUsd, 100))))
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 400)
@@ -41,7 +47,10 @@ export default function ClienteComprarPage() {
     )
   }
 
-  const packs = client.packMode === "custom" ? client.customPacks : standardPacks
+  const customN = Number(customInput)
+  const customValid = Number.isInteger(customN) && customN >= minUsd && customN <= maxUsd
+  const customPts = customValid ? clientPointsForUsd(customN, client.usdPerPoint) : 0
+  const customPack: PointsPack = { id: "custom", usdCents: customN * 100, points: customPts }
   const maxPoints = Math.max(...packs.map((p) => p.points))
 
   return (
@@ -51,6 +60,9 @@ export default function ClienteComprarPage() {
         <h2 className="text-xl font-semibold tracking-tight">Comprar puntos</h2>
         <p className="text-sm text-muted-foreground">
           Recarga tu bolsa corporativa para seguir repartiendo puntos a tus clientes
+        </p>
+        <p className="text-sm text-muted-foreground">
+          Los tramos son los mismos del Canjeador, a tu tarifa. También puedes comprar el monto que necesites.
         </p>
         <p className="mt-2 text-sm text-muted-foreground">
           Tu bolsa actual: <strong className="text-foreground">{formatPts(bag)} pts</strong>
@@ -110,6 +122,49 @@ export default function ClienteComprarPage() {
             </Card>
           )
         })}
+
+        {/* A medida: monto libre a la tarifa de este Cliente */}
+        <Card className="flex flex-col justify-between overflow-hidden">
+          <CardHeader className="space-y-1">
+            <div className="flex items-center gap-2 text-primary">
+              <Gem className="h-5 w-5" />
+              <CardTitle className="text-2xl font-bold tracking-tight">A medida</CardTitle>
+            </div>
+            <CardDescription>Compra el monto que necesites</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex items-center gap-2 text-3xl font-extrabold text-foreground">
+              $
+              <Input
+                aria-label="Monto en dólares"
+                type="number"
+                inputMode="numeric"
+                min={minUsd}
+                max={maxUsd}
+                step={1}
+                value={customInput}
+                onChange={(e) => setCustomInput(e.target.value)}
+                className="h-12 w-32 text-2xl"
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Recibes <strong className="text-foreground">{customValid ? formatPts(customPts) : "—"}</strong> puntos
+            </p>
+            {!customValid && <p className="text-xs text-destructive">Entre ${minUsd} y ${maxUsd}.</p>}
+          </CardContent>
+          <CardFooter className="pt-2">
+            <Button
+              className="w-full"
+              disabled={!customValid}
+              onClick={() => {
+                setSelectedPack(customPack)
+                setDialogOpen(true)
+              }}
+            >
+              <CreditCard className="mr-2 h-4 w-4" /> Pagar con la pasarela
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
 
       {selectedPack && (

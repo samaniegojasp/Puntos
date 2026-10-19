@@ -42,6 +42,7 @@ import {
   bestClientCentsPerPoint,
   cardMargin,
   centsPerPoint,
+  clientPacks,
   productClientPriceCents,
   productCostCents,
   productPoints,
@@ -59,12 +60,11 @@ export default function AdminPreciosPage() {
   const [loading, setLoading] = useState(true)
 
   // Estado local para productos y paquetes
-  const { settings, providers, products, setProducts, clients, publicPacks, setPublicPacks, standardPacks, setStandardPacks } = useAdminSettings()
+  const { settings, providers, products, setProducts, clients, publicPacks, setPublicPacks } = useAdminSettings()
 
   // Selector de tabla de paquetes
-  const [selectedPackTable, setSelectedPackTable] = useState<string>("standard")
+  const [selectedPackTable, setSelectedPackTable] = useState<string>("public")
   const [packsDialogOpen, setPacksDialogOpen] = useState(false)
-  const [standardDialogOpen, setStandardDialogOpen] = useState(false)
 
   // Modal para editar producto
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -80,7 +80,7 @@ export default function AdminPreciosPage() {
 
   // Referencia común para cálculos de puntos
   const refCents = referenceCentsPerPoint(publicPacks)
-  const bestClient = bestClientCentsPerPoint({ standardPacks, clients })
+  const bestClient = bestClientCentsPerPoint({ publicPacks, clients })
   const clientRefCents = bestClient.centsPerPoint
   const providerOf = (id: string): Provider =>
     providers.find((x) => x.id === id) ?? {
@@ -156,18 +156,15 @@ export default function AdminPreciosPage() {
   }
 
   // Obtener lista de paquetes según el selector
-  let activeDisplayPacks: PointsPack[] = standardPacks
-  let activeTableTitle = "Paquetes estándar (clientes por defecto)"
+  let activeDisplayPacks: PointsPack[] = publicPacks
+  let activeTableTitle = "Paquetes públicos (canjeadores)"
 
-  if (selectedPackTable === "public") {
-    activeDisplayPacks = publicPacks
-    activeTableTitle = "Paquetes públicos (canjeadores)"
-  } else if (selectedPackTable.startsWith("client-")) {
+  if (selectedPackTable.startsWith("client-")) {
     const clientId = selectedPackTable.replace("client-", "")
     const client = clients.find((c) => c.id === clientId)
     if (client) {
-      activeDisplayPacks = client.customPacks
-      activeTableTitle = `Paquetes de ${client.name}`
+      activeDisplayPacks = clientPacks(client, publicPacks)
+      activeTableTitle = `Tramos de ${client.name} (los del Canjeador General, a su tarifa; solo lectura)`
     }
   }
 
@@ -393,22 +390,14 @@ export default function AdminPreciosPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="standard">Estándar (Clientes)</SelectItem>
                   <SelectItem value="public">Público (Canjeadores)</SelectItem>
-                  {clients
-                    .filter((c) => c.packMode === "custom")
-                    .map((c) => (
-                      <SelectItem key={c.id} value={`client-${c.id}`}>
-                        Propio: {c.name}
-                      </SelectItem>
-                    ))}
+                  {clients.map((c) => (
+                    <SelectItem key={c.id} value={`client-${c.id}`}>
+                      Cliente: {c.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
-              {selectedPackTable === "standard" && (
-                <Button type="button" size="sm" variant="outline" onClick={() => setStandardDialogOpen(true)}>
-                  <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar paquetes estándar
-                </Button>
-              )}
               {selectedPackTable === "public" && (
                 <Button type="button" size="sm" variant="outline" onClick={() => setPacksDialogOpen(true)}>
                   <Edit2 className="mr-1 h-3.5 w-3.5" /> Editar paquetes del Canjeador
@@ -474,19 +463,6 @@ export default function AdminPreciosPage() {
         onSave={(next) => {
           setPublicPacks(next)
           toast.success("Paquetes del Canjeador actualizados")
-        }}
-      />
-
-      <PacksEditor
-        open={standardDialogOpen}
-        onOpenChange={setStandardDialogOpen}
-        title="Paquetes estándar (Clientes)"
-        description="Lo que paga un Cliente sin tabla propia (USD → puntos)."
-        packs={standardPacks}
-        pointsPerUsdBase={100 * (settings.pointsFactor ?? 1)}
-        onSave={(next) => {
-          setStandardPacks(next)
-          toast.success("Paquetes estándar actualizados")
         }}
       />
 

@@ -8,16 +8,14 @@ import { createContext, useContext, useState } from "react"
 import {
   MOCK_CLIENT,
   MOCK_CLIENTS_ADMIN,
-  MOCK_CLIENT_PACKS,
   MOCK_GRANTED,
   MOCK_PRODUCTS,
   MOCK_PROVIDERS,
   MOCK_PUBLIC_PACKS,
   MOCK_SETTINGS,
-  MOCK_STANDARD_PACKS,
   MOCK_CARD_REQUESTS,
 } from "@/lib/mock/data"
-import { productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
+import { clientPacks, productPoints, referenceCentsPerPoint } from "@/lib/domain/pricing"
 import { clientBasePack } from "@/lib/domain/grants"
 import type { AdminSettings, ClientAdminRow, GrantedItem, PointsPack, Product, Provider } from "@/lib/domain/types"
 import type { CardRequest } from "@/lib/domain/card-requests"
@@ -34,8 +32,6 @@ type Ctx = {
   setClients: React.Dispatch<React.SetStateAction<ClientAdminRow[]>>
   publicPacks: PointsPack[]
   setPublicPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
-  standardPacks: PointsPack[]
-  setStandardPacks: React.Dispatch<React.SetStateAction<PointsPack[]>>
   grantedItems: GrantedItem[]
   setGrantedItems: React.Dispatch<React.SetStateAction<GrantedItem[]>>
   sentBatches: { hash: string; sentAt: string }[]
@@ -52,7 +48,6 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
   const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS)
   const [clients, setClients] = useState<ClientAdminRow[]>(MOCK_CLIENTS_ADMIN)
   const [publicPacks, setPublicPacks] = useState<PointsPack[]>(MOCK_PUBLIC_PACKS)
-  const [standardPacks, setStandardPacks] = useState<PointsPack[]>(MOCK_STANDARD_PACKS)
   const [grantedItems, setGrantedItems] = useState<GrantedItem[]>(MOCK_GRANTED)
   const [sentBatches, setSentBatches] = useState<{ hash: string; sentAt: string }[]>([])
   const [cardRequests, setCardRequests] = useState<CardRequest[]>(MOCK_CARD_REQUESTS)
@@ -69,8 +64,6 @@ export function AdminSettingsProvider({ children }: { children: React.ReactNode 
         setClients,
         publicPacks,
         setPublicPacks,
-        standardPacks,
-        setStandardPacks,
         grantedItems,
         setGrantedItems,
         sentBatches,
@@ -130,12 +123,13 @@ export function useCardPoints() {
 
 /** Cliente de la sesión de ejemplo, con su tramo base y su bolsa viva (la misma que ven Clientes y Resumen). */
 export function useCurrentClient() {
-  const { clients, setClients, standardPacks } = useAdminSettings()
-  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS, active: true }
-  const base = clientBasePack(client, standardPacks)
+  const { clients, setClients, publicPacks } = useAdminSettings()
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, active: true }
+  const base = clientBasePack(client, publicPacks)
+  const packs = clientPacks(client, publicPacks)
   const addToBag = (delta: number) =>
     setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, bagPoints: c.bagPoints + delta } : c)))
-  return { client, base, bag: client.bagPoints, addToBag }
+  return { client, base, packs, bag: client.bagPoints, addToBag }
 }
 
 /** Proveedor de la sesión de ejemplo: el del perfil; si entra Nosotros al panel, Fybeca. */

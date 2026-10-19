@@ -3,6 +3,7 @@
 
 import type {
   AdminSettings,
+  ClientAccount,
   ClientAdminRow,
   ExchangePreview,
   GiftCard,
@@ -21,41 +22,30 @@ export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
   centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
 
+/** Tramos de un Cliente: los puntos del Canjeador General a la tarifa del Cliente (centavo hacia arriba). */
+export const clientPacks = (client: Pick<ClientAccount, "usdPerPoint">, publicPacks: PointsPack[]): PointsPack[] =>
+  [...publicPacks]
+    .sort((a, b) => a.usdCents - b.usdCents)
+    .map((p) => ({ ...p, usdCents: Math.ceil(p.points * client.usdPerPoint * 100 - 1e-9) }))
+
+/** Puntos de una compra a medida: dólares ÷ tarifa, hacia abajo. */
+export const clientPointsForUsd = (usd: number, usdPerPoint: number) => Math.floor(usd / usdPerPoint + 1e-9)
+
 /**
- * Precio de referencia del punto para Clientes: el menor ¢/punto entre los paquetes
- * estándar y los paquetes propios de cada Cliente **activo** con tabla propia.
- * Devuelve el de menor centsPerPoint (= más puntos por dólar = más descuento).
+ * Precio de referencia del punto para Clientes: el menor ¢/punto (= la tarifa más baja = más descuento)
+ * entre los Clientes **activos**. Sin Clientes activos, el del Canjeador General.
  */
 export function bestClientCentsPerPoint(input: {
-  standardPacks: PointsPack[]
+  publicPacks: PointsPack[]
   clients: ClientAdminRow[]
 }): { centsPerPoint: number; label: string } {
-  let best = Infinity
-  let label = "—"
-
-  // Candidatos de la tabla estándar
-  for (const pack of input.standardPacks) {
-    const cpp = pack.usdCents / pack.points
-    if (cpp < best) {
-      best = cpp
-      label = "Tabla estándar"
-    }
-  }
-
-  // Candidatos de los Clientes activos con tabla propia
+  let best: { centsPerPoint: number; label: string } | null = null
   for (const client of input.clients) {
-    if (!client.active || client.packMode !== "custom") continue
-    for (const pack of client.customPacks) {
-      const cpp = pack.usdCents / pack.points
-      if (cpp < best) {
-        best = cpp
-        label = client.name
-      }
-    }
+    if (!client.active) continue
+    const cpp = client.usdPerPoint * 100
+    if (!best || cpp < best.centsPerPoint) best = { centsPerPoint: cpp, label: client.name }
   }
-
-  if (best === Infinity) return { centsPerPoint: 1, label: "—" }
-  return { centsPerPoint: best, label }
+  return best ?? { centsPerPoint: referenceCentsPerPoint(input.publicPacks), label: "Canjeador General" }
 }
 
 /** Costo que se le paga al Proveedor por la tarjeta. */

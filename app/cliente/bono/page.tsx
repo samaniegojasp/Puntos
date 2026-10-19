@@ -10,14 +10,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
-import { MOCK_CLIENT, MOCK_CLIENT_PACKS } from "@/lib/mock/data"
+import { MOCK_CLIENT } from "@/lib/mock/data"
 import { useAdminSettings } from "@/lib/mock/admin-settings"
 import { formatPts, formatUsd } from "@/lib/domain/format"
 import { bonusFromSale } from "@/lib/domain/pricing"
 
 export default function ClienteBonoPage() {
   const { clients } = useAdminSettings()
-  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS }
+  const client = clients.find((c) => c.id === MOCK_CLIENT.id) ?? { ...MOCK_CLIENT, active: true }
   const [loading, setLoading] = useState(true)
 
   // Campo "Mi % de bono" precargado con client.bonusPct * 100 (0.85)

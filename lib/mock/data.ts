@@ -123,26 +123,14 @@ export const MOCK_CARDS: GiftCard[] = [
 // ---------- Cliente ----------
 
 export const MOCK_CLIENT: ClientAccount = {
-  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00971984, bonusPct: 0.0085, bagPoints: 38000, packMode: "custom",
+  id: "c-andina", name: "Concesionaria Andina", usdPerPoint: 0.00971984, bonusPct: 0.0085, bagPoints: 38000,
 }
-
-/** Paquetes estándar (precio por volumen). Ilustrativos. */
-export const MOCK_STANDARD_PACKS: PointsPack[] = [
-  { id: "std-10", usdCents: c(10), points: 1020 },
-  { id: "std-50", usdCents: c(50), points: 5140, badge: "Popular" },
-  { id: "std-100", usdCents: c(100), points: 10280, badge: "Mejor valor" },
-]
 
 /** Paquetes que ve un Canjeador (cada punto cuesta más que al Cliente). */
 export const MOCK_PUBLIC_PACKS: PointsPack[] = [
   { id: "pub-15", usdCents: c(15), points: 1500 },
   { id: "pub-25", usdCents: c(25), points: 2500, badge: "Popular" },
   { id: "pub-50", usdCents: c(50), points: 5100, badge: "Mejor valor" },
-]
-
-export const MOCK_CLIENT_PACKS: PointsPack[] = [
-  { id: "cp-1", usdCents: c(170), points: 17490 },
-  { id: "cp-2", usdCents: c(400), points: 41150, badge: "Acuerdo" },
 ]
 
 export const MOCK_GRANTED: GrantedItem[] = [
@@ -211,9 +199,9 @@ export const MOCK_PRODUCTS: Product[] = [
 ]
 
 export const MOCK_CLIENTS_ADMIN: ClientAdminRow[] = [
-  { ...MOCK_CLIENT, customPacks: MOCK_CLIENT_PACKS, active: true },
-  { id: "c-union", name: "Ferretería La Unión", usdPerPoint: 0.0098039, bonusPct: 0.01, bagPoints: 4200, packMode: "standard", customPacks: [], active: true },
-  { id: "c-pacifico", name: "Clínica Pacífico", usdPerPoint: 0.0098039, bonusPct: 0.005, bagPoints: 0, packMode: "standard", customPacks: [], active: false },
+  { ...MOCK_CLIENT, active: true },
+  { id: "c-union", name: "Ferretería La Unión", usdPerPoint: 0.0098039, bonusPct: 0.01, bagPoints: 4200, active: true },
+  { id: "c-pacifico", name: "Clínica Pacífico", usdPerPoint: 0.0098039, bonusPct: 0.005, bagPoints: 0, active: false },
 ]
 
 export const MOCK_SETTINGS: AdminSettings = {

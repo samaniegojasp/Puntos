@@ -3,7 +3,6 @@ import type { AdminSettings, ClientAdminRow, PointsPack } from "./types"
 export type RescaleFactorInput = {
   settings: AdminSettings
   publicPacks: PointsPack[]
-  standardPacks: PointsPack[]
   clients: ClientAdminRow[]
 }
 
@@ -24,19 +23,10 @@ export function rescaleForFactor<T extends RescaleFactorInput>(
     points: Math.round(p.points * ratio),
   }))
 
-  const standardPacks = input.standardPacks.map((p) => ({
-    ...p,
-    points: Math.round(p.points * ratio),
-  }))
-
   const clients = input.clients.map((c) => ({
     ...c,
     usdPerPoint: c.usdPerPoint / ratio,
     bagPoints: Math.round(c.bagPoints * ratio),
-    customPacks: c.customPacks.map((p) => ({
-      ...p,
-      points: Math.round(p.points * ratio),
-    })),
   }))
 
   const settings: AdminSettings = {
@@ -51,7 +41,6 @@ export function rescaleForFactor<T extends RescaleFactorInput>(
     ...input,
     settings,
     publicPacks,
-    standardPacks,
     clients,
   }
 }

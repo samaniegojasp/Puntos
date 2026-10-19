@@ -39,6 +39,7 @@ import { useCatalog } from "@/lib/catalog-store"
 import { type Store } from "@/lib/catalog"
 import { formatDate, formatPct, formatPts, formatUsd } from "@/lib/domain/format"
 import {
+  clientPacks,
   marginAtPack,
   productPoints,
   productTotalCostCents,
@@ -109,7 +110,6 @@ export default function AdminSolicitudesPage() {
     settings,
     providers,
     setProducts,
-    standardPacks,
     publicPacks,
     clients,
   } = useAdminSettings()
@@ -266,24 +266,15 @@ export default function AdminSolicitudesPage() {
     setDialogOpen(false)
   }
 
-  // Tablas de paquetes para las columnas de márgenes (tramo más pequeño de cada tabla)
-  const clientTables = clients
-    .filter((c) => c.customPacks && c.customPacks.length > 0)
-    .map((c) => ({
-      who: c.name,
-      smallestPack: [...c.customPacks].sort((a, b) => a.usdCents - b.usdCents)[0],
-    }))
-
+  // Tablas de paquetes para las columnas de márgenes: Canjeador y cada Cliente activo (su tramo más pequeño)
   const tablesWithSmallest = [
     {
       who: "Canjeador",
       smallestPack: [...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0],
     },
-    {
-      who: "Estándar",
-      smallestPack: [...standardPacks].sort((a, b) => a.usdCents - b.usdCents)[0],
-    },
-    ...clientTables,
+    ...clients
+      .filter((c) => c.active)
+      .map((c) => ({ who: c.name, smallestPack: clientPacks(c, publicPacks)[0] })),
   ].filter((t) => t.smallestPack != null)
 
   const emptyTextByFilter: Record<FilterKey, string> = {

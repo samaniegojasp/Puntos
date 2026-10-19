@@ -110,13 +110,12 @@ export type ExchangePreview =
 export type ClientAccount = {
   id: string
   name: string
-  /** Precio que paga por punto (lo fija Nosotros) */
+  /** Tarifa del Cliente: lo que paga por punto (lo fija Nosotros). Todos sus tramos y su compra a medida usan esta tarifa. */
   usdPerPoint: number
   /** % de bono (lo cambia el Cliente). 0.0085 = 0,85 % */
   bonusPct: number
   /** Puntos disponibles en su bolsa */
   bagPoints: number
-  packMode: "standard" | "custom"
 }
 
 export type PointsPack = {
@@ -243,7 +242,6 @@ export type Product = {
 }
 
 export type ClientAdminRow = ClientAccount & {
-  customPacks: PointsPack[]
   active: boolean
 }
 
