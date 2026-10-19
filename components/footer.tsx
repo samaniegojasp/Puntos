@@ -62,6 +62,9 @@ export default function Footer() {
           <p className="text-center text-xs text-muted-foreground">
             &copy; {new Date().getFullYear()} Regala. Las marcas mencionadas pertenecen a sus respectivos dueños.
           </p>
+          <p className="mt-1 text-center text-[11px] text-muted-foreground/70 tabular-nums">
+            Versión {process.env.NEXT_PUBLIC_APP_VERSION} · {process.env.NEXT_PUBLIC_BUILD_DATE}
+          </p>
         </div>
       </div>
     </footer>
