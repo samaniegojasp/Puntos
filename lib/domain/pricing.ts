@@ -22,11 +22,14 @@ export const centsPerPoint = (p: PointsPack) => p.usdCents / p.points
 export const referenceCentsPerPoint = (publicPacks: PointsPack[]) =>
   centsPerPoint([...publicPacks].sort((a, b) => a.usdCents - b.usdCents)[0])
 
-/** Tramos de un Cliente: los puntos del Canjeador General a la tarifa del Cliente (centavo hacia arriba). */
+/**
+ * Tramos de un Cliente: los puntos del Canjeador General a la tarifa del Cliente (centavo hacia arriba),
+ * sin superar nunca el precio del paquete público (los paquetes grandes del Canjeador ya traen descuento).
+ */
 export const clientPacks = (client: Pick<ClientAccount, "usdPerPoint">, publicPacks: PointsPack[]): PointsPack[] =>
   [...publicPacks]
     .sort((a, b) => a.usdCents - b.usdCents)
-    .map((p) => ({ ...p, usdCents: Math.ceil(p.points * client.usdPerPoint * 100 - 1e-9) }))
+    .map((p) => ({ ...p, usdCents: Math.min(p.usdCents, Math.ceil(p.points * client.usdPerPoint * 100 - 1e-9)) }))
 
 /** Puntos de una compra a medida: dólares ÷ tarifa, hacia abajo. */
 export const clientPointsForUsd = (usd: number, usdPerPoint: number) => Math.floor(usd / usdPerPoint + 1e-9)
