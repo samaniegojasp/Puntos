@@ -158,3 +158,36 @@ export function clientPpdLimits(input: {
   }
 }
 
+export type ProviderDiscountLimits = { min: number; limitingLabel?: string; feasible: boolean } // min en fracción (0.05 = 5 %)
+
+/** Descuento mínimo del Proveedor: el que deja la tarjeta más exigente con el margen mínimo sobre el precio del mejor Cliente. */
+export function providerMinDiscountPct(input: {
+  settings: Pick<AdminSettings, "redeemSurchargePct" | "pointsMultiple" | "minMarginPct">
+  providerId: string
+  products: Product[]
+  publicPacks: PointsPack[]
+  bestClientCentsPerPoint: number
+}): ProviderDiscountLimits {
+  const ref = referenceCentsPerPoint(input.publicPacks)
+  const m = input.settings.minMarginPct ?? 0.02
+  let need = 0
+  let limitingLabel: string | undefined
+
+  for (const prod of input.products) {
+    // Con costo fijado a mano, el descuento no cambia el costo
+    if (!prod.active || prod.providerId !== input.providerId || prod.costCentsOverride != null) continue
+    const pts = productPoints(prod, input.settings, ref)
+    const pc = productClientPriceCents(prod, pts, input.bestClientCentsPerPoint)
+    // Despejando el margen: d >= 1 - (Pc ÷ (1 + m) - S) ÷ F
+    const d = 1 - (pc / (1 + m) - prod.shippingCents) / prod.faceCents
+    if (d > need) {
+      need = d
+      limitingLabel = `${prod.storeName} $${prod.faceCents / 100}`
+    }
+  }
+
+  // Subido al siguiente 0,5 % (paso del slider)
+  const step = Math.max(0, Math.ceil(need / 0.005 - 1e-9)) * 0.005 // max evita un -0 ("−0 %" en pantalla)
+  return { min: Math.min(step, 0.5), limitingLabel, feasible: step <= 0.5 }
+}
+

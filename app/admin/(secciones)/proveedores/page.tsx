@@ -35,6 +35,7 @@ import {
   productPoints,
   productPriceCents,
   productTotalCostCents,
+  providerMinDiscountPct,
   referenceCentsPerPoint,
 } from "@/lib/domain/pricing"
 import EditableNumber from "@/components/panel/editable-number"
@@ -99,6 +100,16 @@ export default function AdminProveedoresPage() {
 
   const refCents = referenceCentsPerPoint(publicPacks)
   const bestClient = bestClientCentsPerPoint({ publicPacks, clients })
+  // Descuento mínimo para conservar el margen mínimo de ganancia en el precio de Cliente
+  const discountLimits = providerMinDiscountPct({
+    settings,
+    providerId: editingProvider?.id ?? "",
+    products,
+    publicPacks,
+    bestClientCentsPerPoint: bestClient.centsPerPoint,
+  })
+  const minPct = discountLimits.min * 100
+  const minPctText = new Intl.NumberFormat("es-EC", { maximumFractionDigits: 1 }).format(minPct)
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault()
@@ -223,22 +234,38 @@ export default function AdminProveedoresPage() {
                     suffix="%"
                     decimals
                     allowZero
-                    onCommit={(v) => setDiscountPctInput(String(Math.round(v * 100) / 100))}
+                    onCommit={(v) => setDiscountPctInput(String(Math.max(Math.round(v * 100) / 100, minPct)))}
                   />
                 </div>
                 <Slider
                   id="discountPct"
-                  min={0}
+                  min={minPct}
                   max={50}
                   step={0.5}
-                  value={[Math.min(Math.max(parsedDiscountPct * 100, 0), 50)]}
-                  onValueChange={(v) => setDiscountPctInput(String(v[0]))}
+                  value={[Math.min(Math.max(parsedDiscountPct * 100, minPct), 50)]}
+                  onValueChange={(v) => setDiscountPctInput(String(Math.max(v[0], minPct)))}
                   aria-label="Descuento sobre valor facial"
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>Mínimo 0 %</span>
+                  <span>Mínimo {minPctText} %</span>
                   <span>Máximo 50 %</span>
                 </div>
+                {minPct > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Mínimo para conservar el {formatPct(settings.minMarginPct ?? 0.02)} de ganancia
+                    {discountLimits.limitingLabel && ` (tarjeta más exigente: ${discountLimits.limitingLabel})`}.
+                  </p>
+                )}
+                {!discountLimits.feasible && (
+                  <p className="text-xs text-destructive">
+                    Ni con el 50 % se alcanza el mínimo de ganancia en {discountLimits.limitingLabel}; revisa el precio de la tarjeta.
+                  </p>
+                )}
+                {parsedDiscountPct * 100 < minPct - 1e-9 && (
+                  <p className="text-xs text-amber-700">
+                    El descuento actual está por debajo del mínimo recomendado ({minPctText} %): el margen de Cliente no llega al mínimo.
+                  </p>
+                )}
                 <p className="text-xs text-muted-foreground">
                   Ejemplo: 17 % significa que Regala paga $8,30 por cada $10 de valor facial.
                 </p>
