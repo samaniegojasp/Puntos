@@ -28,21 +28,21 @@ Un único rol por perfil: **canjeador, cliente, proveedor, admin ("Nosotros")**.
 - **Punto de referencia:** el paquete público más pequeño del Canjeador ($15 = 1.500 pts, es decir 100 pts por dólar).
 - **Dos precios por tarjeta**, que "Nosotros" edita en Admin → Precios (celdas editables, con botón "Restablecer" para volver al valor automático):
   - **Canjeador General** (USD): lo que paga quien compra puntos por su cuenta. Por defecto = valor facial × (1 + recargo); el recargo es global en Ajustes (0 % por defecto, es decir el valor visual de la tarjeta: una tarjeta de $10 = 1.000 pts; con 3 % serían 1.030 pts).
-  - **Canjeador de Cliente** (USD): lo que ingresa Regala cuando se canjea con puntos que vienen de un Cliente (la empresa los compró más baratos). Por defecto = puntos de la tarjeta × precio del punto del Cliente activo con más descuento (el de menor ¢/punto entre la tabla estándar y las tablas propias de Clientes activos).
+  - **Canjeador de Cliente** (USD): lo que ingresa Regala cuando se canjea con puntos que vienen de un Cliente (la empresa los compró más baratos). Por defecto = puntos de la tarjeta × precio del punto del Cliente activo con más descuento (la tarifa más baja entre los Clientes activos).
 - **Los puntos de la tarjeta salen del precio General** (al punto de referencia, redondeados hacia arriba al múltiplo de puntos de Ajustes: 10 por defecto, o 50/100). La tarjeta cuesta los **mismos puntos para todos**; el precio de Cliente solo cambia el ingreso y el margen. La tienda, el carrito y el pago reflejan el precio General editado.
 - Margen de cada caso = precio − (costo al proveedor + transporte), mostrado en USD y como % sobre el costo.
 - **Factor de conversión** (Ajustes, entero, exige contraseña de admin): multiplica todos los valores en puntos (paquetes y compra a tu medida se reescalan).
 - Los Proveedores tienen un descuento acordado de 5–12 % (datos de ejemplo).
-- **Límites de "Puntos por cada dólar" de un Cliente** (Admin → Clientes → Editar, tanto la barra superior como la de cada tramo propio): mínimo = pts/$ del Canjeador General (100 hoy); máximo = `P ÷ (C × (1 + m))` calculado para la tarjeta más exigente (la de menor puntos por dólar de costo, en la práctica la del proveedor con menor descuento), donde `P` = puntos de la tarjeta, `C` = costo total en USD y `m` = "Porcentaje mínimo de ganancia" (Ajustes, 2 % por defecto, sobre el costo). Con los datos de ejemplo da ≈106,6 pts/$ (limita Juguetón $15). Solo acota barras y valores escritos; no bloquea el guardado y muestra un aviso si un Cliente queda fuera del rango.
-- El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño.
+- **Límites de "Puntos por cada dólar" de un Cliente** (Admin → Clientes → Editar, la barra de tarifa): mínimo = pts/$ del Canjeador General (100 hoy); máximo = `P ÷ (C × (1 + m))` calculado para la tarjeta más exigente (la de menor puntos por dólar de costo, en la práctica la del proveedor con menor descuento), donde `P` = puntos de la tarjeta, `C` = costo total en USD y `m` = "Porcentaje mínimo de ganancia" (Ajustes, 2 % por defecto, sobre el costo). Con los datos de ejemplo da ≈106,6 pts/$ (limita Juguetón $15). Solo acota barras y valores escritos; no bloquea el guardado y muestra un aviso si un Cliente queda fuera del rango.
+- **Tramos del Cliente:** son los mismos puntos que los paquetes del Canjeador General (hoy 1.500 / 2.500 / 5.100), con la tarifa del Cliente (una sola `usdPerPoint` con límites min/max). No hay tramos propios ni tabla estándar. Si Nosotros cambia los paquetes del Canjeador, los tramos de todos los Clientes cambian solos.
 - **Confidencialidad:** solo "Nosotros" ve precio por punto, márgenes y costos. Canjeador, Cliente y Proveedor ven solo "USD → puntos".
-- **Compra a tu medida:** solo Cliente y admin en Recargar Puntos, a un precio de puntos por dólar que fija "Nosotros" en Ajustes (entre 50 y 200 × factor, sin tope ligado a los paquetes). El Canjeador compra paquetes fijos; si le faltan puntos se le propone el paquete más pequeño que cubra el faltante.
+- **Compra a tu medida:** Nosotros la usa en Recargar Puntos y el Cliente en Comprar puntos, a su tarifa (monto en dólares enteros entre el mínimo y máximo de Ajustes). El Canjeador compra paquetes fijos; si le faltan puntos se le propone el paquete más pequeño que cubra el faltante.
 - Saldo de bienvenida: 1.100 puntos (etiqueta de saldo ajustada).
 - Edad: siempre "declaración", nunca "verificamos".
 
 ## 5. Flujo de reparto del Cliente (comisiones)
 1. El Cliente descarga una **planilla .xlsx** (1 a 1.000 filas): tipo de documento (lista desplegable por fila), número de documento, correo electrónico, valor de comisión ($) y referencia.
-2. Sube la planilla; la web calcula los puntos: `floor(comisión × puntos_base / USD_base)` con la base = tramo más pequeño del Cliente (ej. Andina $170 = 17.490 pts).
+2. Sube la planilla; la web calcula los puntos: `floor(comisión × puntos_base / USD_base)` con la base = tramo más pequeño del Cliente (ej. Andina $14,58 = 1.500 pts).
 3. Revisión: lista con puntos por persona, total necesario, saldo actual y faltante. Ejemplo: 25 filas × $20 → 51.425 pts; faltan 13.425 → hay que comprar $131 (= 13.477 pts).
 4. Botón para comprar el faltante exacto en dólares enteros (diálogo de compra).
 5. Reglas: todo o nada, irreversible, idempotente (hash), sin enumeración de documentos al revisar; el servidor revalidará cada fila; las fórmulas del Excel nunca se evalúan; límite 1.000 filas / 5 MB.
@@ -67,7 +67,6 @@ Resumen (KPIs), Clientes (con los límites de puntos por dólar), Proveedores, P
 ## 9. Limitaciones y pendientes conocidos
 - Sin backend: B0 (cuentas Supabase staging/prod) y B1+ (roles, RLS, `requireRole()`) pendientes. Pasarela: Payphone primero, Deuna segunda; correo transaccional por definir.
 - Estado del prototipo se pierde al recargar.
-- El precio de Cliente por tarjeta **todavía no alimenta** las tablas de paquetes de los Clientes ni el reparto por planilla, que siguen usando los tramos del Cliente. Unificarlos es el siguiente paso de diseño pendiente.
 - Al no haber reglas, es posible dejar márgenes negativos; los márgenes se ven en la tabla de Precios (sin alarmas).
 - Megamaxi no tiene producto propio en los datos de ejemplo (comparte proveedor con Supermaxi), por lo que no tiene precio editable en Precios.
 - Sin verificar: Administración → Catálogo (editor `/admin`) tras el refactor de componentes compartidos; la planilla xlsx en Excel real; un CSV con codificación antigua puede dañar tildes.

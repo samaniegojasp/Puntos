@@ -177,6 +177,8 @@ Cada tramo de descuento al comprador se come margen. Por eso el panel muestra el
 
 **Caducidad por tarjeta:** `providers.card_valid_days` es el valor por defecto; cada producto puede tener el suyo (`products.card_valid_days`, opcional) y, si existe, manda. La tarjeta emitida guarda su `expires_at` al emitirse: un cambio posterior no afecta a las ya emitidas.
 
+> **REEMPLAZADO (2026-10-19): ver `CLAUDE.md` (Tramos del Cliente).** Ya no hay tabla estándar ni tablas propias.
+
 Cada Cliente usa la tabla estándar o una **tabla propia** (`client_packs`): sus tramos y precio por punto. El panel de Nosotros muestra, para cada tramo, el margen de cada producto, y lo bloquea si rompe las reglas 1–3. Cambiar el precio de un Cliente afecta solo **lotes futuros**: los lotes ya vendidos conservan su `usd_per_point`.
 
 ### 5.5 Sobre el Excel de ejemplo

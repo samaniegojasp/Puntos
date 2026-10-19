@@ -28,20 +28,18 @@ Código clave:
 - **Confidencialidad (regla 13):** solo "Nosotros" ve precio por punto, márgenes y costos del proveedor. Canjeador, Cliente y Proveedor ven "USD → puntos".
 - **Modelo de precios (oct 2026):** Sin reglas de validación de precios (eliminadas el 2026-10-16). Cada tarjeta tiene dos precios en USD que edita Nosotros en Precios: Canjeador General y Canjeador de Cliente. Los puntos de la tarjeta salen del precio General al punto de referencia (paquete más pequeño del Canjeador), redondeados hacia arriba al múltiplo de puntos; el precio de Cliente solo cambia ingreso y margen. El precio General por defecto es el valor visual de la tarjeta (recargo 0 %; el recargo y los precios siguen siendo editables). El precio de Cliente automático usa el mejor precio por punto de un Cliente activo (el de más descuento), así el margen de Cliente es el caso más ajustado.
 - `PLAN-ROLES.md` §5.3 (reglas 1–8) quedó reemplazado por esta decisión.
-- El precio por punto de un Cliente con tabla propia se deriva de su tramo más pequeño. El bono (%) lo edita el Cliente; el precio del punto lo fija Nosotros.
+- **Tramos del Cliente:** son los mismos puntos que los paquetes del Canjeador General, con la tarifa del Cliente (un solo `usdPerPoint` con límites min/max). No hay tramos propios ni tabla estándar. 'A medida' del Cliente (Cliente → Comprar puntos) usa esa misma tarifa. El bono (%) se convierte en puntos con esa tarifa. El precio del punto lo fija Nosotros.
 - **Límites de puntos por dólar de un Cliente (Admin → Clientes):** mínimo = puntos por dólar del Canjeador General; máximo = `P ÷ (C × (1 + m))` de la tarjeta más exigente, con `m` = 'Porcentaje mínimo de ganancia' (Ajustes, 2 % por defecto, sobre el costo). Solo acota barras y valores escritos; no bloquea.
 - Reparto por Excel: todo o nada, irreversible, idempotente, sin enumeración de documentos al revisar. El Cliente SÍ ve usados/disponibles por documento en "Lo repartido" (decisión del dueño).
 - **Planilla de reparto:** .xlsx con N filas (1 a 1.000): tipo de documento (lista desplegable), número de documento, correo electrónico, valor de comisión ($) y referencia. Los puntos se calculan en la web: `floor(comisión ÷ precio del punto del tramo más pequeño del Cliente)`. La revisión muestra puntos por persona, total, saldo y faltante, y permite comprar el faltante exacto en dólares enteros. El servidor siempre vuelve a validar cada fila. El Cliente nunca ve el precio por punto, solo USD → puntos.
 - **Catálogo del Proveedor:** el Proveedor crea tarjetas (nombre, categoría, descripción, valores, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprobamos en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor (ahora aprobar no se bloquea por reglas). El Proveedor nunca ve costos, márgenes ni reglas: si se rechaza, solo ve el motivo que escribimos.
-- **Compra a tu medida:** solo la ven y usan Cliente y Nosotros en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos, se le propone el paquete más pequeño que cubra lo que falta.
+- **Compra a tu medida:** solo la ven y usan Cliente y Nosotros en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos, se le propone el paquete más pequeño que cubra lo que falta. El Cliente la usa en Comprar puntos con su tarifa; el Canjeador y `/recargar` siguen con la global.
 - Edad: siempre "declaración", nunca "verificamos".
 
 ## Pendientes
 1. B0 (cuentas externas) y backend B1+.
 2. Pasarela de pago: Payphone primero (Deuna como segunda opción); correo transaccional: servicio por definir, dominio propio antes de producción.
-3. Pregunta abierta de negocio: con tramos de precios distintos, ¿qué precio convierte el bono en puntos?
-4. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
-5. Diseño pendiente: el precio de Cliente por tarjeta aún no alimenta las tablas de paquetes de los Clientes ni el reparto por planilla.
-6. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.000 pts con 0 % de recargo): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
-7. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
-8. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.
+3. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
+4. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.000 pts con 0 % de recargo): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
+5. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
+6. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.
