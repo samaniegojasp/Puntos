@@ -13,13 +13,13 @@ import { useCatalog } from "@/lib/catalog-store"
 import { usePoints } from "@/lib/points-store"
 
 export default function CartPage() {
-  const { cart, cartTotal, balance, ready, setQty, clearCart } = usePoints()
+  const { cart, cartTotal, balance, available, locked, ready, setQty, clearCart } = usePoints()
   const cardPoints = useCardPoints()
   const { custom, packs } = usePublicOffer()
   const canCustom = useCanBuyCustom()
   const { findStore } = useCatalog()
   // Cliente y Nosotros compran el monto exacto a tu medida; el Canjeador, el paquete fijo que cubre lo que falta.
-  const suggested = packForPoints(Math.max(0, cartTotal - balance), packs)
+  const suggested = packForPoints(Math.max(0, cartTotal - available), packs)
 
   if (!ready) {
     return (
@@ -151,6 +151,11 @@ export default function CartPage() {
                   <span className="text-muted-foreground">Tu saldo</span>
                   <span className="font-medium">{formatPoints(balance)} pts</span>
                 </div>
+                {locked > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {formatPoints(locked)} pts bloqueados hasta tu primera recarga
+                  </p>
+                )}
                 <Separator />
                 <div className="flex justify-between text-base font-semibold">
                   <span>Total</span>
@@ -158,19 +163,19 @@ export default function CartPage() {
                 </div>
               </div>
 
-              {cartTotal > balance ? (
+              {cartTotal > available ? (
                 <div className="space-y-3">
                   <div className="rounded-lg bg-destructive/10 p-3 text-center text-sm font-medium text-destructive">
-                    Te faltan {formatPoints(cartTotal - balance)} pts
+                    Te faltan {formatPoints(cartTotal - available)} pts
                   </div>
                   <Button className="w-full" asChild>
-                    <Link href={`/recargar?faltan=${cartTotal - balance}`}>
+                    <Link href={`/recargar?faltan=${cartTotal - available}`}>
                       {canCustom ? (
-                        <>Comprar los {formatPoints(cartTotal - balance)} pts que faltan (${usdForPoints(cartTotal - balance, custom)})</>
+                        <>Comprar los {formatPoints(cartTotal - available)} pts que faltan (${usdForPoints(cartTotal - available, custom)})</>
                       ) : (
                         <>
                           Recargar el paquete de ${suggested.usd} ({formatPoints(suggested.points)} pts)
-                          {suggested.points < cartTotal - balance && " (no alcanza; puedes repetir)"}
+                          {suggested.points < cartTotal - available && " (no alcanza; puedes repetir)"}
                         </>
                       )}
                     </Link>

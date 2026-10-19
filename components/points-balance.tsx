@@ -6,12 +6,16 @@ import { usePoints } from "@/lib/points-store"
 import { formatPoints } from "@/lib/catalog"
 
 export default function PointsBalance() {
-  const { balance, ready } = usePoints()
+  const { balance, locked, ready } = usePoints()
+  // Con puntos bloqueados, el aviso lo dice aquí (título y lector de pantalla)
+  const label = locked > 0
+    ? `Saldo demo: ${formatPoints(balance)} puntos, de los cuales ${formatPoints(locked)} bloqueados hasta tu primera recarga`
+    : `Saldo demo de la tienda: ${formatPoints(balance)} puntos`
   return (
     <Link
       href="/recargar"
-      title="Saldo demo de la tienda: se guarda solo en este navegador"
-      aria-label={ready ? `Saldo demo de la tienda: ${formatPoints(balance)} puntos. Recargar` : "Recargar puntos"}
+      title={locked > 0 ? label : "Saldo demo de la tienda: se guarda solo en este navegador"}
+      aria-label={ready ? `${label}. Recargar` : "Recargar puntos"}
       className="flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 py-1 pl-3 pr-1 text-sm font-semibold tabular-nums transition-colors hover:bg-primary/20"
     >
       <Gem className="h-4 w-4 text-primary" aria-hidden />

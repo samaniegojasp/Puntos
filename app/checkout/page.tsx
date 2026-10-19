@@ -19,7 +19,7 @@ import { usePoints } from "@/lib/points-store"
 // Canje con Puntos: sin pasarela bancaria.
 export default function CheckoutPage() {
   const router = useRouter()
-  const { cart, cartTotal, balance, ready, redeem } = usePoints()
+  const { cart, cartTotal, balance, available, locked, ready, redeem } = usePoints()
   const cardPoints = useCardPoints()
   const { custom, packs } = usePublicOffer()
   const canCustom = useCanBuyCustom()
@@ -27,7 +27,7 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
   const [busy, setBusy] = useState(false)
-  const missing = cartTotal - balance
+  const missing = cartTotal - available
   // Cliente y Nosotros compran el monto exacto a tu medida; el Canjeador, el paquete fijo que cubre lo que falta.
   const suggested = packForPoints(Math.max(0, missing), packs)
 
@@ -87,7 +87,10 @@ export default function CheckoutPage() {
             ))}
             <Separator />
             <Row label="Total" value={`${formatPoints(cartTotal)} pts`} bold />
-            <Row label="Tu saldo" value={`${formatPoints(balance)} pts`} />
+            <Row label="Tu saldo" value={`${formatPoints(available)} pts`} />
+            {locked > 0 && (
+              <p className="text-xs text-muted-foreground">{formatPoints(locked)} pts bloqueados hasta tu primera recarga</p>
+            )}
             <Row label="Saldo después" value={missing > 0 ? "—" : `${formatPoints(balance - cartTotal)} pts`} />
             {missing > 0 ? (
               <>

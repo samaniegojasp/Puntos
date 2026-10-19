@@ -28,7 +28,7 @@ Regla de oro: **una fase [UI] no empieza hasta que su [NÚCLEO] esté en la rama
 
 | # | Decisión | Recomendación |
 |---|---|---|
-| D1 | **Puntos de bienvenida.** Un lote regalado tiene costo real para ti. | **0** al registrarse. Si quieres incentivo: bono tras la primera compra de puntos. Configurable. |
+| D1 | **Puntos de bienvenida.** Un lote regalado tiene costo real para ti. | **0** al registrarse. Si quieres incentivo: bono tras la primera compra de puntos. Configurable. Decisión 2026-10-19: lote promocional bloqueado hasta primera recarga pagada o primer reparto recibido; configurable (monto y liberación) en Ajustes. |
 | D2 | **Parámetros de precio** (`PLAN-ROLES.md` §5): descuento de cada Proveedor, `margin_pct`, `min_margin_pct`, paquetes por volumen, precio público del punto. | Los reúnes con los contratos. Todo se edita en `/admin`; el sistema bloquea combinaciones que rompan las reglas de §5.3. |
 | D3 | **Pasarela de pago:** Payphone, Kushki o Datafast. | La que te apruebe primero con tu RUC. Debe ofrecer **checkout alojado** y **verificación del pago desde el servidor**. Nunca formulario de tarjeta propio. |
 | D4 | **Contrato con cada Proveedor:** descuento, caducidad de sus tarjetas, cómo y cuándo se le liquida, qué pasa con tarjetas caducadas. | Por escrito antes de cargar su catálogo. |

@@ -34,12 +34,12 @@ Código clave:
 - **Planilla de reparto:** .xlsx con N filas (1 a 1.000): tipo de documento (lista desplegable), número de documento, correo electrónico, valor de comisión ($) y referencia. Los puntos se calculan en la web: `floor(comisión ÷ precio del punto del tramo más pequeño del Cliente)`. La revisión muestra puntos por persona, total, saldo y faltante, y permite comprar el faltante exacto en dólares enteros. El servidor siempre vuelve a validar cada fila. El Cliente nunca ve el precio por punto, solo USD → puntos.
 - **Catálogo del Proveedor:** el Proveedor crea tarjetas (nombre, categoría, descripción, valores, diseño) en `/proveedor/catalogo` y las envía; Nosotros las aprobamos en `/admin/solicitudes`. Aprobar crea la tarjeta en el catálogo y sus productos con el descuento del Proveedor (ahora aprobar no se bloquea por reglas). El Proveedor nunca ve costos, márgenes ni reglas: si se rechaza, solo ve el motivo que escribimos.
 - **Compra a tu medida:** solo la ven y usan Cliente y Nosotros en Recargar Puntos. El Canjeador compra paquetes fijos; si le faltan puntos, se le propone el paquete más pequeño que cubra lo que falta. El Cliente la usa en Comprar puntos con su tarifa; el Canjeador y `/recargar` siguen con la global.
+- **Puntos de bienvenida (1.100):** bolsillo bloqueado; se ven desde el registro pero solo se gastan tras la primera recarga pagada o el primer reparto recibido de un Cliente. El prototipo lo simula en la billetera (`locked`); el backend lo llevará como lote `promo` con `locked_until`.
 - Edad: siempre "declaración", nunca "verificamos".
 
 ## Pendientes
 1. B0 (cuentas externas) y backend B1+.
 2. Pasarela de pago: Payphone primero (Deuna como segunda opción); correo transaccional: servicio por definir, dominio propio antes de producción.
 3. Legal/contable (el dueño): saldos prepagados, caducidad, datos de terceros, facturación SRI.
-4. Saldo de bienvenida (1.100 pts) alcanza para una tarjeta de $10 (1.000 pts con 0 % de recargo): decidir candado antifraude (bolsillo promocional que se libere tras un reparto o una recarga pagada) en el backend.
-5. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
-6. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.
+4. Sin reglas de precios, la comisión de la pasarela y el cobro mínimo por transacción no están modelados.
+5. Probar a mano: Admin → Catálogo (editor `/admin` con clave) y la planilla .xlsx en Excel/Google Sheets.

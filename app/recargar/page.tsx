@@ -18,7 +18,7 @@ import { formatCardNumber, formatExp, validateCard, type CardErrors, type CardIn
 
 // ÚNICA página del sitio con pago en dinero real (simulado).
 export default function RecargarPage() {
-  const { balance, ready, topUp, topUpCustom } = usePoints()
+  const { balance, locked, ready, topUp, topUpCustom } = usePoints()
   const { packs: PACKS, custom } = usePublicOffer()
   // "A tu medida" solo para Cliente y Nosotros. Se muestra cuando la sesión ya está lista, para no esconderla al cargar.
   const canCustom = useCanBuyCustom()
@@ -98,6 +98,9 @@ export default function RecargarPage() {
           Saldo actual:{" "}
           <span className="font-semibold text-foreground tabular-nums">{ready ? formatPoints(balance) : "…"} pts</span>
         </p>
+        {ready && locked > 0 && (
+          <p className="text-sm text-muted-foreground">Tus {formatPoints(locked)} pts de bienvenida se liberan con tu primera recarga.</p>
+        )}
       </div>
 
       <div className="mb-6 flex items-center gap-2 rounded-lg border border-sky-500/30 bg-sky-500/10 px-4 py-3 text-sm text-sky-700 dark:text-sky-300">

@@ -10,12 +10,19 @@ export type CartItem = { storeId: string; usd: number; qty: number }
 export type RedeemedCode = { storeId: string; usd: number; code: string }
 export type Order = { id: string; date: string; points: number; codes: RedeemedCode[]; recipientEmail?: string; message?: string }
 export type TopUp = { id: string; date: string; packId: string; points: number; usd: number; last4: string }
-type State = { balance: number; cart: CartItem[]; orders: Order[]; topups: TopUp[] }
+type State = {
+  balance: number
+  /** Puntos de bienvenida: se ven pero no se gastan hasta la primera recarga pagada (candado antifraude). */
+  locked: number
+  cart: CartItem[]
+  orders: Order[]
+  topups: TopUp[]
+}
 
 export type RedeemResult = { ok: true; order: Order } | { ok: false; reason: "empty" | "insufficient"; missing: number }
 
 const STORAGE_KEY = "gc_state_v1"
-const initialState: State = { balance: WELCOME_POINTS, cart: [], orders: [], topups: [] }
+const initialState: State = { balance: WELCOME_POINTS, locked: WELCOME_POINTS, cart: [], orders: [], topups: [] }
 
 // Validación estructural (no depende del catálogo): el catálogo se aplica al derivar el carrito.
 const isWellFormed = (i: CartItem) =>
@@ -28,8 +35,11 @@ function load(): State {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return initialState
     const s = JSON.parse(raw) as State
+    const balance = Number.isInteger(s.balance) && s.balance >= 0 ? s.balance : 0
     return {
-      balance: Number.isInteger(s.balance) && s.balance >= 0 ? s.balance : 0,
+      balance,
+      // Estado viejo (sin locked) o inválido: no queda bloqueado nada
+      locked: Number.isInteger(s.locked) && s.locked >= 0 && s.locked <= balance ? s.locked : 0,
       cart: Array.isArray(s.cart) ? s.cart.filter(isWellFormed) : [],
       orders: Array.isArray(s.orders) ? s.orders : [],
       topups: Array.isArray(s.topups) ? s.topups : [],
@@ -48,6 +58,8 @@ function genCode(storeId: string) {
 
 type Ctx = State & {
   ready: boolean
+  /** Puntos que sí se pueden gastar: saldo menos los bloqueados. */
+  available: number
   cartTotal: number
   cartCount: number
   addToCart: (storeId: string, usd: number) => void
@@ -127,7 +139,8 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
       const items = s.cart.filter((i) => availRef.current(i.storeId, i.usd))
       if (!items.length) return { ok: false, reason: "empty", missing: 0 }
       const total = cartTotal(items, cardPointsRef.current)
-      if (total > s.balance) return { ok: false, reason: "insufficient", missing: total - s.balance }
+      const available = s.balance - s.locked
+      if (total > available) return { ok: false, reason: "insufficient", missing: total - available }
       const codes = items.flatMap((i) => Array.from({ length: i.qty }, () => ({ storeId: i.storeId, usd: i.usd, code: genCode(i.storeId) })))
       const order: Order = { id: `ORD-${Date.now()}`, date: new Date().toISOString(), points: total, codes, ...opts }
       commit({ ...s, balance: s.balance - total, cart: [], orders: [order, ...s.orders] })
@@ -143,7 +156,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
       if (!pack) return false
       const s = ref.current
       const t: TopUp = { id: `TOP-${Date.now()}`, date: new Date().toISOString(), packId, points: pack.points, usd: pack.usd, last4 }
-      commit({ ...s, balance: s.balance + pack.points, topups: [t, ...s.topups] })
+      commit({ ...s, balance: s.balance + pack.points, locked: 0, topups: [t, ...s.topups] })
       return true
     },
     [commit],
@@ -157,7 +170,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
       const s = ref.current
       const points = Math.floor(usd * pointsPerUsd)
       const t: TopUp = { id: `TOP-${Date.now()}`, date: new Date().toISOString(), packId: "custom", points, usd, last4 }
-      commit({ ...s, balance: s.balance + points, topups: [t, ...s.topups] })
+      commit({ ...s, balance: s.balance + points, locked: 0, topups: [t, ...s.topups] })
       return true
     },
     [commit],
@@ -170,6 +183,7 @@ export function PointsProvider({ children }: { children: React.ReactNode }) {
     ...state,
     cart,
     ready,
+    available: state.balance - state.locked,
     cartTotal: cartTotal(cart, cardPoints),
     cartCount: cart.reduce((n, i) => n + i.qty, 0),
     addToCart,
