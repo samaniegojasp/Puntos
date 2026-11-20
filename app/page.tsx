@@ -93,14 +93,14 @@ export default function HomePage() {
             <h2 className="text-3xl font-bold tracking-tight">Categorías</h2>
             <p className="text-muted-foreground">Explora gift cards por tus categorías preferidas</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="flex flex-wrap justify-center gap-4">
             {categories.map((cat) => {
               const Icon = CATEGORY_ICONS[cat] || ShoppingBasket
               return (
                 <Link
                   key={cat}
                   href={`/shop?categoria=${encodeURIComponent(cat)}`}
-                  className="group flex flex-col items-center justify-center rounded-2xl border bg-card p-6 text-center transition-all hover:-translate-y-1 hover:border-primary hover:shadow-md"
+                  className="group flex w-[calc(50%_-_0.5rem)] flex-col items-center justify-center rounded-2xl border bg-card p-6 text-center transition-all sm:w-[calc(33.333%_-_0.667rem)] lg:w-[calc(16.666%_-_0.834rem)] hover:-translate-y-1 hover:border-primary hover:shadow-md"
                 >
                   <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
                     <Icon className="h-6 w-6" />
